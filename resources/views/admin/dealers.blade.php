@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Dealers – Admin')
+@section('title', 'Users – Admin')
 @section('content')
 <header class="dashboard-header">
     <div>
-        <h1 class="dashboard-title">Dealers</h1>
-        <p class="dashboard-subtitle">All dealers</p>
+        <h1 class="dashboard-title">Users</h1>
+        <p class="dashboard-subtitle">All users</p>
     </div>
 </header>
 
@@ -15,25 +15,23 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>User ID</th>
-                        <th>Name</th>
-                        <th>Code</th>
-                        <th>Bank</th>
-                        <th>Join Date</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Active</th>
+                        <th>Last login</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($items as $r)
                         <tr>
-                            <td>{{ $r->DealerID }}</td>
-                            <td>{{ $r->UserID }}</td>
-                            <td>{{ $r->DealerName }}</td>
-                            <td>{{ $r->DealerCode }}</td>
-                            <td>{{ $r->BankName ?? '—' }}</td>
-                            <td>{{ $r->JoinDate ? date('Y-m-d', strtotime($r->JoinDate)) : '—' }}</td>
+                            <td>{{ $r->USERID }}</td>
+                            <td>{{ $r->EMAIL }}</td>
+                            <td>{{ $r->SYSTEMROLE ?? '—' }}</td>
+                            <td>{{ ($r->ISACTIVE ?? 0) ? 'Yes' : 'No' }}</td>
+                            <td>{{ $r->LASTLOGIN ? date('Y-m-d H:i', strtotime($r->LASTLOGIN)) : '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6">No dealers yet.</td></tr>
+                        <tr><td colspan="5">No users yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

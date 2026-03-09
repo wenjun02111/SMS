@@ -11,20 +11,34 @@ class DealerController extends Controller
     public function dashboard(Request $request): View
     {
         $dealerId = $request->session()->get('user_id');
-        $deals = [];
+        $leads = [];
         if ($dealerId) {
-            $deals = DB::select('SELECT "DealsSubmissionID","ClientsLeadID","PipelineStatus","ExpectedTotalRevenueRM","DateAssigned" FROM "Deals_Submissions" WHERE "DealerID" = ? ORDER BY "DealsSubmissionID" DESC LIMIT 20', [$dealerId]);
+            $leads = DB::select(
+                'SELECT FIRST 50
+                    "LEADID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL","CITY","CURRENTSTATUS","CREATEDAT","LASTMODIFIED"
+                FROM "LEAD"
+                WHERE "ASSIGNED_TO" = ?
+                ORDER BY "LEADID" DESC',
+                [$dealerId]
+            );
         }
-        return view('dealer.dashboard', ['deals' => $deals, 'currentPage' => 'dashboard']);
+        return view('dealer.dashboard', ['leads' => $leads, 'currentPage' => 'dashboard']);
     }
 
     public function demo(Request $request): View
     {
         $dealerId = $request->session()->get('user_id');
-        $deals = [];
+        $leads = [];
         if ($dealerId) {
-            $deals = DB::select('SELECT "DealsSubmissionID","ClientsLeadID","PipelineStatus","IsDemoCompleted","DemoDate" FROM "Deals_Submissions" WHERE "DealerID" = ? ORDER BY "DealsSubmissionID" DESC', [$dealerId]);
+            $leads = DB::select(
+                'SELECT FIRST 100
+                    "LEADID","COMPANYNAME","CONTACTNAME","EMAIL","CURRENTSTATUS","DEMOMODE","CREATEDAT","LASTMODIFIED"
+                FROM "LEAD"
+                WHERE "ASSIGNED_TO" = ?
+                ORDER BY "LEADID" DESC',
+                [$dealerId]
+            );
         }
-        return view('dealer.demo', ['deals' => $deals, 'currentPage' => 'demo']);
+        return view('dealer.demo', ['leads' => $leads, 'currentPage' => 'demo']);
     }
 }

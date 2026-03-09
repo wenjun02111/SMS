@@ -9,13 +9,15 @@ class AdminController extends Controller
 {
     private function dashboardData(): array
     {
-        $inquiries = DB::select('SELECT COUNT(*) as c FROM "Customer_Inquiries"');
-        $deals = DB::select('SELECT COUNT(*) as c FROM "Deals_Submissions"');
-        $dealers = DB::select('SELECT COUNT(*) as c FROM "Dealers"');
+        $leads = DB::select('SELECT COUNT(*) as c FROM "LEAD"');
+        $activities = DB::select('SELECT COUNT(*) as c FROM "LEAD_ACT"');
+        $payouts = DB::select('SELECT COUNT(*) as c FROM "REFERRER_PAYOUT"');
+        $users = DB::select('SELECT COUNT(*) as c FROM "USERS"');
         return [
-            'totalInquiries' => $inquiries[0]->c ?? 0,
-            'totalDeals' => $deals[0]->c ?? 0,
-            'totalDealers' => $dealers[0]->c ?? 0,
+            'totalLeads' => $leads[0]->c ?? 0,
+            'totalActivities' => $activities[0]->c ?? 0,
+            'totalPayouts' => $payouts[0]->c ?? 0,
+            'totalUsers' => $users[0]->c ?? 0,
         ];
     }
 
@@ -26,19 +28,35 @@ class AdminController extends Controller
 
     public function inquiries(): View
     {
-        $rows = DB::select('SELECT "CustomerInquiryID","ProductID","CompanyName","ContactName","ContactNo","EmailAddress","City","IsResolved","SubmittedAt" FROM "Customer_Inquiries" ORDER BY "CustomerInquiryID" DESC LIMIT 100');
+        $rows = DB::select(
+            'SELECT FIRST 100
+                "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL","CITY","POSTCODE",
+                "BUSINESSNATURE","USERCOUNT","EXISTINGSOFTWARE","DEMOMODE","CURRENTSTATUS",
+                "CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
+            FROM "LEAD"
+            ORDER BY "LEADID" DESC'
+        );
         return view('admin.inquiries', ['items' => $rows, 'currentPage' => 'inquiries']);
     }
 
     public function dealers(): View
     {
-        $rows = DB::select('SELECT "DealerID","UserID","DealerName","DealerCode","BankName","JoinDate" FROM "Dealers" ORDER BY "DealerID"');
+        $rows = DB::select(
+            'SELECT "USERID","EMAIL","SYSTEMROLE","ISACTIVE","LASTLOGIN"
+             FROM "USERS"
+             ORDER BY "USERID"'
+        );
         return view('admin.dealers', ['items' => $rows, 'currentPage' => 'dealers']);
     }
 
     public function rewards(): View
     {
-        $rows = DB::select('SELECT "ReferrerPayoutID","DealsSubmissionID","DealerID","ReferrerID","Status","DateGenerated","DatePaid" FROM "Referrer_Payouts" ORDER BY "ReferrerPayoutID" DESC LIMIT 100');
+        $rows = DB::select(
+            'SELECT FIRST 100
+                "REFERRERPAYOUTID","DEALSUBMISSIONID","USERID","REFERRERID","STATUS","DATEGENERATED","DATEPAID"
+            FROM "REFERRER_PAYOUT"
+            ORDER BY "REFERRERPAYOUTID" DESC'
+        );
         return view('admin.rewards', ['items' => $rows, 'currentPage' => 'rewards']);
     }
 
@@ -49,25 +67,23 @@ class AdminController extends Controller
 
     public function history(): View
     {
-        $rows = DB::select('SELECT "DealHistoryStatusID","DealsSubmissionID","PreviousStatus","NewStatus","ChangedByID","ChangeDate" FROM "Deal_Status_History" ORDER BY "DealHistoryStatusID" DESC LIMIT 100');
+        $rows = DB::select(
+            'SELECT FIRST 100
+                "LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS"
+            FROM "LEAD_ACT"
+            ORDER BY "LEAD_ACTID" DESC'
+        );
         return view('admin.history', ['items' => $rows, 'currentPage' => 'history']);
     }
 
     public function fulldatabase(): View
     {
         $tables = [
-            'products' => DB::select('SELECT "ProductID", "ProductName", "Category", "BasePriceRM" FROM "Products" ORDER BY "ProductID"'),
-            'clients_leads' => DB::select('SELECT "ClientsLeadID","CompanyName","ContactPerson","Email","PhoneNo","CityState","Industry","CreatedDate" FROM "Clients_Leads" ORDER BY "ClientsLeadID"'),
-            'referrers' => DB::select('SELECT "ReferrerID","FullName","PhoneNo","BankName","BankAccountNo" FROM "Referrers" ORDER BY "ReferrerID"'),
-            'users' => DB::select('SELECT "UserID","Email","SystemRole","IsActive","LastLogin" FROM "Users" ORDER BY "UserID"'),
-            'admins' => DB::select('SELECT "AdminID","UserID","AdminName" FROM "Admins" ORDER BY "AdminID"'),
-            'dealers' => DB::select('SELECT "DealerID","UserID","DealerName","DealerCode","BankName","JoinDate" FROM "Dealers" ORDER BY "DealerID"'),
-            'customer_inquiries' => DB::select('SELECT "CustomerInquiryID","ProductID","CompanyName","ContactName","IsResolved","SubmittedAt" FROM "Customer_Inquiries" ORDER BY "CustomerInquiryID"'),
-            'admin_interventions' => DB::select('SELECT "AdminInterventionID","DealerID","AdminID","ActionTaken","DateLogged" FROM "Admin_Interventions" ORDER BY "AdminInterventionID"'),
-            'deals_submissions' => DB::select('SELECT "DealsSubmissionID","DealerID","ClientsLeadID","PipelineStatus","ExpectedTotalRevenueRM","DateAssigned" FROM "Deals_Submissions" ORDER BY "DealsSubmissionID"'),
-            'deal_items' => DB::select('SELECT "DealItemID","DealSubmissionID","ProductID","Quantity","QuotedPriceRM" FROM "Deal_Items" ORDER BY "DealItemID"'),
-            'referrer_payouts' => DB::select('SELECT "ReferrerPayoutID","DealsSubmissionID","DealerID","ReferrerID","Status","DateGenerated" FROM "Referrer_Payouts" ORDER BY "ReferrerPayoutID"'),
-            'deal_status_history' => DB::select('SELECT "DealHistoryStatusID","DealsSubmissionID","PreviousStatus","NewStatus","ChangeDate" FROM "Deal_Status_History" ORDER BY "DealHistoryStatusID"'),
+            'lead' => DB::select('SELECT FIRST 200 * FROM "LEAD" ORDER BY "LEADID" DESC'),
+            'lead_act' => DB::select('SELECT FIRST 200 * FROM "LEAD_ACT" ORDER BY "LEAD_ACTID" DESC'),
+            'referrer_payout' => DB::select('SELECT FIRST 200 * FROM "REFERRER_PAYOUT" ORDER BY "REFERRERPAYOUTID" DESC'),
+            'users' => DB::select('SELECT FIRST 200 * FROM "USERS" ORDER BY "USERID" DESC'),
+            'user_passkey' => DB::select('SELECT FIRST 200 * FROM "USER_PASSKEY" ORDER BY "USER_PASSKEYID" DESC'),
         ];
         return view('admin.fulldatabase', ['tables' => $tables, 'currentPage' => 'fulldatabase']);
     }

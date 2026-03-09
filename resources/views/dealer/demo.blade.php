@@ -4,7 +4,7 @@
 <header class="dashboard-header">
     <div>
         <h1 class="dashboard-title">Demo Schedule</h1>
-        <p class="dashboard-subtitle">Your demos</p>
+        <p class="dashboard-subtitle">Leads with demo mode</p>
     </div>
 </header>
 
@@ -14,24 +14,24 @@
             <table class="dashboard-table">
                 <thead>
                     <tr>
-                        <th>Deal ID</th>
-                        <th>Client Lead</th>
+                        <th>Lead ID</th>
+                        <th>Company</th>
                         <th>Status</th>
-                        <th>Demo completed</th>
-                        <th>Demo date</th>
+                        <th>Demo mode</th>
+                        <th>Last modified</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($deals as $r)
+                    @forelse($leads as $r)
                         <tr>
-                            <td>{{ $r->DealsSubmissionID }}</td>
-                            <td>{{ $r->ClientsLeadID }}</td>
-                            <td>{{ $r->PipelineStatus }}</td>
-                            <td>{{ $r->IsDemoCompleted ? 'Yes' : 'No' }}</td>
-                            <td>{{ $r->DemoDate ? date('Y-m-d', strtotime($r->DemoDate)) : '—' }}</td>
+                            <td>{{ $r->LEADID }}</td>
+                            <td>{{ $r->COMPANYNAME }}</td>
+                            <td>{{ $r->CURRENTSTATUS ?? '—' }}</td>
+                            <td>{{ $r->DEMOMODE ?? '—' }}</td>
+                            <td>{{ $r->LASTMODIFIED ? date('Y-m-d', strtotime($r->LASTMODIFIED)) : '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="5">No demo records. Demo user may see no data.</td></tr>
+                        <tr><td colspan="5">No demo leads found.</td></tr>
                     @endforelse
                 </tbody>
             </table>

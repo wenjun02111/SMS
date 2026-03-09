@@ -16,7 +16,7 @@
                     <tr>
                         <th>ID</th>
                         <th>Deal Submission</th>
-                        <th>Dealer</th>
+                        <th>User</th>
                         <th>Referrer</th>
                         <th>Status</th>
                         <th>Generated</th>
@@ -26,13 +26,13 @@
                 <tbody>
                     @forelse($items as $r)
                         <tr>
-                            <td>{{ $r->ReferrerPayoutID }}</td>
-                            <td>{{ $r->DealsSubmissionID }}</td>
-                            <td>{{ $r->DealerID }}</td>
-                            <td>{{ $r->ReferrerID }}</td>
-                            <td>{{ $r->Status }}</td>
-                            <td>{{ $r->DateGenerated ? date('Y-m-d', strtotime($r->DateGenerated)) : '—' }}</td>
-                            <td>{{ $r->DatePaid ? date('Y-m-d', strtotime($r->DatePaid)) : '—' }}</td>
+                            <td>{{ $r->REFERRERPAYOUTID }}</td>
+                            <td>{{ $r->DEALSUBMISSIONID ?? '—' }}</td>
+                            <td>{{ $r->USERID ?? '—' }}</td>
+                            <td>{{ $r->REFERRERID ?? '—' }}</td>
+                            <td>{{ $r->STATUS ?? '—' }}</td>
+                            <td>{{ $r->DATEGENERATED ? date('Y-m-d', strtotime($r->DATEGENERATED)) : '—' }}</td>
+                            <td>{{ $r->DATEPAID ? date('Y-m-d', strtotime($r->DATEPAID)) : '—' }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="7">No payouts yet.</td></tr>

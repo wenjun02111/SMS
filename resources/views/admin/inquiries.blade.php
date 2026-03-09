@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'Inquiries – Admin')
+@section('title', 'Leads – Admin')
 @section('content')
 <header class="dashboard-header">
     <div>
-        <h1 class="dashboard-title">Customer Inquiries</h1>
-        <p class="dashboard-subtitle">Recent inquiries (latest 100)</p>
+        <h1 class="dashboard-title">Leads</h1>
+        <p class="dashboard-subtitle">Recent leads (latest 100)</p>
     </div>
 </header>
 
@@ -19,23 +19,25 @@
                         <th>Contact</th>
                         <th>Email</th>
                         <th>City</th>
-                        <th>Resolved</th>
-                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Created</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($items as $r)
                         <tr>
-                            <td>{{ $r->CustomerInquiryID }}</td>
-                            <td>{{ $r->CompanyName }}</td>
-                            <td>{{ $r->ContactName }}</td>
-                            <td>{{ $r->EmailAddress }}</td>
-                            <td>{{ $r->City ?? '—' }}</td>
-                            <td>{{ $r->IsResolved ? 'Yes' : 'No' }}</td>
-                            <td>{{ $r->SubmittedAt ? date('Y-m-d H:i', strtotime($r->SubmittedAt)) : '—' }}</td>
+                            <td>{{ $r->LEADID }}</td>
+                            <td>{{ $r->COMPANYNAME }}</td>
+                            <td>{{ $r->CONTACTNAME }}</td>
+                            <td>{{ $r->EMAIL }}</td>
+                            <td>{{ $r->CITY ?? '—' }}</td>
+                            <td>{{ $r->CURRENTSTATUS ?? '—' }}</td>
+                            <td>{{ $r->ASSIGNED_TO ?? '—' }}</td>
+                            <td>{{ $r->CREATEDAT ? date('Y-m-d H:i', strtotime($r->CREATEDAT)) : '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="7">No inquiries yet.</td></tr>
+                        <tr><td colspan="8">No leads yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

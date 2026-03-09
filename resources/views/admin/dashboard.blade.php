@@ -11,23 +11,30 @@
 <section class="dashboard-metrics">
     <div class="dashboard-metric-card">
         <div class="dashboard-metric-icon dashboard-metric-icon-leads"><i class="bi bi-graph-up-arrow"></i></div>
-        <div class="dashboard-metric-label">Total Inquiries</div>
+        <div class="dashboard-metric-label">Total Leads</div>
         <div class="dashboard-metric-value-row">
-            <div class="dashboard-metric-value">{{ $totalInquiries }}</div>
+            <div class="dashboard-metric-value">{{ $totalLeads }}</div>
         </div>
     </div>
     <div class="dashboard-metric-card">
         <div class="dashboard-metric-icon dashboard-metric-icon-closed"><i class="bi bi-cash-stack"></i></div>
-        <div class="dashboard-metric-label">Total Deals</div>
+        <div class="dashboard-metric-label">Lead Activities</div>
         <div class="dashboard-metric-value-row">
-            <div class="dashboard-metric-value">{{ $totalDeals }}</div>
+            <div class="dashboard-metric-value">{{ $totalActivities }}</div>
         </div>
     </div>
     <div class="dashboard-metric-card">
         <div class="dashboard-metric-icon dashboard-metric-icon-inquiries"><i class="bi bi-people"></i></div>
-        <div class="dashboard-metric-label">Dealers</div>
+        <div class="dashboard-metric-label">Users</div>
         <div class="dashboard-metric-value-row">
-            <div class="dashboard-metric-value">{{ $totalDealers }}</div>
+            <div class="dashboard-metric-value">{{ $totalUsers }}</div>
+        </div>
+    </div>
+    <div class="dashboard-metric-card">
+        <div class="dashboard-metric-icon dashboard-metric-icon-inquiries"><i class="bi bi-gift"></i></div>
+        <div class="dashboard-metric-label">Referrer Payouts</div>
+        <div class="dashboard-metric-value-row">
+            <div class="dashboard-metric-value">{{ $totalPayouts }}</div>
         </div>
     </div>
 </section>
@@ -37,7 +44,7 @@
         <div class="dashboard-panel-title">Quick links</div>
     </div>
     <div class="dashboard-panel-body">
-        <p><a href="{{ route('admin.inquiries') }}">Inquiries</a> · <a href="{{ route('admin.dealers') }}">Dealers</a> · <a href="{{ route('admin.rewards') }}">Rewards</a> · <a href="{{ route('admin.fulldatabase') }}">Full Database</a></p>
+        <p><a href="{{ route('admin.inquiries') }}">Leads</a> · <a href="{{ route('admin.dealers') }}">Users</a> · <a href="{{ route('admin.rewards') }}">Payouts</a> · <a href="{{ route('admin.history') }}">Lead Activities</a> · <a href="{{ route('admin.fulldatabase') }}">Full Database</a></p>
     </div>
 </section>
 @endsection
