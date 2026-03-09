@@ -174,9 +174,11 @@ class PasskeyController extends Controller
         }
 
         // Store both as base64url; ByteBuffer jsonSerialize uses RFC 1342 format which breaks storage/lookup.
-        $credentialId = $data->credentialId instanceof ByteBuffer
-            ? rtrim(strtr(base64_encode($data->credentialId->getBinaryString()), '+/', '-_'), '=')
+        // getCredentialId() returns raw binary string (not ByteBuffer) - must base64url encode for JSON storage.
+        $credIdBinary = $data->credentialId instanceof ByteBuffer
+            ? $data->credentialId->getBinaryString()
             : (string) $data->credentialId;
+        $credentialId = rtrim(strtr(base64_encode($credIdBinary), '+/', '-_'), '=');
 
         $credentialPublicKeyStorage = $data->credentialPublicKey instanceof ByteBuffer
             ? rtrim(strtr(base64_encode($data->credentialPublicKey->getBinaryString()), '+/', '-_'), '=')
@@ -277,10 +279,15 @@ class PasskeyController extends Controller
             if ($storedIdBinary === $idBinary) {
                 $storedPubKey = $cred['credentialPublicKey'] ?? null;
                 if (is_string($storedPubKey)) {
-                    try {
-                        $credentialPublicKey = ByteBuffer::fromBase64Url($storedPubKey)->getBinaryString();
-                    } catch (\Throwable $e) {
-                        $credentialPublicKey = null;
+                    // Stored as PEM (from getPublicKeyPem) or base64url. PEM must be passed through; base64url is raw binary (wrong).
+                    if (str_contains($storedPubKey, '-----BEGIN')) {
+                        $credentialPublicKey = $storedPubKey;
+                    } else {
+                        try {
+                            $credentialPublicKey = ByteBuffer::fromBase64Url($storedPubKey)->getBinaryString();
+                        } catch (\Throwable $e) {
+                            $credentialPublicKey = null;
+                        }
                     }
                 } else {
                     $credentialPublicKey = $storedPubKey;
