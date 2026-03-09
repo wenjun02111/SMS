@@ -1,10 +1,10 @@
 @extends('layouts.app')
-@section('title', 'History – Admin')
+@section('title', 'Lead Activities – Admin')
 @section('content')
 <header class="dashboard-header">
     <div>
-        <h1 class="dashboard-title">Deal Status History</h1>
-        <p class="dashboard-subtitle">Recent status changes (latest 100)</p>
+        <h1 class="dashboard-title">Lead Activities</h1>
+        <p class="dashboard-subtitle">Recent activities (latest 100)</p>
     </div>
 </header>
 
@@ -15,25 +15,25 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Deal Submission</th>
-                        <th>Previous</th>
-                        <th>New</th>
-                        <th>Changed By</th>
+                        <th>Lead</th>
+                        <th>User</th>
+                        <th>Subject</th>
+                        <th>Status</th>
                         <th>Date</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($items as $r)
                         <tr>
-                            <td>{{ $r->DealHistoryStatusID }}</td>
-                            <td>{{ $r->DealsSubmissionID }}</td>
-                            <td>{{ $r->PreviousStatus }}</td>
-                            <td>{{ $r->NewStatus }}</td>
-                            <td>{{ $r->ChangedByID }}</td>
-                            <td>{{ $r->ChangeDate ? date('Y-m-d H:i', strtotime($r->ChangeDate)) : '—' }}</td>
+                            <td>{{ $r->LEAD_ACTID }}</td>
+                            <td>{{ $r->LEADID }}</td>
+                            <td>{{ $r->USERID }}</td>
+                            <td>{{ $r->SUBJECT ?? '—' }}</td>
+                            <td>{{ $r->STATUS ?? '—' }}</td>
+                            <td>{{ $r->CREATIONDATE ? date('Y-m-d H:i', strtotime($r->CREATIONDATE)) : '—' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6">No history yet.</td></tr>
+                        <tr><td colspan="6">No activities yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

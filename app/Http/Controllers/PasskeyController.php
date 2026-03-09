@@ -13,7 +13,7 @@ class PasskeyController extends Controller
 {
     /**
      * Same as the working SQL SMS PHP project: use "localhost" for 127.0.0.1/::1
-     * so passkey works when you open http://localhost:8080 (not http://127.0.0.1:8080).
+     * so passkey works when you open http://localhost:8000 (not http://127.0.0.1:8000).
      */
     private function getRpId(Request $request): string
     {
@@ -51,26 +51,26 @@ class PasskeyController extends Controller
         $row = null;
         try {
             $row = DB::selectOne(
-                'SELECT "UserID", "Email" FROM "Users" WHERE "Email" = ? AND ("IsActive" = 1 OR "IsActive" IS NULL OR "IsActive" = true)',
+                'SELECT "USERID", "EMAIL" FROM "USERS" WHERE "EMAIL" = ? AND ("ISACTIVE" = 1 OR "ISACTIVE" IS NULL OR "ISACTIVE" = true)',
                 [$email]
             );
             if (!$row) {
                 $row = DB::selectOne(
-                    'SELECT "UserID", "Email" FROM "Users" WHERE "Email" = ?',
+                    'SELECT "USERID", "EMAIL" FROM "USERS" WHERE "EMAIL" = ?',
                     [$email]
                 );
             }
         } catch (\Throwable $e) {
             try {
                 $row = DB::selectOne(
-                    'SELECT "UserID", "Email" FROM "Users" WHERE "Email" = ?',
+                    'SELECT "USERID", "EMAIL" FROM "USERS" WHERE "EMAIL" = ?',
                     [$email]
                 );
             } catch (\Throwable $e2) {
                 try {
                     $laravelUser = DB::selectOne('SELECT id, email FROM users WHERE email = ?', [$email]);
                     if ($laravelUser) {
-                        $row = (object) ['UserID' => $laravelUser->id, 'Email' => $laravelUser->email];
+                        $row = (object) ['USERID' => $laravelUser->id, 'EMAIL' => $laravelUser->email];
                     }
                 } catch (\Throwable $e3) {
                     return response()->json([
@@ -84,17 +84,26 @@ class PasskeyController extends Controller
             return response()->json(['error' => 'No account found for this email. Use the exact email in your "Users" table (e.g. weijiansql@gmail.com).'], 400);
         }
 
-        $userIdBinary = pack('N', $row->UserID);
-        $userName = $row->Email;
-        $userDisplayName = $row->Email;
+        $userIdRaw = (string) ($row->USERID ?? '');
+        // WebAuthn user.id is an opaque byte sequence. Our Firebird USERID can be non-numeric (e.g. "U001"),
+        // so use a stable binary id that won't collapse to 0.
+        $userIdBinary = ctype_digit($userIdRaw)
+            ? pack('N', (int) $userIdRaw)
+            : hash('sha256', $userIdRaw, true);
+        $userName = $row->EMAIL;
+        $userDisplayName = $row->EMAIL;
 
         $excludeCredentialIds = [];
         $driver = DB::connection()->getDriverName();
         $selectCredSql = $driver === 'pgsql'
             ? 'SELECT "Credential" FROM "User_Passkey" WHERE "UserID" = ?'
-            : ($driver === 'sqlsrv' ? 'SELECT [Credential] FROM [User_Passkey] WHERE [UserID] = ?' : 'SELECT Credential FROM User_Passkey WHERE UserID = ?');
+            : ($driver === 'sqlsrv'
+                ? 'SELECT [Credential] FROM [User_Passkey] WHERE [UserID] = ?'
+                : ($driver === 'firebird'
+                    ? 'SELECT "CREDENTIAL" AS "Credential" FROM "USER_PASSKEY" WHERE "USERID" = ?'
+                    : 'SELECT Credential FROM User_Passkey WHERE UserID = ?'));
         try {
-            $passkeys = DB::select($selectCredSql, [$row->UserID]);
+            $passkeys = DB::select($selectCredSql, [$row->USERID]);
             foreach ($passkeys as $p) {
                 $cred = json_decode($p->Credential ?? '{}', true);
                 $cid = $cred['credentialId'] ?? null;
@@ -108,7 +117,7 @@ class PasskeyController extends Controller
             }
         } catch (\Throwable $e) {
             return response()->json([
-                'error' => 'Registration could not start. Ensure the "User_Passkey" table exists (run: php artisan migrate).',
+                'error' => 'Registration could not start. Ensure the "USER_PASSKEY" table exists and is readable.',
             ], 500);
         }
 
@@ -129,7 +138,7 @@ class PasskeyController extends Controller
         }
 
         $request->session()->put('passkey_challenge', $webAuthn->getChallenge());
-        $request->session()->put('passkey_register_user_id', $row->UserID);
+        $request->session()->put('passkey_register_user_id', $row->USERID);
         $request->session()->put('passkey_register_email', $email);
 
         return response()->json($createArgs);
@@ -200,6 +209,14 @@ class PasskeyController extends Controller
                 'INSERT INTO [User_Passkey] ([UserID], [Nickname], [Credential], [CreationDate]) VALUES (?, ?, CAST(? AS NVARCHAR(MAX)), GETDATE())',
                 [$userId, $nickname, $credentialJson]
             );
+        } elseif ($driver === 'firebird') {
+            // USER_PASSKEYID isn't auto-generated in this schema; allocate one.
+            $row = DB::selectOne('SELECT COALESCE(MAX("USER_PASSKEYID"), 0) + 1 AS "NEXT_ID" FROM "USER_PASSKEY"');
+            $nextId = (int) ($row->NEXT_ID ?? 1);
+            DB::insert(
+                'INSERT INTO "USER_PASSKEY" ("USER_PASSKEYID","USERID","NICKNAME","CREDENTIAL","CREATIONDATE") VALUES (?,?,?,?,CURRENT_TIMESTAMP)',
+                [$nextId, $userId, $nickname, $credentialJson]
+            );
         } else {
             DB::table('User_Passkey')->insert([
                 'UserID' => $userId,
@@ -251,10 +268,13 @@ class PasskeyController extends Controller
         $signature = ByteBuffer::fromBase64Url($request->input('signature'))->getBinaryString();
 
         $driver = DB::connection()->getDriverName();
-        $pkCol = $driver === 'pgsql' ? '"AutoID"' : 'id';
         $selectAuthSql = $driver === 'pgsql'
-            ? "SELECT {$pkCol} as pk, \"UserID\", \"Credential\" FROM \"User_Passkey\""
-            : ($driver === 'sqlsrv' ? 'SELECT [id] as pk, [UserID], [Credential] FROM [User_Passkey]' : "SELECT {$pkCol} as pk, UserID, Credential FROM User_Passkey");
+            ? 'SELECT "AutoID" as pk, "UserID", "Credential" FROM "User_Passkey"'
+            : ($driver === 'sqlsrv'
+                ? 'SELECT [id] as pk, [UserID], [Credential] as [Credential] FROM [User_Passkey]'
+                : ($driver === 'firebird'
+                    ? 'SELECT "USER_PASSKEYID" as pk, "USERID", "CREDENTIAL" as "Credential" FROM "USER_PASSKEY"'
+                    : 'SELECT id as pk, UserID, Credential FROM User_Passkey'));
         $passkeys = DB::select($selectAuthSql);
         $credentialPublicKey = null;
         $prevSignatureCnt = null;
@@ -293,7 +313,7 @@ class PasskeyController extends Controller
                     $credentialPublicKey = $storedPubKey;
                 }
                 $prevSignatureCnt = $cred['signatureCounter'] ?? null;
-                $userId = $p->UserID;
+                $userId = $p->USERID ?? $p->UserID ?? null;
                 $passkeyAutoId = $p->pk ?? null;
                 $matchedCred = $cred;
                 break;
@@ -330,29 +350,31 @@ class PasskeyController extends Controller
                 DB::update('UPDATE "User_Passkey" SET "Credential" = CAST(? AS TEXT) WHERE "AutoID" = ?', [$credJson, $passkeyAutoId]);
             } elseif ($driver === 'sqlsrv') {
                 DB::update('UPDATE [User_Passkey] SET [Credential] = CAST(? AS NVARCHAR(MAX)) WHERE [id] = ?', [$credJson, $passkeyAutoId]);
+            } elseif ($driver === 'firebird') {
+                DB::update('UPDATE "USER_PASSKEY" SET "CREDENTIAL" = ? WHERE "USER_PASSKEYID" = ?', [$credJson, $passkeyAutoId]);
             } else {
                 DB::table('User_Passkey')->where('id', $passkeyAutoId)->update(['Credential' => $credJson]);
             }
         }
 
         $user = DB::selectOne(
-            'SELECT "UserID", "Email", "SystemRole", "IsActive" FROM "Users" WHERE "UserID" = ?',
+            'SELECT "USERID", "EMAIL", "SYSTEMROLE", "ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
             [$userId]
         );
 
-        if (!$user || !$user->IsActive) {
+        if (!$user || !$user->ISACTIVE) {
             $request->session()->forget('passkey_challenge');
             return response()->json(['error' => 'Account not found or inactive.'], 400);
         }
 
-        DB::update('UPDATE "Users" SET "LastLogin" = NOW() WHERE "UserID" = ?', [$userId]);
+        DB::update('UPDATE "USERS" SET "LASTLOGIN" = CURRENT_TIMESTAMP WHERE "USERID" = ?', [$userId]);
 
         $request->session()->forget('passkey_challenge');
-        $request->session()->put('user_id', $user->UserID);
-        $request->session()->put('user_email', $user->Email);
-        $request->session()->put('user_role', $user->SystemRole === 'Admin' ? 'admin' : 'dealer');
+        $request->session()->put('user_id', $user->USERID);
+        $request->session()->put('user_email', $user->EMAIL);
+        $request->session()->put('user_role', $user->SYSTEMROLE === 'Admin' ? 'admin' : 'dealer');
 
-        $redirect = $user->SystemRole === 'Admin' ? '/admin/dashboard' : '/dealer/dashboard';
+        $redirect = $user->SYSTEMROLE === 'Admin' ? '/admin/dashboard' : '/dealer/dashboard';
 
         return response()->json(['success' => true, 'redirect' => $redirect]);
     }

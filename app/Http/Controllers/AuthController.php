@@ -31,18 +31,18 @@ class AuthController extends Controller
 
         // Database login
         $row = DB::selectOne(
-            'SELECT "UserID", "PasswordHash", "SystemRole", "IsActive" FROM "Users" WHERE "Email" = ?',
+            'SELECT "USERID", "PASSWORDHASH", "SYSTEMROLE", "ISACTIVE" FROM "USERS" WHERE "EMAIL" = ?',
             [$email]
         );
 
         if (!$row) {
             return back()->withInput($request->only('email'))->with('error', 'Invalid email or password.');
         }
-        if (!$row->IsActive) {
+        if (!$row->ISACTIVE) {
             return back()->withInput($request->only('email'))->with('error', 'Account is deactivated.');
         }
 
-        $stored = (string) ($row->PasswordHash ?? '');
+        $stored = (string) ($row->PASSWORDHASH ?? '');
         $looksHashed = str_starts_with($stored, '$2y$') || str_starts_with($stored, '$2a$') || str_starts_with($stored, '$argon2');
         $ok = $looksHashed ? Hash::check($password, $stored) : hash_equals($stored, $password);
 
@@ -53,15 +53,15 @@ class AuthController extends Controller
         // If legacy plaintext was stored, upgrade it to a real hash on successful login.
         if (!$looksHashed) {
             DB::update(
-                'UPDATE "Users" SET "PasswordHash" = ? WHERE "UserID" = ?',
-                [Hash::make($password), $row->UserID]
+                'UPDATE "USERS" SET "PASSWORDHASH" = ? WHERE "USERID" = ?',
+                [Hash::make($password), $row->USERID]
             );
         }
 
-        DB::update('UPDATE "Users" SET "LastLogin" = NOW() WHERE "UserID" = ?', [$row->UserID]);
+        DB::update('UPDATE "USERS" SET "LASTLOGIN" = CURRENT_TIMESTAMP WHERE "USERID" = ?', [$row->USERID]);
 
-        $role = $row->SystemRole === 'Admin' ? 'admin' : 'dealer';
-        $request->session()->put('user_id', $row->UserID);
+        $role = $row->SYSTEMROLE === 'Admin' ? 'admin' : 'dealer';
+        $request->session()->put('user_id', $row->USERID);
         $request->session()->put('user_email', $email);
         $request->session()->put('user_role', $role);
 
