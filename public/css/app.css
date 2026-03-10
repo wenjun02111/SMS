@@ -668,7 +668,7 @@ body {
 .dashboard-content {
   flex: 1;
   min-height: 0;
-  padding: 24px 28px 24px 24px;
+  padding: 28px 40px 32px 40px; /* more space left/right and bottom */
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -729,6 +729,30 @@ body {
   align-items: center;
   gap: 8px;
   position: relative;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-outline {
+  background: #7f5af0;
+  background: linear-gradient(135deg, #7f5af0, #9f67ff);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 10px 25px rgba(127, 90, 240, 0.45);
+}
+
+.btn-outline:hover {
+  filter: brightness(1.05);
 }
 
 .dashboard-icon-btn {
@@ -836,9 +860,10 @@ body {
 
 .dashboard-metric-card {
   background: #ffffff;
-  border-radius: 18px;
-  padding: 14px 16px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  border-radius: 10px; /* less curvy, closer to squares */
+  padding: 16px 18px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e5e7eb;
 }
 
 .dashboard-metric-header {
@@ -884,7 +909,7 @@ body {
 
 .dashboard-metric-label {
   font-size: 13px;
-  color: var(--text-muted, #6c757d);
+  color: #9ca3af;
   margin-bottom: 4px;
 }
 
@@ -895,7 +920,7 @@ body {
 }
 
 .dashboard-metric-value {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
 }
 
@@ -928,7 +953,7 @@ body {
 
 .dashboard-panel {
   background: #ffffff;
-  border-radius: 18px;
+  border-radius: 12px;
   padding: 16px 16px 14px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
   display: flex;
@@ -945,6 +970,11 @@ body {
 .dashboard-panel-title {
   font-size: 14px;
   font-weight: 600;
+}
+
+.dashboard-panel-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .dashboard-panel-caption {
@@ -1016,6 +1046,16 @@ body {
 
 .dashboard-table-panel {
   padding-bottom: 10px;
+}
+
+@media (max-width: 960px) {
+  .dashboard-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-panels-two-column {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .dashboard-table-wrapper {

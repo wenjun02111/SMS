@@ -6,6 +6,7 @@
     <title>@yield('title', 'SQL Sales Management System')</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    @stack('styles')
 </head>
 <body>
 <div class="dashboard-root {{ isset($sidebarCollapsed) && $sidebarCollapsed ? 'dashboard-root-sidebar-collapsed' : '' }}">
