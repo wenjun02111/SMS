@@ -22,10 +22,6 @@
             <span class="dashboard-nav-icon"><i class="bi {{ $current === 'inquiries' ? 'bi-list-ul' : 'bi-list-ul' }}"></i></span>
             <span>My Inquiries</span>
         </a>
-        <a href="{{ route('dealer.demo') }}" class="dashboard-nav-item {{ $current === 'demo' ? 'dashboard-nav-item-active' : '' }}">
-            <span class="dashboard-nav-icon"><i class="bi bi-calendar-event"></i></span>
-            <span>Demo Schedule</span>
-        </a>
         <a href="{{ route('dealer.rewards') }}" class="dashboard-nav-item {{ $current === 'rewards' ? 'dashboard-nav-item-active' : '' }}">
             <span class="dashboard-nav-icon"><i class="bi {{ $current === 'rewards' ? 'bi-trophy-fill' : 'bi-trophy' }}"></i></span>
             <span>Rewards</span>
@@ -33,10 +29,6 @@
         <a href="{{ route('dealer.reports') }}" class="dashboard-nav-item {{ $current === 'reports' ? 'dashboard-nav-item-active' : '' }}">
             <span class="dashboard-nav-icon"><i class="bi {{ $current === 'reports' ? 'bi-bar-chart-fill' : 'bi-bar-chart' }}"></i></span>
             <span>Reports</span>
-        </a>
-        <a href="{{ route('dealer.history') }}" class="dashboard-nav-item {{ $current === 'history' ? 'dashboard-nav-item-active' : '' }}">
-            <span class="dashboard-nav-icon"><i class="bi {{ $current === 'history' ? 'bi-clock-fill' : 'bi-clock-history' }}"></i></span>
-            <span>History</span>
         </a>
     </nav>
     <div class="dashboard-sidebar-footer dealer-sidebar-profile">

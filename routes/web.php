@@ -30,6 +30,8 @@ Route::middleware(['auth.sms', 'admin'])->prefix('admin')->name('admin.')->group
 Route::middleware(['auth.sms', 'dealer'])->prefix('dealer')->name('dealer.')->group(function () {
     Route::get('/dashboard', [DealerController::class, 'dashboard'])->name('dashboard');
     Route::get('/inquiries', [DealerController::class, 'inquiries'])->name('inquiries');
+    Route::get('/inquiries/{leadId}/activity', [DealerController::class, 'inquiryActivity'])->name('inquiries.activity');
+    Route::post('/inquiries/update-status', [DealerController::class, 'updateInquiryStatus'])->name('inquiries.update-status');
     Route::get('/demo', [DealerController::class, 'demo'])->name('demo');
     Route::get('/rewards', [DealerController::class, 'rewards'])->name('rewards');
     Route::get('/reports', [DealerController::class, 'reports'])->name('reports');

@@ -23,13 +23,13 @@
         </div>
         <div class="dealer-metric-card">
             <div class="dealer-metric-header">
-                <div class="dealer-metric-icon dealer-metric-icon-conversion">
-                    <i class="bi bi-graph-up"></i>
+                <div class="dealer-metric-icon dealer-metric-icon-pending">
+                    <i class="bi bi-clock"></i>
                 </div>
-                <span class="dealer-metric-trend dealer-metric-trend-down">-2% <i class="bi bi-arrow-down"></i></span>
+                <span class="dealer-metric-trend dealer-metric-trend-critical">CRITICAL</span>
             </div>
-            <div class="dealer-metric-label">My Conversion Rate</div>
-            <div class="dealer-metric-value">{{ $metrics['conversionRate'] ?? '18.5' }}%</div>
+            <div class="dealer-metric-label">Pending Follow-ups</div>
+            <div class="dealer-metric-value">{{ $metrics['pendingFollowups'] ?? 8 }}</div>
         </div>
         <div class="dealer-metric-card">
             <div class="dealer-metric-header">
@@ -38,18 +38,18 @@
                 </div>
                 <span class="dealer-metric-trend dealer-metric-trend-up">+5 <i class="bi bi-arrow-up"></i></span>
             </div>
-            <div class="dealer-metric-label">Demos This Week</div>
-            <div class="dealer-metric-value">{{ $metrics['demosThisWeek'] ?? 12 }}</div>
+            <div class="dealer-metric-label">My Closed Case</div>
+            <div class="dealer-metric-value">{{ $metrics['closedCaseCount'] ?? 0 }}</div>
         </div>
         <div class="dealer-metric-card">
             <div class="dealer-metric-header">
-                <div class="dealer-metric-icon dealer-metric-icon-pending">
-                    <i class="bi bi-clock"></i>
+                <div class="dealer-metric-icon dealer-metric-icon-conversion">
+                    <i class="bi bi-graph-up"></i>
                 </div>
-                <span class="dealer-metric-trend dealer-metric-trend-critical">CRITICAL</span>
+                <span class="dealer-metric-trend dealer-metric-trend-down">-2% <i class="bi bi-arrow-down"></i></span>
             </div>
-            <div class="dealer-metric-label">Pending Follow-ups</div>
-            <div class="dealer-metric-value">{{ $metrics['pendingFollowups'] ?? 8 }}</div>
+            <div class="dealer-metric-label">My Conversion Rate</div>
+            <div class="dealer-metric-value">{{ $metrics['conversionRate'] ?? 0 }}%</div>
         </div>
     </div>
 
@@ -74,7 +74,7 @@
                         <span>PROGRESS STAGE</span>
                         <span>NEXT FOLLOW-UP</span>
                     </div>
-                    @forelse(array_slice($leads ?? [], 0, 6) as $r)
+                    @forelse(($leads ?? []) as $i => $r)
                         @php
                             $status = strtoupper($r->CURRENTSTATUS ?? 'PENDING');
                             $stages = ['PENDING','FOLLOW UP','DEMO','CASE CONFIRMED','CASE COMPLETED','REWARD DISTRIBUTED'];
@@ -82,8 +82,9 @@
                             $idx = $idx !== false ? $idx : 0;
                             $filledCount = $idx + 1;
                             $displayStatus = in_array($status, $stages) ? $status : 'PENDING';
+                            $rowPage = (int) floor($i / ($inquiriesPerPage ?? 6)) + 1;
                         @endphp
-                        <div class="dealer-table-row">
+                        <div class="dealer-table-row dealer-inquiry-row" data-page="{{ $rowPage }}">
                             <span class="dealer-inquiry-id">#LX-{{ $r->LEADID }}</span>
                             <span>{{ $r->CONTACTNAME ? 'Mr/Ms ' . $r->CONTACTNAME : ($r->COMPANYNAME ?? '—') }}</span>
                             <span>{{ $r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED)) : '—' }}</span>
@@ -99,72 +100,66 @@
                                     @endfor
                                 </div>
                             </div>
-                            <span>{{ $idx < 4 ? ($r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED . ' +7 days')) : 'N/A') : 'N/A' }}</span>
+                            <span>{{ $idx < 4 ? ($r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED . ' +3 days')) : 'N/A') : 'N/A' }}</span>
                         </div>
                     @empty
-                        <div class="dealer-table-row dealer-table-empty">
-                            <span colspan="5">No inquiries assigned yet.</span>
-                        </div>
+                        <div class="dealer-table-empty">No inquiries assigned yet.</div>
                     @endforelse
                 </div>
                 <div class="dealer-table-footer">
-                    <span class="dealer-table-count">Showing {{ min(6, count($leads ?? [])) }} of {{ count($leads ?? []) }} inquiries</span>
-                    <div class="dealer-pagination">
-                        <button type="button" class="dealer-pagination-btn" disabled><i class="bi bi-chevron-left"></i></button>
-                        <button type="button" class="dealer-pagination-btn dealer-pagination-btn--active">1</button>
-                        <button type="button" class="dealer-pagination-btn">2</button>
-                        <button type="button" class="dealer-pagination-btn"><i class="bi bi-chevron-right"></i></button>
+                    @php
+                        $leadsTotal = $leadsTotal ?? 0;
+                        $inquiriesTotalPages = max(1, $inquiriesTotalPages ?? 1);
+                        $inquiriesPerPage = $inquiriesPerPage ?? 6;
+                    @endphp
+                    <span class="dealer-table-count" id="inquiriesCountText">Showing 0 of {{ $leadsTotal }} inquiries</span>
+                    <div class="dealer-pagination" id="inquiriesPagination"
+                         data-total="{{ $leadsTotal }}"
+                         data-per-page="{{ $inquiriesPerPage }}"
+                         data-total-pages="{{ $inquiriesTotalPages }}">
+                        <button type="button" class="dealer-pagination-btn" id="inquiriesPrevBtn" title="Previous page"><i class="bi bi-chevron-left"></i></button>
+                        <div class="dealer-pagination-pages" id="inquiriesPageNumbers"></div>
+                        <button type="button" class="dealer-pagination-btn" id="inquiriesNextBtn" title="Next page"><i class="bi bi-chevron-right"></i></button>
                     </div>
                 </div>
             </div>
         </div>
         <div class="dealer-dashboard-main-right">
-            <div class="dealer-panel dealer-demos-panel">
+            <div class="dealer-panel dealer-closed-case-panel">
                 <div class="dealer-panel-header dealer-panel-header--no-action">
                     <div class="dealer-panel-title-row">
                         <div class="dealer-panel-icon dealer-panel-icon-demos">
-                            <i class="bi bi-calendar-event"></i>
+                            <i class="bi bi-bar-chart-fill"></i>
                         </div>
-                        <h2 class="dealer-panel-title">Upcoming Demos</h2>
+                        <h2 class="dealer-panel-title">My Closed Case</h2>
+                    </div>
+                    <div class="dealer-chart-period-selector">
+                        <button type="button" class="dealer-chart-period-btn dealer-chart-period-btn--active" data-period="week">Week</button>
+                        <button type="button" class="dealer-chart-period-btn" data-period="month">Month</button>
+                        <button type="button" class="dealer-chart-period-btn" data-period="year">Year</button>
                     </div>
                 </div>
-                <div class="dealer-upcoming-list">
-                    @foreach($upcomingDemos ?? [] as $d)
-                        <div class="dealer-upcoming-item">
-                            <div class="dealer-upcoming-date-block">
-                                <span class="dealer-upcoming-day">{{ $d->day }}</span>
-                                <span class="dealer-upcoming-date-num">{{ $d->dateNum }}</span>
+                <div class="dealer-closed-case-chart dealer-chart-period-week" id="closedCaseChart"
+                     data-week="{{ json_encode($closedCaseChartData['week'] ?? []) }}"
+                     data-month="{{ json_encode($closedCaseChartData['month'] ?? []) }}"
+                     data-year="{{ json_encode($closedCaseChartData['year'] ?? []) }}">
+                    @php
+                        $chartData = $closedCaseChartData['week'] ?? [];
+                        $maxCount = max(1, collect($chartData)->pluck('count')->max() ?? 1);
+                    @endphp
+                    <div class="dealer-bar-chart-bars" id="closedCaseChartBars">
+                        @foreach($chartData as $item)
+                            <div class="dealer-bar-chart-bar-wrap">
+                                <div class="dealer-bar-chart-bar" style="height: {{ ($item->count / $maxCount) * 100 }}%"></div>
                             </div>
-                            <div class="dealer-upcoming-info">
-                                <span class="dealer-upcoming-title">{{ $d->title }}</span>
-                                <span class="dealer-upcoming-meta">{{ $d->time }} • {{ $d->contact }}</span>
-                            </div>
-                        </div>
-                    @endforeach
-                    @if(empty($upcomingDemos))
-                        <div class="dealer-upcoming-item">
-                            <div class="dealer-upcoming-date-block">
-                                <span class="dealer-upcoming-day">OCT</span>
-                                <span class="dealer-upcoming-date-num">24</span>
-                            </div>
-                            <div class="dealer-upcoming-info">
-                                <span class="dealer-upcoming-title">SQL Payroll Demo</span>
-                                <span class="dealer-upcoming-meta">10:30 AM • Ms Ng</span>
-                            </div>
-                        </div>
-                        <div class="dealer-upcoming-item">
-                            <div class="dealer-upcoming-date-block">
-                                <span class="dealer-upcoming-day">OCT</span>
-                                <span class="dealer-upcoming-date-num">24</span>
-                            </div>
-                            <div class="dealer-upcoming-info">
-                                <span class="dealer-upcoming-title">SQL Account Demo</span>
-                                <span class="dealer-upcoming-meta">2:00 PM • Mr Lim</span>
-                            </div>
-                        </div>
-                    @endif
+                        @endforeach
+                    </div>
+                    <div class="dealer-bar-chart-xaxis" id="closedCaseChartXaxis">
+                        @foreach($chartData as $item)
+                            <span>{{ $item->label }}</span>
+                        @endforeach
+                    </div>
                 </div>
-                <a href="{{ route('dealer.demo') }}" class="dealer-upcoming-schedule-link">Open Full Schedule</a>
             </div>
             <div class="dealer-panel dealer-alert-panel">
                 <div class="dealer-panel-header dealer-panel-header--simple">
@@ -191,34 +186,7 @@
                         </div>
                     @endforeach
                     @if(empty($highPriorityFollowups))
-                        <div class="dealer-alert-item dealer-alert-item--overdue">
-                            <div class="dealer-alert-top">
-                                <span class="dealer-alert-badge dealer-alert-badge--overdue">OVERDUE</span>
-                                <span class="dealer-alert-time">2h late</span>
-                            </div>
-                            <div class="dealer-alert-main">
-                                <span class="dealer-alert-title">LX-1234 Ms Wong</span>
-                                <span class="dealer-alert-subtitle">SQL Account + Stock</span>
-                            </div>
-                            <div class="dealer-alert-actions">
-                                <button type="button" class="dealer-primary-pill">Email Now</button>
-                                <button type="button" class="dealer-secondary-pill">Skip</button>
-                            </div>
-                        </div>
-                        <div class="dealer-alert-item dealer-alert-item--due-soon">
-                            <div class="dealer-alert-top">
-                                <span class="dealer-alert-badge dealer-alert-badge--due">DUE SOON</span>
-                                <span class="dealer-alert-time">In 45m</span>
-                            </div>
-                            <div class="dealer-alert-main">
-                                <span class="dealer-alert-title">LX-6789 Ms Sarah</span>
-                                <span class="dealer-alert-subtitle">SQL Payroll (50 staffs)</span>
-                            </div>
-                            <div class="dealer-alert-actions">
-                                <button type="button" class="dealer-primary-pill">Email Now</button>
-                                <button type="button" class="dealer-secondary-pill">Skip</button>
-                            </div>
-                        </div>
+                        <div class="dealer-alert-empty">No follow-ups due at the moment.</div>
                     @endif
                 </div>
             </div>
@@ -239,4 +207,96 @@
         </div>
     </footer>
 </div>
+@push('scripts')
+<script>
+(function() {
+    var chartEl = document.getElementById('closedCaseChart');
+    var barsEl = document.getElementById('closedCaseChartBars');
+    var xaxisEl = document.getElementById('closedCaseChartXaxis');
+    var periodBtns = document.querySelectorAll('.dealer-chart-period-btn');
+    if (!chartEl || !barsEl || !xaxisEl || !periodBtns.length) return;
+
+    var data = {
+        week: JSON.parse(chartEl.getAttribute('data-week') || '[]'),
+        month: JSON.parse(chartEl.getAttribute('data-month') || '[]'),
+        year: JSON.parse(chartEl.getAttribute('data-year') || '[]')
+    };
+
+    function renderChart(period) {
+        var items = data[period] || [];
+        var maxCount = Math.max(1, Math.max.apply(null, items.map(function(i) { return i.count || 0; })));
+
+        chartEl.classList.remove('dealer-chart-period-week', 'dealer-chart-period-month', 'dealer-chart-period-year');
+        chartEl.classList.add('dealer-chart-period-' + period);
+
+        barsEl.innerHTML = items.map(function(item) {
+            var pct = ((item.count || 0) / maxCount) * 100;
+            return '<div class="dealer-bar-chart-bar-wrap"><div class="dealer-bar-chart-bar" style="height:' + pct + '%"></div></div>';
+        }).join('');
+
+        xaxisEl.innerHTML = items.map(function(item) {
+            return '<span>' + (item.label || '') + '</span>';
+        }).join('');
+    }
+
+    periodBtns.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var period = this.getAttribute('data-period');
+            periodBtns.forEach(function(b) { b.classList.remove('dealer-chart-period-btn--active'); });
+            this.classList.add('dealer-chart-period-btn--active');
+            renderChart(period);
+        });
+    });
+})();
+
+(function() {
+    var pagination = document.getElementById('inquiriesPagination');
+    var rows = document.querySelectorAll('.dealer-inquiry-row');
+    var countText = document.getElementById('inquiriesCountText');
+    var prevBtn = document.getElementById('inquiriesPrevBtn');
+    var nextBtn = document.getElementById('inquiriesNextBtn');
+    var pageNumbersEl = document.getElementById('inquiriesPageNumbers');
+    if (!pagination || !countText) return;
+
+    var total = parseInt(pagination.getAttribute('data-total') || '0', 10);
+    var perPage = parseInt(pagination.getAttribute('data-per-page') || '6', 10);
+    var totalPages = parseInt(pagination.getAttribute('data-total-pages') || '1', 10);
+    var currentPage = 1;
+
+    function goToPage(page) {
+        currentPage = Math.max(1, Math.min(page, totalPages));
+        rows.forEach(function(row) {
+            row.style.display = parseInt(row.getAttribute('data-page'), 10) === currentPage ? '' : 'none';
+        });
+        var from = total > 0 ? ((currentPage - 1) * perPage) + 1 : 0;
+        var to = Math.min(currentPage * perPage, total);
+        countText.textContent = 'Showing ' + (total > 0 ? from + '-' + to + ' of ' : '0 of ') + total + ' inquiries';
+        prevBtn.disabled = currentPage <= 1;
+        nextBtn.disabled = currentPage >= totalPages;
+        var btns = pageNumbersEl.querySelectorAll('button');
+        btns.forEach(function(b) {
+            b.classList.toggle('dealer-pagination-btn--active', parseInt(b.getAttribute('data-page'), 10) === currentPage);
+        });
+    }
+
+    function buildPageNumbers() {
+        pageNumbersEl.innerHTML = '';
+        for (var p = 1; p <= Math.min(totalPages, 5); p++) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'dealer-pagination-btn' + (p === 1 ? ' dealer-pagination-btn--active' : '');
+            btn.setAttribute('data-page', p);
+            btn.textContent = p;
+            btn.addEventListener('click', function() { goToPage(parseInt(this.getAttribute('data-page'), 10)); });
+            pageNumbersEl.appendChild(btn);
+        }
+    }
+
+    prevBtn.addEventListener('click', function() { if (!this.disabled) goToPage(currentPage - 1); });
+    nextBtn.addEventListener('click', function() { if (!this.disabled) goToPage(currentPage + 1); });
+    buildPageNumbers();
+    goToPage(1);
+})();
+</script>
+@endpush
 @endsection
