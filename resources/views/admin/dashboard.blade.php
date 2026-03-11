@@ -1,13 +1,6 @@
 @extends('layouts.app')
 @section('title', 'Dashboard – Admin')
 @section('content')
-<header class="dashboard-header">
-    <div>
-        <h1 class="dashboard-title">Dashboard</h1>
-        <p class="dashboard-subtitle">Overview of system metrics</p>
-    </div>
-</header>
-
 <section class="dashboard-metrics">
     <div class="dashboard-metric-card">
         <div class="dashboard-metric-icon dashboard-metric-icon-leads"><i class="bi bi-graph-up-arrow"></i></div>
@@ -43,30 +36,34 @@
     </div>
 </section>
 
-<section class="dashboard-row">
-    <div class="dashboard-panel dashboard-chart-panel">
-        <div class="dashboard-panel-header">
-            <div class="dashboard-panel-title">Closed Case</div>
-            <div class="dashboard-chart-tabs">
-                <button type="button" class="dashboard-chart-tab active" data-range="week">Week</button>
-                <button type="button" class="dashboard-chart-tab" data-range="month">Month</button>
-                <button type="button" class="dashboard-chart-tab" data-range="year">Year</button>
-            </div>
-        </div>
-        <div class="dashboard-panel-body">
-            <div class="dashboard-chart-container">
-                <canvas id="closedCaseChart" height="200"></canvas>
-            </div>
+<section class="dashboard-charts-container">
+    <div class="dashboard-charts-container-header">
+        <div class="dashboard-chart-tabs" id="closedCaseRangeTabs">
+            <button type="button" class="dashboard-chart-tab active" data-range="week">Week</button>
+            <button type="button" class="dashboard-chart-tab" data-range="month">Month</button>
+            <button type="button" class="dashboard-chart-tab" data-range="year">Year</button>
         </div>
     </div>
-    <div class="dashboard-panel dashboard-chart-panel">
-        <div class="dashboard-panel-header">
-            <div class="dashboard-panel-title">Recent Referral Activity</div>
-            <span class="dashboard-metric-pill dashboard-metric-pill-up">+14% vs last week</span>
+    <div class="dashboard-row">
+        <div class="dashboard-panel dashboard-chart-panel">
+            <div class="dashboard-panel-header">
+                <div class="dashboard-panel-title">Closed Case</div>
+            </div>
+            <div class="dashboard-panel-body">
+                <div class="dashboard-chart-container">
+                    <canvas id="closedCaseChart" height="200"></canvas>
+                </div>
+            </div>
         </div>
-        <div class="dashboard-panel-body">
-            <div class="dashboard-chart-container">
-                <canvas id="referralChart" height="200"></canvas>
+        <div class="dashboard-panel dashboard-chart-panel">
+            <div class="dashboard-panel-header">
+                <div class="dashboard-panel-title">Recent Referral Activity</div>
+                <span class="dashboard-metric-pill dashboard-metric-pill-up">+14% vs last week</span>
+            </div>
+            <div class="dashboard-panel-body">
+                <div class="dashboard-chart-container">
+                    <canvas id="referralChart" height="200"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -83,21 +80,25 @@
                 <thead>
                     <tr>
                         <th>Dealer Name</th>
+                        <th>Location</th>
                         <th>Leads</th>
                         <th>Closed</th>
                         <th>Conversion</th>
+                        <th>Avg. Closing Time</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($topDealers as $d)
                         <tr>
                             <td>{{ $d['dealer_name'] }}</td>
+                            <td>{{ $d['location'] }}</td>
                             <td>{{ number_format($d['total_leads']) }}</td>
                             <td>{{ number_format($d['closed_count']) }}</td>
                             <td>{{ $d['conversion_rate'] }}%</td>
+                            <td>{{ $d['avg_closing_time'] }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="4">No dealer data yet.</td></tr>
+                        <tr><td colspan="6">No dealer data yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -179,26 +180,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.querySelectorAll('.dashboard-chart-tab[data-range]').forEach((btn) => {
+    document.querySelectorAll('#closedCaseRangeTabs .dashboard-chart-tab[data-range]').forEach((btn) => {
         btn.addEventListener('click', () => {
             const range = btn.getAttribute('data-range');
-            if (!range || !ranges[range] || !closedChart) return;
+            if (!range || !ranges[range]) return;
 
-            document.querySelectorAll('.dashboard-chart-tab[data-range]').forEach((b) => b.classList.remove('active'));
+            document.querySelectorAll('#closedCaseRangeTabs .dashboard-chart-tab[data-range]').forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
-            closedChart.data.labels = ranges[range].labels;
-            closedChart.data.datasets[0].data = ranges[range].data;
-            closedChart.update();
+            const refMap = { week: referralWeekData, month: referralMonthData, year: referralYearData };
+            const refData = refMap[range] ?? referralWeekData;
 
+            if (closedChart) {
+                closedChart.data.labels = ranges[range].labels;
+                closedChart.data.datasets[0].data = ranges[range].data;
+                closedChart.update();
+            }
             if (referralChart) {
-                const refMap = {
-                    week: referralWeekData,
-                    month: referralMonthData,
-                    year: referralYearData,
-                };
                 referralChart.data.labels = ranges[range].labels;
-                referralChart.data.datasets[0].data = refMap[range] ?? referralWeekData;
+                referralChart.data.datasets[0].data = refData;
                 referralChart.update();
             }
         });

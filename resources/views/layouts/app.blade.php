@@ -42,10 +42,23 @@
         </header>
 
         @if (session('error'))
-            <div class="login-message login-error" style="margin:16px;">{{ session('error') }}</div>
+            <div class="login-message login-error" style="margin:16px;" data-flash-message="1">{{ session('error') }}</div>
         @endif
         @if (session('success'))
-            <div class="login-message login-success" style="margin:16px;">{{ session('success') }}</div>
+            <div class="login-message login-success" style="margin:16px;" data-flash-message="1">{{ session('success') }}</div>
+        @endif
+
+        @if (session('show_passkey_prompt'))
+        <div class="passkey-prompt-overlay" id="passkeyPromptOverlay" role="dialog" aria-modal="true" aria-labelledby="passkeyPromptTitle">
+            <div class="passkey-prompt-window">
+                <h2 class="passkey-prompt-title" id="passkeyPromptTitle">Register a passkey?</h2>
+                <p class="passkey-prompt-text">You can register a passkey to sign in quickly next time without entering your password.</p>
+                <div class="passkey-prompt-actions">
+                    <a href="{{ route('passkey.register.form') }}" class="login-primary-btn passkey-prompt-btn">Register passkey</a>
+                    <button type="button" class="passkey-prompt-skip" id="passkeyPromptSkip">Not now</button>
+                </div>
+            </div>
+        </div>
         @endif
 
         <div class="dashboard-main-body">
@@ -58,23 +71,42 @@
 @push('scripts')
 <script>
 (function() {
+    // Auto-hide flash messages (success/error) after 3s
+    document.querySelectorAll('[data-flash-message="1"]').forEach(function(el) {
+        setTimeout(function() {
+            if (!el) return;
+            el.style.transition = 'opacity 200ms ease';
+            el.style.opacity = '0';
+            setTimeout(function() { if (el && el.parentNode) el.parentNode.removeChild(el); }, 250);
+        }, 3000);
+    });
+
     var trigger = document.getElementById('profileDropdownTrigger');
     var menu = document.getElementById('profileDropdownMenu');
-    if (!trigger || !menu) return;
-    function toggle() {
-        var open = !menu.hidden;
-        menu.hidden = open;
-        trigger.setAttribute('aria-expanded', !open);
+    if (trigger && menu) {
+        function toggle() {
+            var open = !menu.hidden;
+            menu.hidden = open;
+            trigger.setAttribute('aria-expanded', !open);
+        }
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggle();
+        });
+        document.addEventListener('click', function() {
+            if (!menu.hidden) { menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); }
+        });
+        menu.addEventListener('click', function(e) { e.stopPropagation(); });
     }
-    trigger.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        toggle();
-    });
-    document.addEventListener('click', function() {
-        if (!menu.hidden) { menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); }
-    });
-    menu.addEventListener('click', function(e) { e.stopPropagation(); });
+    var overlay = document.getElementById('passkeyPromptOverlay');
+    var skipBtn = document.getElementById('passkeyPromptSkip');
+    if (overlay && skipBtn) {
+        skipBtn.addEventListener('click', function() { overlay.remove(); });
+        overlay.addEventListener('click', function(e) {
+            if (e.target === overlay) overlay.remove();
+        });
+    }
 })();
 </script>
 @endpush

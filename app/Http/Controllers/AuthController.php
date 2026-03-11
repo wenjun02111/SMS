@@ -12,6 +12,12 @@ class AuthController extends Controller
 {
     public function showLoginForm(Request $request): View|RedirectResponse
     {
+        // After sign-in success we stay on login page to show register passkey; only then go to dashboard.
+        if ($request->session()->has('user_id') && $request->session()->has('show_register_passkey')) {
+            $role = $request->session()->get('user_role');
+            $dashboardUrl = ($role === 'admin' || $role === 'manager') ? '/admin/dashboard' : '/dealer/dashboard';
+            return view('auth.login', ['show_register_passkey' => true, 'dashboard_url' => $dashboardUrl]);
+        }
         if ($request->session()->has('user_role')) {
             $role = $request->session()->get('user_role');
             if ($role === 'admin' || $role === 'manager') {
@@ -74,10 +80,9 @@ class AuthController extends Controller
         $request->session()->put('user_alias', $row->ALIAS ?? '');
         $request->session()->put('user_role', $role);
 
-        if ($role === 'admin' || $role === 'manager') {
-            return redirect('/admin/dashboard');
-        }
-        return redirect('/dealer/dashboard');
+        // Stay on login page and show register passkey; redirect to dashboard only after they register or skip.
+        $request->session()->flash('show_register_passkey', true);
+        return redirect()->route('login');
     }
 
     public function logout(Request $request): RedirectResponse

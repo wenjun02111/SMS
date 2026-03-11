@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -30,27 +33,116 @@ class AdminController extends Controller
 
         $dealerStats = [];
         try {
-            $topDealersRaw = DB::select(
-                'SELECT u."USERID", u."EMAIL", u."ALIAS",
-                    COUNT(la."LEAD_ACTID") as total_leads,
-                    SUM(CASE WHEN (la."STATUS" = \'Completed\' OR la."STATUS" = \'Reward\') THEN 1 ELSE 0 END) as closed_count
-                FROM "USERS" u
-                LEFT JOIN "LEAD_ACT" la ON la."USERID" = u."USERID"
-                WHERE u."SYSTEMROLE" = \'Dealer\'
-                GROUP BY u."USERID", u."EMAIL", u."ALIAS"
-                HAVING COUNT(la."LEAD_ACTID") > 0'
-            );
+            // Top Active Dealers (USERS + LEAD) per requested logic:
+            // Leads: COUNT(*) from LEAD where ASSIGNED_TO = dealer
+            // Closed: COUNT(*) where ASSIGNED_TO = dealer and CURRENTSTATUS = 'Closed'
+            // Conversion: Closed / Leads
+            // Pull dealer list first (company is display name).
+            // Some schemas may not have COMPANY populated; still return rows.
+            $topDealersRaw = [];
+            try {
+                $topDealersRaw = DB::select(
+                    'SELECT u."USERID", u."EMAIL", u."COMPANY" AS "COMPANY", u."POSTCODE" AS "POSTCODE", u."CITY" AS "CITY"
+                     FROM "USERS" u
+                     WHERE UPPER(TRIM(u."SYSTEMROLE")) LIKE \'%DEALER%\''
+                );
+            } catch (\Throwable $e) {
+                // Fallback if COMPANY column is unavailable for any reason.
+                $topDealersRaw = DB::select(
+                    'SELECT u."USERID", u."EMAIL", \'\' AS "COMPANY", \'\' AS "POSTCODE", \'\' AS "CITY"
+                     FROM "USERS" u
+                     WHERE UPPER(TRIM(u."SYSTEMROLE")) LIKE \'%DEALER%\''
+                );
+            }
 
             $dealerStats = collect($topDealersRaw)->map(function ($d) {
-            $leads = (int) $d->total_leads;
-            $closed = (int) $d->closed_count;
-            return [
-                'dealer_name' => ! empty($d->ALIAS ?? '') ? $d->ALIAS : ($d->EMAIL ?? 'Dealer #'.$d->USERID),
-                'total_leads' => $leads,
-                'closed_count' => $closed,
-                'conversion_rate' => $leads > 0 ? round(($closed / $leads) * 100, 1) : 0,
-            ];
-        })->sortByDesc('conversion_rate')->values()->all();
+                $userId = (string) ($d->USERID ?? '');
+                $leadsRow = DB::selectOne(
+                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50)))',
+                    [$userId]
+                );
+                $closedRow = DB::selectOne(
+                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND "CURRENTSTATUS" = \'Closed\'',
+                    [$userId]
+                );
+                $leads = (int) ($leadsRow->c ?? $leadsRow->C ?? current((array) $leadsRow) ?? 0);
+                $closed = (int) ($closedRow->c ?? $closedRow->C ?? current((array) $closedRow) ?? 0);
+                $conversion = $leads > 0 ? ($closed / $leads) : 0;
+                $company = trim((string) ($d->COMPANY ?? ''));
+
+                // Avg. Closing Time: average(Completed.CREATIONDATE - Pending.CREATIONDATE) per LEADID for this dealer.
+                $avgClosingSeconds = null;
+                try {
+                    $rows = DB::select(
+                        'SELECT
+                            a."LEADID" AS lead_id,
+                            MIN(CASE WHEN a."STATUS" = \'Pending\' THEN a."CREATIONDATE" END) AS pending_at,
+                            MIN(CASE WHEN a."STATUS" = \'Completed\' THEN a."CREATIONDATE" END) AS completed_at
+                         FROM "LEAD_ACT" a
+                         JOIN "LEAD" l ON l."LEADID" = a."LEADID"
+                         WHERE TRIM(CAST(l."ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50)))
+                         GROUP BY a."LEADID"',
+                        [$userId]
+                    );
+                    $total = 0;
+                    $count = 0;
+                    foreach ($rows as $r) {
+                        $p = $r->pending_at ?? $r->PENDING_AT ?? null;
+                        $cAt = $r->completed_at ?? $r->COMPLETED_AT ?? null;
+                        if (!$p || !$cAt) continue;
+                        $pTs = strtotime((string) $p);
+                        $cTs = strtotime((string) $cAt);
+                        if (!$pTs || !$cTs || $cTs < $pTs) continue;
+                        $total += ($cTs - $pTs);
+                        $count++;
+                    }
+                    if ($count > 0) {
+                        $avgClosingSeconds = (int) round($total / $count);
+                    }
+                } catch (\Throwable $e) {
+                    $avgClosingSeconds = null;
+                }
+
+                $avgClosingDisplay = '-';
+                if (is_int($avgClosingSeconds)) {
+                    $mins = (int) floor($avgClosingSeconds / 60);
+                    if ($mins < 60) {
+                        $avgClosingDisplay = $mins . ' min';
+                    } elseif ($mins < 60 * 24) {
+                        $h = (int) floor($mins / 60);
+                        $m = $mins % 60;
+                        $avgClosingDisplay = $h . 'h ' . $m . 'm';
+                    } else {
+                        $d2 = (int) floor($mins / (60 * 24));
+                        $remM = $mins % (60 * 24);
+                        $h2 = (int) floor($remM / 60);
+                        $avgClosingDisplay = $d2 . 'd ' . $h2 . 'h';
+                    }
+                }
+
+                $postcode = trim((string) ($d->POSTCODE ?? ''));
+                $city = trim((string) ($d->CITY ?? ''));
+                $location = trim(trim($postcode . ' ' . $city));
+                return [
+                    // Per requirement: show company column for dealers.
+                    'dealer_name' => $company,
+                    'location' => $location,
+                    'total_leads' => $leads,
+                    'closed_count' => $closed,
+                    'conversion_rate' => round($conversion * 100, 1),
+                    'avg_closing_time' => $avgClosingDisplay,
+                ];
+            })
+                // Highest conversion rate first; tie-breakers: closed, leads
+                ->sort(function (array $a, array $b) {
+                    $c = ($b['conversion_rate'] <=> $a['conversion_rate']);
+                    if ($c !== 0) return $c;
+                    $c2 = ($b['closed_count'] <=> $a['closed_count']);
+                    if ($c2 !== 0) return $c2;
+                    return ($b['total_leads'] <=> $a['total_leads']);
+                })
+                ->values()
+                ->all();
         } catch (\Throwable $e) {
             // Schema may differ; keep empty
         }
@@ -157,24 +249,417 @@ class AdminController extends Controller
     public function inquiries(): View
     {
         $rows = DB::select(
-            'SELECT FIRST 100
-                "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL","CITY","POSTCODE",
-                "BUSINESSNATURE","USERCOUNT","EXISTINGSOFTWARE","DEMOMODE","CURRENTSTATUS",
-                "CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
+            'SELECT FIRST 200
+                "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL","ADDRESS1","ADDRESS2","CITY","POSTCODE",
+                "BUSINESSNATURE","USERCOUNT","EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
+                "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
             FROM "LEAD"
             ORDER BY "LEADID" DESC'
         );
-        return view('admin.inquiries', ['items' => $rows, 'currentPage' => 'inquiries']);
+        $unassigned = [];
+        $assigned = [];
+        foreach ($rows as $r) {
+            $assignedTo = trim((string) ($r->ASSIGNED_TO ?? ''));
+            if ($assignedTo === '') {
+                $unassigned[] = $r;
+            } else {
+                $assigned[] = $r;
+            }
+        }
+
+        // Override CURRENTSTATUS from latest LEAD_ACT status per LEADID
+        try {
+            $leadIds = [];
+            foreach ($rows as $r) {
+                $lid = (int)($r->LEADID ?? 0);
+                if ($lid > 0) {
+                    $leadIds[$lid] = true;
+                }
+            }
+            $leadIds = array_keys($leadIds);
+            if (!empty($leadIds)) {
+                $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
+                // Get latest LEAD_ACT row per LEADID by CREATIONDATE
+                $acts = DB::select(
+                    'SELECT a."LEADID", a."STATUS"
+                     FROM "LEAD_ACT" a
+                     JOIN (
+                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
+                         FROM "LEAD_ACT"
+                         WHERE "LEADID" IN (' . $placeholders . ')
+                         GROUP BY "LEADID"
+                     ) x
+                       ON x."LEADID" = a."LEADID" AND x.MAXCD = a."CREATIONDATE"
+                     WHERE a."LEADID" IN (' . $placeholders . ')',
+                    array_merge($leadIds, $leadIds)
+                );
+                $statusMap = [];
+                foreach ($acts as $a) {
+                    $lid = (int)($a->LEADID ?? 0);
+                    if ($lid > 0) {
+                        $statusMap[$lid] = trim((string)($a->STATUS ?? ''));
+                    }
+                }
+                if (!empty($statusMap)) {
+                    foreach ($rows as $r) {
+                        $lid = (int)($r->LEADID ?? 0);
+                        if ($lid > 0 && isset($statusMap[$lid]) && $statusMap[$lid] !== '') {
+                            $r->CURRENTSTATUS = $statusMap[$lid];
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // If LEAD_ACT lookup fails, keep CURRENTSTATUS from LEAD
+        }
+
+        // Resolve display names (ALIAS first) from USERS for:
+        // - Source (CREATEDBY)
+        // - Assigned By (CREATEDBY)
+        // - Assigned To (ASSIGNED_TO)
+        try {
+            $ids = [];
+            foreach ($rows as $r) {
+                $to = trim((string) ($r->ASSIGNED_TO ?? ''));
+                $by = trim((string) ($r->CREATEDBY ?? ''));
+                if ($to !== '') $ids[$to] = true;
+                if ($by !== '') $ids[$by] = true;
+            }
+            $ids = array_keys($ids);
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $users = DB::select('SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')', $ids);
+                $userMap = [];
+                foreach ($users as $u) {
+                    $uid = trim((string) ($u->USERID ?? ''));
+                    if ($uid === '') continue;
+                    $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                    $alias = trim((string) ($u->ALIAS ?? ''));
+                    $fallback = trim((string) ($u->COMPANY ?? ''));
+                    if ($fallback === '') $fallback = trim((string) ($u->EMAIL ?? ''));
+                    if ($fallback === '') $fallback = $uid;
+
+                    if ($role !== '' && $alias !== '') {
+                        $label = $role . '- ' . $alias;
+                    } elseif ($role !== '') {
+                        $label = $role . '- ' . $fallback;
+                    } elseif ($alias !== '') {
+                        $label = $alias;
+                    } else {
+                        $label = $fallback;
+                    }
+                    $userMap[$uid] = $label;
+                }
+                foreach ($rows as $r) {
+                    $to = trim((string) ($r->ASSIGNED_TO ?? ''));
+                    $by = trim((string) ($r->CREATEDBY ?? ''));
+                    if ($to !== '' && isset($userMap[$to])) $r->ASSIGNED_TO_NAME = $userMap[$to];
+                    if ($by !== '' && isset($userMap[$by])) $r->CREATEDBY_NAME = $userMap[$by];
+                }
+            }
+        } catch (\Throwable $e) {
+            // fall back to raw ids
+        }
+        $totalNewInquiries = count($unassigned);
+        $productLabels = [
+            1 => 'Account',
+            2 => 'Payroll',
+            3 => 'Production',
+            4 => 'Mobile Sales',
+            5 => 'Ecommerce',
+            6 => 'EBI POS',
+            7 => 'Sudu AI',
+            8 => 'X-Store',
+            9 => 'Vision',
+            10 => 'HRMS',
+            11 => 'Others',
+        ];
+
+        // Dealer list for Assign dropdown (with stats similar to Dealers page)
+        $dealers = [];
+        try {
+            $baseDealers = DB::select(
+                'SELECT "USERID","EMAIL","POSTCODE","CITY","ISACTIVE","COMPANY","ALIAS"
+                 FROM "USERS"
+                 WHERE TRIM("SYSTEMROLE") = \'Dealer\'
+                 ORDER BY "COMPANY"'
+            );
+
+            $leadStats = [];
+            try {
+                $statsRows = DB::select(
+                    'SELECT
+                        TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) AS UID,
+                        COUNT(*) AS TOTAL_LEAD,
+                        SUM(CASE WHEN "CURRENTSTATUS" = \'Closed\' THEN 1 ELSE 0 END) AS TOTAL_CLOSED
+                     FROM "LEAD"
+                     WHERE "ASSIGNED_TO" IS NOT NULL AND TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) <> \'\'
+                     GROUP BY TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50)))'
+                );
+                foreach ($statsRows as $sr) {
+                    $uid = trim((string)($sr->UID ?? $sr->uid ?? ''));
+                    if ($uid === '') continue;
+                    $totalLead = (int)($sr->TOTAL_LEAD ?? $sr->total_lead ?? 0);
+                    $totalClosed = (int)($sr->TOTAL_CLOSED ?? $sr->total_closed ?? 0);
+                    $leadStats[$uid] = [
+                        'totalLead' => $totalLead,
+                        'totalClosed' => $totalClosed,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // leave stats empty
+            }
+
+            $dealers = array_map(function ($r) use ($leadStats) {
+                $uid = trim((string)($r->USERID ?? ''));
+                $totalLead = $leadStats[$uid]['totalLead'] ?? 0;
+                $totalClosed = $leadStats[$uid]['totalClosed'] ?? 0;
+                $conversion = $totalLead > 0 ? ($totalClosed / $totalLead) * 100 : 0;
+                $r->TOTAL_LEAD = $totalLead;
+                $r->TOTAL_CLOSED = $totalClosed;
+                $r->CONVERSION_RATE = $conversion;
+                return $r;
+            }, $baseDealers);
+        } catch (\Throwable $e) {
+            // leave empty
+        }
+
+        return view('admin.inquiries', [
+            'unassigned' => $unassigned,
+            'assigned' => $assigned,
+            'totalNewInquiries' => $totalNewInquiries,
+            'productLabels' => $productLabels,
+            'dealers' => $dealers,
+            'currentPage' => 'inquiries',
+        ]);
+    }
+
+    public function inquiriesSync(): JsonResponse
+    {
+        // Reuse the same data as the main inquiries page
+        $view = $this->inquiries();
+        $data = $view->getData();
+
+        $unassignedHtml = view('admin.partials.inquiries_unassigned_rows', $data)->render();
+        $assignedHtml = view('admin.partials.inquiries_assigned_rows', $data)->render();
+
+        return response()->json([
+            'unassigned' => $unassignedHtml,
+            'assigned' => $assignedHtml,
+        ]);
+    }
+
+    public function assignInquiry(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'LEADID' => 'required',
+            'ASSIGNED_TO' => 'required',
+        ]);
+
+        $leadId = (int) $validated['LEADID'];
+        $assignedTo = trim((string) $validated['ASSIGNED_TO']);
+        $fromUserId = trim((string) ($request->session()->get('user_id') ?? ''));
+
+        if ($leadId <= 0 || $assignedTo === '') {
+            return back()->with('error', 'Invalid assignment request.');
+        }
+
+        // Resolve nice names for description (SYSTEMROLE- ALIAS)
+        $nameMap = [];
+        try {
+            $ids = array_values(array_unique(array_filter([$fromUserId, $assignedTo], fn ($v) => trim((string) $v) !== '')));
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $users = DB::select('SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')', $ids);
+                foreach ($users as $u) {
+                    $uid = trim((string) ($u->USERID ?? ''));
+                    if ($uid === '') continue;
+                    $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                    $alias = trim((string) ($u->ALIAS ?? ''));
+                    $fallback = trim((string) ($u->COMPANY ?? ''));
+                    if ($fallback === '') $fallback = trim((string) ($u->EMAIL ?? ''));
+                    if ($fallback === '') $fallback = $uid;
+                    if ($role !== '' && $alias !== '') $label = $role . '- ' . $alias;
+                    elseif ($role !== '') $label = $role . '- ' . $fallback;
+                    elseif ($alias !== '') $label = $alias;
+                    else $label = $fallback;
+                    $nameMap[$uid] = $label;
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        $fromLabel = $fromUserId !== '' ? ($nameMap[$fromUserId] ?? $fromUserId) : 'System';
+        $toLabel = $nameMap[$assignedTo] ?? $assignedTo;
+
+        try {
+            DB::update(
+                'UPDATE "LEAD" SET "ASSIGNED_TO" = ?, "LASTMODIFIED" = CURRENT_TIMESTAMP WHERE "LEADID" = ?',
+                [$assignedTo, $leadId]
+            );
+
+            $desc = 'Lead assigned from ' . $fromLabel . ' to ' . $toLabel;
+            // Insert activity record
+            DB::selectOne(
+                'INSERT INTO "LEAD_ACT" ("LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS")
+                 VALUES (?,?,CURRENT_TIMESTAMP,?,?,?,?)
+                 RETURNING "LEAD_ACTID"',
+                [$leadId, $fromUserId !== '' ? $fromUserId : null, 'Lead Assigned', $desc, null, 'Pending']
+            );
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Could not assign lead: ' . $e->getMessage());
+        }
+
+        return redirect()->route('admin.inquiries')->with('success', 'Lead asssigned successfully.');
+    }
+
+    public function createInquiry(): View
+    {
+        $dealers = [];
+        try {
+            $dealers = DB::select(
+                'SELECT "USERID", "COMPANY", "EMAIL" FROM "USERS" WHERE UPPER(TRIM("SYSTEMROLE")) LIKE \'%DEALER%\' ORDER BY "COMPANY"'
+            );
+        } catch (\Throwable $e) {
+            try {
+                $dealers = DB::select(
+                    'SELECT "USERID", "EMAIL" FROM "USERS" WHERE UPPER(TRIM("SYSTEMROLE")) LIKE \'%DEALER%\' ORDER BY "USERID"'
+                );
+            } catch (\Throwable $e2) {
+                // leave empty
+            }
+        }
+        $productInterestedList = [
+            1 => 'SQL Account',
+            2 => 'SQL Payroll',
+            3 => 'SQL Production',
+            4 => 'Mobile Sales',
+            5 => 'SQL Ecommerce',
+            6 => 'SQL EBI Wellness POS',
+            7 => 'SQL X Suduai',
+            8 => 'SQL X-Store',
+            9 => 'SQL Vision',
+            10 => 'SQL HRMS',
+            11 => 'Others',
+        ];
+        return view('admin.inquiries-create', [
+            'dealers' => $dealers,
+            'productInterestedList' => $productInterestedList,
+            'currentPage' => 'inquiries',
+        ]);
+    }
+
+    public function storeInquiry(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'COMPANYNAME' => 'required|string|max:255',
+            'CONTACTNAME' => 'required|string|max:255',
+            'CONTACTNO' => 'required|string|max:100',
+            'EMAIL' => 'required|email|max:255',
+            'ADDRESS1' => 'nullable|string|max:255',
+            'ADDRESS2' => 'nullable|string|max:255',
+            'CITY' => 'required|string|max:100',
+            'POSTCODE' => 'required|string|max:20',
+            'BUSINESSNATURE' => 'required|string|max:255',
+            'USERCOUNT' => 'nullable|string|max:50',
+            'EXISTINGSOFTWARE' => 'required|string|max:255',
+            'DEMOMODE' => 'required|string|in:Zoom,On-site',
+            'product_interested' => 'required|array',
+            'product_interested.*' => 'integer|in:1,2,3,4,5,6,7,8,9,10,11',
+            'DESCRIPTION' => 'nullable|string|max:4000',
+            'REFERRALCODE' => 'nullable|string|max:100',
+            'ASSIGNED_TO' => 'nullable|string|max:50',
+        ]);
+
+        $userId = $request->session()->get('user_id');
+        $productInterested = array_map('intval', $validated['product_interested']);
+        $productInterested = array_unique(array_filter($productInterested));
+        sort($productInterested, SORT_NUMERIC);
+        $productIdValue = implode(',', $productInterested);
+        $description = trim($validated['DESCRIPTION'] ?? '');
+        $descriptionValue = $description !== '' ? $description : null;
+
+        try {
+            DB::insert(
+                'INSERT INTO "LEAD" (
+                    "PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
+                    "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
+                    "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
+                    "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?,?,CURRENT_TIMESTAMP)',
+                [
+                    $productIdValue,
+                    $validated['COMPANYNAME'],
+                    $validated['CONTACTNAME'],
+                    $validated['CONTACTNO'],
+                    $validated['EMAIL'],
+                    $validated['ADDRESS1'] ?? null,
+                    $validated['ADDRESS2'] ?? null,
+                    $validated['CITY'],
+                    $validated['POSTCODE'],
+                    $validated['BUSINESSNATURE'],
+                    $validated['USERCOUNT'] ?? null,
+                    $validated['EXISTINGSOFTWARE'],
+                    $validated['DEMOMODE'],
+                    $descriptionValue,
+                    $validated['REFERRALCODE'] ?? null,
+                    'Open',
+                    $userId,
+                    $validated['ASSIGNED_TO'] ?? null,
+                ]
+            );
+        } catch (\Throwable $e) {
+            return back()->withInput($request->only(array_keys($validated)))->with('error', 'Could not save inquiry: ' . $e->getMessage());
+        }
+
+        return redirect()->route('admin.inquiries')->with('success', 'Inquiry created.');
     }
 
     public function dealers(): View
     {
         $rows = DB::select(
-            'SELECT "USERID","EMAIL","SYSTEMROLE","ISACTIVE","LASTLOGIN"
+            'SELECT "USERID","EMAIL","POSTCODE","CITY","ISACTIVE","COMPANY","ALIAS"
              FROM "USERS"
+             WHERE TRIM("SYSTEMROLE") = \'Dealer\'
              ORDER BY "USERID"'
         );
-        return view('admin.dealers', ['items' => $rows, 'currentPage' => 'dealers']);
+
+        $leadStats = [];
+        try {
+            $statsRows = DB::select(
+                'SELECT
+                    TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) AS UID,
+                    COUNT(*) AS TOTAL_LEAD,
+                    SUM(CASE WHEN "CURRENTSTATUS" = \'Closed\' THEN 1 ELSE 0 END) AS TOTAL_CLOSED
+                 FROM "LEAD"
+                 WHERE "ASSIGNED_TO" IS NOT NULL AND TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) <> \'\'
+                 GROUP BY TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50)))'
+            );
+            foreach ($statsRows as $sr) {
+                $uid = trim((string) ($sr->UID ?? $sr->uid ?? ''));
+                if ($uid === '') continue;
+                $totalLead = (int) ($sr->TOTAL_LEAD ?? $sr->total_lead ?? 0);
+                $totalClosed = (int) ($sr->TOTAL_CLOSED ?? $sr->total_closed ?? 0);
+                $leadStats[$uid] = [
+                    'totalLead' => $totalLead,
+                    'totalClosed' => $totalClosed,
+                ];
+            }
+        } catch (\Throwable $e) {
+            // leave stats empty
+        }
+
+        $items = array_map(function ($r) use ($leadStats) {
+            $uid = trim((string) ($r->USERID ?? ''));
+            $totalLead = $leadStats[$uid]['totalLead'] ?? 0;
+            $totalClosed = $leadStats[$uid]['totalClosed'] ?? 0;
+            $conversion = $totalLead > 0 ? ($totalClosed / $totalLead) * 100 : 0;
+            $r->TOTAL_LEAD = $totalLead;
+            $r->TOTAL_CLOSED = $totalClosed;
+            $r->CONVERSION_RATE = $conversion;
+            return $r;
+        }, $rows);
+
+        return view('admin.dealers', ['items' => $items, 'currentPage' => 'dealers']);
     }
 
     public function rewards(): View
