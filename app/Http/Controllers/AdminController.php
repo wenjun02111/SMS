@@ -189,8 +189,8 @@ class AdminController extends Controller
             }
         }
 
-        // Unassigned vs assigned leads
-        $unassigned = DB::selectOne('SELECT COUNT(*) AS c FROM "LEAD" WHERE "ASSIGNED_TO" IS NULL');
+        // Unassigned leads: match LEAD status \"Open\"
+        $unassignedCount = $leadStatus['Open'] ?? 0;
 
         $pendingActs = DB::select(
             'SELECT "STATUS" AS status, COUNT(*) AS c FROM "LEAD_ACT" GROUP BY "STATUS"'
@@ -351,7 +351,7 @@ class AdminController extends Controller
         return view('admin.reports', [
             'currentPage' => 'reports',
             'leadStatus' => $leadStatus,
-            'unassignedLeads' => (int) ($unassigned->c ?? 0),
+            'unassignedLeads' => (int) $unassignedCount,
             'activityStatus' => $activityStatus,
             'payoutStatus' => $payoutStatus,
             'metricPercent' => $metricPercent,
