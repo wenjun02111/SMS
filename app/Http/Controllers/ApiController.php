@@ -173,8 +173,8 @@ class ApiController extends Controller
         ]);
 
         $row = DB::selectOne(
-            'INSERT INTO "LEAD_ACT" ("LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS")
-             VALUES (?,?,CURRENT_TIMESTAMP,?,?,?,?)
+            'INSERT INTO "LEAD_ACT" ("LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS")
+             VALUES (GEN_ID("GEN_LEAD_ACTID", 1),?,?,CURRENT_TIMESTAMP,?,?,?,?)
              RETURNING "LEAD_ACTID","CREATIONDATE"',
             [
                 $validated['LEADID'],
@@ -185,6 +185,8 @@ class ApiController extends Controller
                 $validated['STATUS'] ?? null,
             ]
         );
+
+        DB::update('UPDATE "LEAD" SET "LASTMODIFIED" = CURRENT_TIMESTAMP WHERE "LEADID" = ?', [$validated['LEADID']]);
 
         return response()->json(['LEAD_ACTID' => $row->LEAD_ACTID, 'CREATIONDATE' => $row->CREATIONDATE], 201);
     }

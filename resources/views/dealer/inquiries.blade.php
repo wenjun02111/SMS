@@ -174,9 +174,14 @@
                             <td>{{ Str::limit($r->DESCRIPTION ?? '—', 20) }}</td>
                             <td>{{ $r->REFERRALCODE ?? '—' }}</td>
                             <td>{{ $r->ASSIGNED_BY_EMAIL ?? '—' }}</td>
-                            <td>{{ $r->ACT_STATUS ?? '—' }}</td>
+                            <td>@php $s = trim($r->ACT_STATUS ?? ''); echo $s === '' ? '—' : (in_array(strtoupper($s), ['FOLLOWUP', 'FOLLOW UP'], true) ? 'Follow Up' : $s); @endphp</td>
                             <td>
-                                <button type="button" class="inquiries-update-btn" data-lead-id="{{ $r->LEADID }}" data-customer="{{ trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '')) ?: '—' }}" data-status="{{ strtoupper($r->ACT_STATUS ?? 'PENDING') }}">Update</button>
+                                @php $actStatus = strtoupper($r->ACT_STATUS ?? 'PENDING'); $isFailed = $actStatus === 'FAILED'; @endphp
+                                @if ($isFailed)
+                                    <button type="button" class="inquiries-view-btn" data-lead-id="{{ $r->LEADID }}" data-customer="{{ trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '')) ?: '—' }}">View</button>
+                                @else
+                                    <button type="button" class="inquiries-update-btn" data-lead-id="{{ $r->LEADID }}" data-customer="{{ trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '')) ?: '—' }}" data-status="{{ $actStatus }}">Update</button>
+                                @endif
                             </td>
                         </tr>
                     @empty
@@ -199,6 +204,26 @@
             </div>
         </div>
     </section>
+</div>
+
+{{-- View Failed Message Modal --}}
+<div class="inquiry-modal-overlay" id="inquiryViewModal" aria-hidden="true">
+    <div class="inquiry-modal inquiry-modal--view" role="dialog" aria-labelledby="inquiryViewModalTitle">
+        <div class="inquiry-modal-header">
+            <h2 id="inquiryViewModalTitle" class="inquiry-modal-title">Failed Inquiry</h2>
+            <p class="inquiry-modal-subtitle" id="inquiryViewModalSubtitle">Inquiry ID: #SQL-0 • —</p>
+            <button type="button" class="inquiry-modal-close" id="inquiryViewModalClose" aria-label="Close"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="inquiry-modal-body">
+            <div class="inquiry-view-message">
+                <span class="inquiry-field-label">MESSAGE</span>
+                <div class="inquiry-view-message-content" id="inquiryViewMessageContent">—</div>
+            </div>
+        </div>
+        <div class="inquiry-modal-footer">
+            <button type="button" class="inquiry-btn inquiry-btn-cancel" id="inquiryViewModalCloseBtn">Close</button>
+        </div>
+    </div>
 </div>
 
 {{-- Update Inquiry Status Modal --}}
@@ -244,6 +269,17 @@
                         <div class="inquiry-field-input-wrap">
                             <i class="bi bi-clock"></i>
                             <input type="time" class="inquiry-field-input" id="inquiryFollowupTime">
+                        </div>
+                    </label>
+                    <label class="inquiry-field inquiry-field-products" id="inquiryProductsField" style="display:none;">
+                        <span class="inquiry-field-label">PRODUCTS <span class="inquiry-field-required">*</span></span>
+                        <div class="inquiry-products-checklist" id="inquiryProductsChecklist">
+                            @foreach($productNames as $id => $name)
+                                <label class="inquiry-product-check">
+                                    <input type="checkbox" class="inquiry-product-checkbox" name="inquiry_products[]" value="{{ $id }}" data-name="{{ $name }}">
+                                    <span>{{ $name }}</span>
+                                </label>
+                            @endforeach
                         </div>
                     </label>
                     <label class="inquiry-field">
@@ -322,6 +358,8 @@
     var currentCustomer = '';
     var currentStatusIdx = 0;
     var selectedStatusIdx = 0;
+    var viewMode = false;
+    var cachedActivities = [];
 
     function setProgression(currentStatus) {
         var normalized = statusMap[currentStatus] || 'PENDING';
@@ -333,10 +371,10 @@
             var steps = progressionSteps.querySelectorAll('.inquiry-step');
             var showDone = function(i) { return i <= idx; };
             steps.forEach(function(step, i) {
-                step.classList.remove('inquiry-step--done', 'inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click');
+                step.classList.remove('inquiry-step--done', 'inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click', 'inquiry-step--viewable');
                 step.innerHTML = '<span>' + step.dataset.step + '</span>';
                 if (showDone(i)) {
-                    step.classList.add('inquiry-step--done');
+                    step.classList.add('inquiry-step--done', 'inquiry-step--viewable');
                     step.innerHTML = '<i class="bi bi-check"></i><span>' + step.dataset.step + '</span>';
                 } else if (i === selectedStatusIdx) {
                     step.classList.add('inquiry-step--active', 'inquiry-step--selected');
@@ -351,6 +389,8 @@
         if (remarkEl) remarkEl.placeholder = remarkPlaceholders[statusOrder[selectedStatusIdx]] || remarkPlaceholders['PENDING'];
         setDateTimeLabels(statusOrder[selectedStatusIdx]);
         toggleAddCalendarButton();
+        toggleProductChecklist();
+        toggleUpdateButton();
     }
 
     function setRemarkPlaceholder(status) {
@@ -369,6 +409,70 @@
     function toggleAddCalendarButton() {
         var btn = document.getElementById('inquiryModalAddCalendar');
         if (btn) btn.style.display = statusOrder[selectedStatusIdx] === 'DEMO' ? '' : 'none';
+    }
+
+    function toggleProductChecklist() {
+        var field = document.getElementById('inquiryProductsField');
+        var isCompleted = statusOrder[selectedStatusIdx] === 'COMPLETED' && !viewMode;
+        if (field) {
+            field.style.display = isCompleted ? '' : 'none';
+            if (!isCompleted) {
+                var boxes = field.querySelectorAll('.inquiry-product-checkbox');
+                boxes.forEach(function(b) { b.checked = false; });
+            }
+        }
+    }
+
+    function toggleUpdateButton() {
+        var isRewarded = currentStatusIdx === statusOrder.length - 1;
+        var disable = isRewarded || viewMode;
+        updateBtn.disabled = disable;
+        updateBtn.classList.toggle('inquiry-btn-update--disabled', disable);
+    }
+
+    function statusMatches(orderName, activityStatus) {
+        var a = (orderName || '').toUpperCase().replace(/\s+/g, '');
+        var b = (activityStatus || '').toUpperCase().replace(/\s+/g, '').replace('REWARDDISTRIBUTED', 'REWARDED');
+        if (a === 'REWARDED') return b === 'REWARDED' || b === 'REWARDDISTRIBUTED';
+        return a === b;
+    }
+
+    function findActivityForStatus(statusOrderName) {
+        for (var j = 0; j < cachedActivities.length; j++) {
+            if (cachedActivities[j].type === 'activity' && statusMatches(statusOrderName, cachedActivities[j].status)) {
+                return cachedActivities[j];
+            }
+        }
+        return null;
+    }
+
+    function populateFormFromActivity(activity) {
+        var dateEl = document.getElementById('inquiryFollowupDate');
+        var timeEl = document.getElementById('inquiryFollowupTime');
+        var remarkEl = document.getElementById('inquiryRemark');
+        if (!activity || !activity.created_at) {
+            if (dateEl) dateEl.value = '';
+            if (timeEl) timeEl.value = '';
+            if (remarkEl) remarkEl.value = '';
+            return;
+        }
+        var d = new Date(activity.created_at);
+        if (dateEl) dateEl.value = isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+        if (timeEl) timeEl.value = isNaN(d.getTime()) ? '' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        if (remarkEl) remarkEl.value = activity.description || '';
+    }
+
+    function setFieldsReadOnly(readOnly) {
+        var dateEl = document.getElementById('inquiryFollowupDate');
+        var timeEl = document.getElementById('inquiryFollowupTime');
+        var remarkEl = document.getElementById('inquiryRemark');
+        var fileEl = document.getElementById('inquiryAttachment');
+        var productBoxes = document.querySelectorAll('.inquiry-product-checkbox');
+        if (dateEl) dateEl.readOnly = readOnly;
+        if (timeEl) timeEl.readOnly = readOnly;
+        if (remarkEl) remarkEl.readOnly = readOnly;
+        if (fileEl) fileEl.disabled = readOnly;
+        productBoxes.forEach(function(b) { b.disabled = readOnly; });
     }
 
     function formatActivityTime(isoStr) {
@@ -418,7 +522,18 @@
         fetch(url, { headers: { 'Accept': 'application/json' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                renderActivity(data.activities || []);
+                cachedActivities = data.activities || [];
+                renderActivity(cachedActivities);
+                var details = data.last_reward_details;
+                if (details && currentStatusIdx === statusOrder.length - 1) {
+                    var dateEl = document.getElementById('inquiryFollowupDate');
+                    var timeEl = document.getElementById('inquiryFollowupTime');
+                    var remarkEl = document.getElementById('inquiryRemark');
+                    if (dateEl && details.date) dateEl.value = details.date;
+                    if (timeEl && details.time) timeEl.value = details.time;
+                    if (remarkEl && details.description) remarkEl.value = details.description;
+                    setFieldsReadOnly(true);
+                }
             })
             .catch(function() {
                 renderActivity([]);
@@ -428,11 +543,19 @@
     function openModal(leadId, customer, status) {
         currentLeadId = leadId;
         currentCustomer = customer || '—';
+        viewMode = false;
         subtitle.textContent = 'Inquiry ID: #SQL-' + leadId + ' • ' + currentCustomer;
         if (activityLink) activityLink.textContent = '#SQL-' + leadId;
         setProgression(status || 'PENDING');
         var remarkEl = document.getElementById('inquiryRemark');
+        var dateEl = document.getElementById('inquiryFollowupDate');
+        var timeEl = document.getElementById('inquiryFollowupTime');
         if (remarkEl) remarkEl.value = '';
+        if (dateEl) dateEl.value = '';
+        if (timeEl) timeEl.value = '';
+        var productBoxes = document.querySelectorAll('.inquiry-product-checkbox');
+        if (productBoxes.length) productBoxes.forEach(function(b) { b.checked = false; });
+        setFieldsReadOnly(false);
         loadActivity(leadId);
         modal.setAttribute('aria-hidden', 'false');
         modal.classList.add('inquiry-modal-open');
@@ -448,15 +571,39 @@
     if (progressionSteps) {
         progressionSteps.addEventListener('click', function(e) {
             var step = e.target.closest('.inquiry-step');
-            if (!step || !step.classList.contains('inquiry-step--clickable') || step.classList.contains('inquiry-step--no-click')) return;
+            if (!step) return;
+            if (step.classList.contains('inquiry-step--no-click')) return;
             var stepIdx = statusOrder.indexOf(step.dataset.step);
-            if (stepIdx < 0 || stepIdx <= currentStatusIdx) return;
+            if (stepIdx < 0) return;
+            var isDoneStep = stepIdx <= currentStatusIdx;
+            var isFutureStep = step.classList.contains('inquiry-step--clickable');
+            if (!isDoneStep && !isFutureStep) return;
             selectedStatusIdx = stepIdx;
+            if (isDoneStep) {
+                viewMode = true;
+                var act = findActivityForStatus(statusOrder[stepIdx]);
+                populateFormFromActivity(act);
+                setFieldsReadOnly(true);
+                setDateTimeLabels(statusOrder[stepIdx]);
+            } else {
+                viewMode = false;
+                var remarkEl = document.getElementById('inquiryRemark');
+                var dateEl = document.getElementById('inquiryFollowupDate');
+                var timeEl = document.getElementById('inquiryFollowupTime');
+                if (remarkEl) remarkEl.value = '';
+                if (dateEl) dateEl.value = '';
+                if (timeEl) timeEl.value = '';
+                setFieldsReadOnly(false);
+                setRemarkPlaceholder(statusOrder[stepIdx]);
+                setDateTimeLabels(statusOrder[stepIdx]);
+            }
             progressionSteps.querySelectorAll('.inquiry-step').forEach(function(s, i) {
-                s.classList.remove('inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click');
+                s.classList.remove('inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click', 'inquiry-step--viewable');
                 var stepName = s.dataset.step;
-                if (i < currentStatusIdx) {
-                    s.classList.add('inquiry-step--done');
+                var sIsDone = i <= currentStatusIdx;
+                if (sIsDone) {
+                    s.classList.add('inquiry-step--done', 'inquiry-step--viewable');
+                    if (i === selectedStatusIdx && viewMode) s.classList.add('inquiry-step--selected');
                     s.innerHTML = '<i class="bi bi-check"></i><span>' + stepName + '</span>';
                 } else if (i === selectedStatusIdx) {
                     s.classList.add('inquiry-step--active', 'inquiry-step--selected');
@@ -469,9 +616,9 @@
                     s.innerHTML = '<span>' + stepName + '</span>';
                 }
             });
-            setRemarkPlaceholder(statusOrder[selectedStatusIdx]);
-            setDateTimeLabels(statusOrder[selectedStatusIdx]);
             toggleAddCalendarButton();
+            toggleProductChecklist();
+            toggleUpdateButton();
         });
     }
 
@@ -479,6 +626,43 @@
         btn.addEventListener('click', function() {
             openModal(btn.dataset.leadId, btn.dataset.customer, btn.dataset.status);
         });
+    });
+
+    var viewModal = document.getElementById('inquiryViewModal');
+    var viewSubtitle = document.getElementById('inquiryViewModalSubtitle');
+    var viewContent = document.getElementById('inquiryViewMessageContent');
+    var viewCloseBtn = document.getElementById('inquiryViewModalClose');
+    var viewCloseBtnFooter = document.getElementById('inquiryViewModalCloseBtn');
+    document.querySelectorAll('.inquiries-view-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var leadId = btn.dataset.leadId;
+            var customer = btn.dataset.customer || '—';
+            if (viewSubtitle) viewSubtitle.textContent = 'Inquiry ID: #SQL-' + leadId + ' • ' + customer;
+            if (viewContent) viewContent.textContent = 'Loading...';
+            viewModal.setAttribute('aria-hidden', 'false');
+            viewModal.classList.add('inquiry-modal-open');
+            document.body.style.overflow = 'hidden';
+            fetch('{{ url("/dealer/inquiries") }}/' + leadId + '/failed-description', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (viewContent) viewContent.textContent = (data.description || '').trim() || '—';
+            })
+            .catch(function() {
+                if (viewContent) viewContent.textContent = '—';
+            });
+        });
+    });
+    function closeViewModal() {
+        viewModal.setAttribute('aria-hidden', 'true');
+        viewModal.classList.remove('inquiry-modal-open');
+        document.body.style.overflow = '';
+    }
+    if (viewCloseBtn) viewCloseBtn.addEventListener('click', closeViewModal);
+    if (viewCloseBtnFooter) viewCloseBtnFooter.addEventListener('click', closeViewModal);
+    viewModal.addEventListener('click', function(e) {
+        if (e.target === viewModal) closeViewModal();
     });
 
     [closeBtn, cancelBtn].forEach(function(btn) {
@@ -490,7 +674,10 @@
     });
 
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.classList.contains('inquiry-modal-open')) closeModal();
+        if (e.key === 'Escape') {
+            if (viewModal && viewModal.classList.contains('inquiry-modal-open')) closeViewModal();
+            else if (modal.classList.contains('inquiry-modal-open')) closeModal();
+        }
     });
 
     var addCalendarBtn = document.getElementById('inquiryModalAddCalendar');
@@ -525,11 +712,32 @@
     }
 
     updateBtn.addEventListener('click', function() {
-        if (selectedStatusIdx <= currentStatusIdx) return;
-        var leadId = currentLeadId;
+        if (this.disabled || selectedStatusIdx <= currentStatusIdx) return;
         var toStatus = statusOrder[selectedStatusIdx];
+        if (toStatus === 'DEMO' && currentStatusIdx < 1) {
+            alert('You must complete the follow-up (status: FOLLOW UP) before updating to DEMO. Please update the status to FOLLOW UP first.');
+            return;
+        }
+        if (toStatus === 'REWARDED' && currentStatusIdx < 4) {
+            alert('You must complete the inquiry (status: COMPLETED) before updating to REWARDED. Please update the status to COMPLETED first.');
+            return;
+        }
+        if (toStatus === 'COMPLETED') {
+            var checked = document.querySelectorAll('.inquiry-product-checkbox:checked');
+            if (!checked.length) {
+                alert('Please select at least one product for COMPLETED status.');
+                return;
+            }
+        }
+        var leadId = currentLeadId;
         var remarkEl = document.getElementById('inquiryRemark');
         var remark = remarkEl ? remarkEl.value.trim() : '';
+        var products = [];
+        if (toStatus === 'COMPLETED') {
+            document.querySelectorAll('.inquiry-product-checkbox:checked').forEach(function(cb) {
+                products.push({ id: cb.value, name: cb.dataset.name });
+            });
+        }
         var updateUrl = '{{ route("dealer.inquiries.update-status") }}';
         var csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '';
         updateBtn.disabled = true;
@@ -541,7 +749,7 @@
                 'X-CSRF-TOKEN': csrfToken,
                 'X-Requested-With': 'XMLHttpRequest'
             },
-            body: JSON.stringify({ lead_id: leadId, status: toStatus, remark: remark })
+            body: JSON.stringify({ lead_id: leadId, status: toStatus, remark: remark, products: products })
         })
         .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
         .then(function(res) {

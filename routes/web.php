@@ -31,6 +31,7 @@ Route::middleware(['auth.sms', 'dealer'])->prefix('dealer')->name('dealer.')->gr
     Route::get('/dashboard', [DealerController::class, 'dashboard'])->name('dashboard');
     Route::get('/inquiries', [DealerController::class, 'inquiries'])->name('inquiries');
     Route::get('/inquiries/{leadId}/activity', [DealerController::class, 'inquiryActivity'])->name('inquiries.activity');
+    Route::get('/inquiries/{leadId}/failed-description', [DealerController::class, 'inquiryFailedDescription'])->name('inquiries.failed-description');
     Route::post('/inquiries/update-status', [DealerController::class, 'updateInquiryStatus'])->name('inquiries.update-status');
     Route::get('/demo', [DealerController::class, 'demo'])->name('demo');
     Route::get('/rewards', [DealerController::class, 'rewards'])->name('rewards');

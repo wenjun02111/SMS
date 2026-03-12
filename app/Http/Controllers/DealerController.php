@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -40,14 +41,29 @@ class DealerController extends Controller
                 $dealerEmail = trim((string) ($emailRow->EMAIL ?? ''));
             }
 
-            $leads = DB::select(
+            $leadsRaw = DB::select(
                 'SELECT FIRST 50
-                    "LEADID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL","CITY","CURRENTSTATUS","CREATEDAT","LASTMODIFIED","DEMOMODE"
-                FROM "LEAD"
-                WHERE "ASSIGNED_TO" = ?
-                ORDER BY "LEADID" DESC',
+                    l."LEADID", l."PRODUCTID", l."COMPANYNAME", l."CONTACTNAME", l."CONTACTNO", l."EMAIL",
+                    l."CITY", l."POSTCODE", l."BUSINESSNATURE", l."USERCOUNT", l."EXISTINGSOFTWARE", l."DEMOMODE",
+                    l."DESCRIPTION", l."REFERRALCODE", l."CREATEDAT", l."CREATEDBY",
+                    l."ASSIGNED_TO", l."LASTMODIFIED",
+                    u."EMAIL" AS "ASSIGNED_BY_EMAIL",
+                    COALESCE(
+                        (SELECT FIRST 1 la."STATUS" FROM "LEAD_ACT" la WHERE la."LEADID" = l."LEADID" ORDER BY la."CREATIONDATE" DESC),
+                        l."CURRENTSTATUS",
+                        \'Pending\'
+                    ) AS "ACT_STATUS",
+                    (SELECT FIRST 1 la."CREATIONDATE" FROM "LEAD_ACT" la WHERE la."LEADID" = l."LEADID" ORDER BY la."CREATIONDATE" DESC) AS "ACT_LAST_UPDATE"
+                FROM "LEAD" l
+                LEFT JOIN "USERS" u ON u."USERID" = l."CREATEDBY"
+                WHERE l."ASSIGNED_TO" = ?
+                ORDER BY l."LEADID" DESC',
                 [$dealerId]
             );
+            $leads = array_values(array_filter($leadsRaw, function ($l) {
+                $s = strtoupper(trim($l->ACT_STATUS ?? $l->CURRENTSTATUS ?? ''));
+                return $s !== 'FAILED';
+            }));
 
             $activeCountRow = DB::selectOne(
                 'SELECT COUNT(*) AS "CNT" FROM "LEAD"
@@ -149,17 +165,25 @@ class DealerController extends Controller
                 'pendingFollowups' => $pendingFollowupsCount,
             ];
 
-            $stages = ['PENDING', 'FOLLOW UP', 'DEMO', 'CASE CONFIRMED', 'CASE COMPLETED', 'REWARD DISTRIBUTED'];
+            $statusMap = [
+                'PENDING' => 'PENDING', 'FOLLOW UP' => 'FOLLOW UP', 'FOLLOWUP' => 'FOLLOW UP',
+                'DEMO' => 'DEMO', 'CONFIRMED' => 'CONFIRMED', 'CASE CONFIRMED' => 'CONFIRMED',
+                'COMPLETED' => 'COMPLETED', 'CASE COMPLETED' => 'COMPLETED',
+                'REWARD' => 'REWARDED', 'REWARDED' => 'REWARDED', 'REWARD DISTRIBUTED' => 'REWARDED',
+            ];
+            $stages = ['PENDING', 'FOLLOW UP', 'DEMO', 'CONFIRMED', 'COMPLETED', 'REWARDED'];
             $now = time();
             $highPriorityFollowups = collect($leads)
-                ->filter(function ($l) use ($stages) {
-                    $status = strtoupper(trim($l->CURRENTSTATUS ?? 'PENDING'));
+                ->filter(function ($l) use ($stages, $statusMap) {
+                    $raw = strtoupper(trim($l->ACT_STATUS ?? $l->CURRENTSTATUS ?? 'PENDING'));
+                    $status = $statusMap[$raw] ?? 'PENDING';
                     $idx = array_search($status, $stages);
                     $idx = $idx !== false ? $idx : 0;
                     return $idx < 4;
                 })
-                ->map(function ($l) use ($now, $stages) {
-                    $lastMod = $l->LASTMODIFIED ? strtotime($l->LASTMODIFIED) : $now;
+                ->map(function ($l) use ($now) {
+                    $lastAct = $l->ACT_LAST_UPDATE ?? $l->LASTMODIFIED ?? null;
+                    $lastMod = $lastAct ? strtotime($lastAct) : $now;
                     $nextFollowUp = strtotime('+3 days', $lastMod);
                     $diffSec = $now - $nextFollowUp;
 
@@ -197,7 +221,7 @@ class DealerController extends Controller
                         'leadId' => $l->LEADID,
                         'status' => $status,
                         'time' => $time,
-                        'inquiryId' => 'LX-' . $l->LEADID,
+                        'inquiryId' => 'SQL-' . $l->LEADID,
                         'contact' => $contact,
                         'product' => $l->COMPANYNAME ?: 'SQL Account + Stock',
                         '_sortOrder' => $diffSec,
@@ -263,6 +287,26 @@ class DealerController extends Controller
         return view('dealer.inquiries', ['leads' => $leads, 'currentPage' => 'inquiries']);
     }
 
+    public function inquiryFailedDescription(Request $request, int $leadId): JsonResponse
+    {
+        $dealerId = $request->session()->get('user_id');
+        if (!$dealerId) {
+            return response()->json(['description' => ''], 200);
+        }
+        $lead = DB::selectOne('SELECT "LEADID" FROM "LEAD" WHERE "LEADID" = ? AND "ASSIGNED_TO" = ?', [$leadId, $dealerId]);
+        if (!$lead) {
+            return response()->json(['description' => ''], 404);
+        }
+        $row = DB::selectOne(
+            'SELECT FIRST 1 la."DESCRIPTION" FROM "LEAD_ACT" la
+             WHERE la."LEADID" = ? AND UPPER(TRIM(COALESCE(la."STATUS", \'\'))) = \'FAILED\'
+             ORDER BY la."CREATIONDATE" DESC',
+            [$leadId]
+        );
+        $description = trim($row->DESCRIPTION ?? '');
+        return response()->json(['description' => $description]);
+    }
+
     public function inquiryActivity(Request $request, int $leadId): JsonResponse
     {
         $dealerId = $request->session()->get('user_id');
@@ -270,24 +314,12 @@ class DealerController extends Controller
             return response()->json(['activities' => []], 200);
         }
 
-        $lead = DB::selectOne('SELECT "LEADID","CREATEDAT","CREATEDBY" FROM "LEAD" WHERE "LEADID" = ? AND "ASSIGNED_TO" = ?', [$leadId, $dealerId]);
+        $lead = DB::selectOne('SELECT "LEADID" FROM "LEAD" WHERE "LEADID" = ? AND "ASSIGNED_TO" = ?', [$leadId, $dealerId]);
         if (!$lead) {
             return response()->json(['activities' => []], 200);
         }
 
         $activities = [];
-        if ($lead->CREATEDAT) {
-            $creator = DB::selectOne('SELECT "EMAIL" FROM "USERS" WHERE "USERID" = ?', [$lead->CREATEDBY ?? 0]);
-            $activities[] = [
-                'type' => 'created',
-                'user' => $creator ? trim($creator->EMAIL ?? '') : 'System',
-                'subject' => 'Created inquiry',
-                'description' => null,
-                'status' => null,
-                'created_at' => $lead->CREATEDAT,
-            ];
-        }
-
         $rows = DB::select(
             'SELECT la."CREATIONDATE", la."SUBJECT", la."DESCRIPTION", la."STATUS", u."EMAIL" AS "USER_EMAIL"
              FROM "LEAD_ACT" la
@@ -298,12 +330,16 @@ class DealerController extends Controller
         );
 
         foreach ($rows as $r) {
+            $status = trim($r->STATUS ?? '');
+            if (strtoupper($status) === 'CREATED') {
+                continue;
+            }
             $activities[] = [
                 'type' => 'activity',
                 'user' => trim($r->USER_EMAIL ?? 'System'),
                 'subject' => trim($r->SUBJECT ?? ''),
                 'description' => trim($r->DESCRIPTION ?? ''),
-                'status' => trim($r->STATUS ?? ''),
+                'status' => $status,
                 'created_at' => $r->CREATIONDATE,
             ];
         }
@@ -312,7 +348,27 @@ class DealerController extends Controller
             return strtotime($b['created_at']) <=> strtotime($a['created_at']);
         });
 
-        return response()->json(['activities' => $activities]);
+        $lastReward = null;
+        $lastRow = DB::selectOne(
+            'SELECT FIRST 1 la."CREATIONDATE", la."DESCRIPTION" FROM "LEAD_ACT" la
+             WHERE la."LEADID" = ? AND UPPER(TRIM(COALESCE(la."STATUS", \'\'))) IN (\'REWARDED\', \'REWARD DISTRIBUTED\')
+             ORDER BY la."CREATIONDATE" DESC',
+            [$leadId]
+        );
+        if ($lastRow && $lastRow->CREATIONDATE) {
+            $ts = strtotime($lastRow->CREATIONDATE);
+            $lastReward = [
+                'created_at' => $lastRow->CREATIONDATE,
+                'date' => date('Y-m-d', $ts),
+                'time' => date('H:i', $ts),
+                'description' => trim($lastRow->DESCRIPTION ?? ''),
+            ];
+        }
+
+        return response()->json([
+            'activities' => $activities,
+            'last_reward_details' => $lastReward,
+        ]);
     }
 
     public function updateInquiryStatus(Request $request): JsonResponse
@@ -321,6 +377,9 @@ class DealerController extends Controller
             'lead_id' => 'required|integer',
             'status' => 'required|string|max:50',
             'remark' => 'nullable|string|max:4000',
+            'products' => 'nullable|array',
+            'products.*.id' => 'nullable',
+            'products.*.name' => 'nullable|string|max:100',
         ]);
 
         $dealerId = $request->session()->get('user_id');
@@ -336,6 +395,13 @@ class DealerController extends Controller
 
         $status = trim($validated['status']);
         $remark = trim($validated['remark'] ?? '');
+        $products = $validated['products'] ?? [];
+        if (strtoupper($this->mapStatusToDb($status)) === 'COMPLETED' && empty($products)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please select at least one product for COMPLETED status.',
+            ], 422);
+        }
         $statusDb = $this->mapStatusToDb($status);
 
         $lastAct = DB::selectOne(
@@ -343,14 +409,58 @@ class DealerController extends Controller
             [$leadId]
         );
         $fromStatus = $lastAct ? trim($lastAct->STATUS ?? '') : 'Pending';
+
+        $fromUpper = strtoupper($fromStatus);
+        if (in_array(strtoupper($statusDb), ['DEMO'], true)) {
+            $allowedFrom = ['FOLLOW UP', 'FOLLOWUP'];
+            if (!in_array($fromUpper, $allowedFrom, true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You must complete the follow-up (status: FOLLOW UP) before updating to DEMO. Please update the status to FOLLOW UP first.',
+                ], 422);
+            }
+        }
+        if (in_array(strtoupper($statusDb), ['REWARDED', 'REWARD DISTRIBUTED'], true)) {
+            $allowedFrom = ['COMPLETED', 'REWARDED', 'REWARD DISTRIBUTED'];
+            if (!in_array($fromUpper, $allowedFrom, true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You must complete the inquiry (status: COMPLETED) before updating to REWARDED. Please update the status to COMPLETED first.',
+                ], 422);
+            }
+        }
+
         $toStatus = $statusDb;
         $description = $remark !== '' ? $remark : ('Update Status from ' . $fromStatus . ' to ' . $toStatus);
+        if (! empty($products)) {
+            $productNames = array_map(fn ($p) => $p['name'] ?? 'Product ' . ($p['id'] ?? ''), $products);
+            $description = 'Products: ' . implode(', ', $productNames) . "\n\n" . $description;
+        }
 
-        DB::insert(
-            'INSERT INTO "LEAD_ACT" ("LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS")
-             VALUES (?,?,CURRENT_TIMESTAMP,?,?,?,?)',
-            [$leadId, $dealerId, 'Updated Status', $description, null, $statusDb]
-        );
+        $isCompleted = strtoupper($statusDb) === 'COMPLETED' && ! empty($products);
+        if ($isCompleted) {
+            $productIds = [];
+            foreach ($products as $p) {
+                $pid = (int) ($p['id'] ?? 0);
+                if ($pid >= 1 && $pid <= 11) {
+                    $productIds[] = $pid;
+                }
+            }
+            $dealtProduct = ! empty($productIds) ? implode(', ', $productIds) : null;
+            DB::insert(
+                'INSERT INTO "LEAD_ACT" ("LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS","DEALTPRODUCT")
+                 VALUES (GEN_ID("GEN_LEAD_ACTID", 1),?,?,CURRENT_TIMESTAMP,?,?,?,?,?)',
+                [$leadId, $dealerId, 'Updated Status', $description, null, $statusDb, $dealtProduct]
+            );
+        } else {
+            DB::insert(
+                'INSERT INTO "LEAD_ACT" ("LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS")
+                 VALUES (GEN_ID("GEN_LEAD_ACTID", 1),?,?,CURRENT_TIMESTAMP,?,?,?,?)',
+                [$leadId, $dealerId, 'Updated Status', $description, null, $statusDb]
+            );
+        }
+
+        DB::update('UPDATE "LEAD" SET "LASTMODIFIED" = CURRENT_TIMESTAMP WHERE "LEADID" = ?', [$leadId]);
 
         return response()->json(['success' => true, 'message' => 'Status updated']);
     }
@@ -395,7 +505,193 @@ class DealerController extends Controller
 
     public function reports(Request $request): View
     {
-        return view('dealer.reports', ['currentPage' => 'reports']);
+        $dealerId = $request->session()->get('user_id');
+        $period = $request->get('period', 'month');
+        $fromInput = $request->get('from');
+        $toInput = $request->get('to');
+
+        $dateFrom = null;
+        $dateTo = null;
+        $periodLabel = 'Current Month';
+        $trendLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+
+        $days = 0;
+        if ($period === 'range' && !empty($fromInput) && !empty($toInput)) {
+            $dateFrom = Carbon::parse($fromInput)->startOfDay();
+            $dateTo = Carbon::parse($toInput)->endOfDay();
+            $periodLabel = $dateFrom->isSameDay($dateTo)
+                ? $dateFrom->format('M j, Y')
+                : $dateFrom->format('M j, Y') . ' – ' . $dateTo->format('M j, Y');
+            $days = (int) ($dateFrom->diffInDays($dateTo) + 1);
+            $days = max(1, $days);
+            $trendLabels = $days <= 7
+                ? array_map(fn($i) => $dateFrom->copy()->addDays($i)->format('D'), range(0, $days - 1))
+                : ($days <= 31 ? ['Week 1', 'Week 2', 'Week 3', 'Week 4'] : array_map(fn($m) => Carbon::create()->month($m)->format('M'), range(1, 12)));
+        } elseif ($period === 'week') {
+            $dateFrom = Carbon::now()->startOfWeek(Carbon::MONDAY);
+            $dateTo = Carbon::now()->endOfWeek(Carbon::SUNDAY);
+            $periodLabel = 'Current Week';
+            $trendLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            $days = 7;
+        } elseif ($period === 'year') {
+            $dateFrom = Carbon::now()->startOfYear();
+            $dateTo = Carbon::now()->endOfYear();
+            $periodLabel = 'Current Year';
+            $trendLabels = array_map(fn($m) => Carbon::create()->month($m)->format('M'), range(1, 12));
+        } else {
+            $period = 'month';
+            $dateFrom = Carbon::now()->startOfMonth();
+            $dateTo = Carbon::now()->endOfMonth();
+            $periodLabel = 'Current Month';
+            $trendLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        }
+
+        $statusCounts = [
+            'PENDING' => 0,
+            'FOLLOW UP' => 0,
+            'DEMO' => 0,
+            'CONFIRMED' => 0,
+            'COMPLETED' => 0,
+            'REWARDED' => 0,
+        ];
+        $totalInquiry = 0;
+        $inquiryTrendData = array_fill(0, count($trendLabels), 0);
+        $productCounts = array_fill(0, 11, 0);
+
+        if ($dealerId && $dateFrom && $dateTo) {
+            $df = $dateFrom->format('Y-m-d H:i:s');
+            $dt = $dateTo->format('Y-m-d H:i:s');
+
+            $totalRow = DB::selectOne(
+                'SELECT COUNT(*) AS "CNT" FROM "LEAD" WHERE "ASSIGNED_TO" = ? AND "CREATEDAT" >= ? AND "CREATEDAT" <= ?',
+                [$dealerId, $df, $dt]
+            );
+            $totalInquiry = (int) ($totalRow->CNT ?? 0);
+
+            $numBuckets = count($trendLabels);
+            if ($period === 'week' || ($period === 'range' && $days <= 7)) {
+                $dayCounts = [];
+                for ($i = 0; $i < $numBuckets; $i++) {
+                    $d = $dateFrom->copy()->addDays($i)->format('Y-m-d');
+                    $row = DB::selectOne(
+                        'SELECT COUNT(*) AS "CNT" FROM "LEAD" WHERE "ASSIGNED_TO" = ? AND CAST("CREATEDAT" AS DATE) = ?',
+                        [$dealerId, $d]
+                    );
+                    $dayCounts[] = (int) ($row->CNT ?? 0);
+                }
+                $inquiryTrendData = $dayCounts;
+            } elseif ($period === 'year' || ($period === 'range' && $days > 31)) {
+                $monthCounts = [];
+                $y = $dateFrom->year;
+                for ($m = 1; $m <= 12; $m++) {
+                    $row = DB::selectOne(
+                        'SELECT COUNT(*) AS "CNT" FROM "LEAD" l WHERE l."ASSIGNED_TO" = ?
+                            AND l."CREATEDAT" IS NOT NULL
+                            AND l."CREATEDAT" >= ? AND l."CREATEDAT" <= ?
+                            AND EXTRACT(YEAR FROM l."CREATEDAT") = ?
+                            AND EXTRACT(MONTH FROM l."CREATEDAT") = ?',
+                        [$dealerId, $df, $dt, $y, $m]
+                    );
+                    $monthCounts[] = (int) ($row->CNT ?? 0);
+                }
+                $inquiryTrendData = $monthCounts;
+            } elseif ($period === 'range' && $days >= 8 && $days <= 31) {
+                $bucketDays = (int) ceil($days / 4);
+                $weekCounts = [];
+                for ($i = 0; $i < 4; $i++) {
+                    $bStart = $dateFrom->copy()->addDays($i * $bucketDays)->startOfDay()->format('Y-m-d H:i:s');
+                    $bEnd = $dateFrom->copy()->addDays(min(($i + 1) * $bucketDays, $days) - 1)->endOfDay()->format('Y-m-d H:i:s');
+                    $row = DB::selectOne(
+                        'SELECT COUNT(*) AS "CNT" FROM "LEAD" WHERE "ASSIGNED_TO" = ? AND "CREATEDAT" >= ? AND "CREATEDAT" <= ?',
+                        [$dealerId, $bStart, $bEnd]
+                    );
+                    $weekCounts[] = (int) ($row->CNT ?? 0);
+                }
+                $inquiryTrendData = $weekCounts;
+            } else {
+                $trendRows = DB::select(
+                    'SELECT
+                        SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") BETWEEN 1 AND 7 THEN 1 ELSE 0 END) AS "W1",
+                        SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") BETWEEN 8 AND 14 THEN 1 ELSE 0 END) AS "W2",
+                        SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") BETWEEN 15 AND 21 THEN 1 ELSE 0 END) AS "W3",
+                        SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") >= 22 THEN 1 ELSE 0 END) AS "W4"
+                    FROM "LEAD" l
+                    WHERE l."ASSIGNED_TO" = ?
+                        AND l."CREATEDAT" IS NOT NULL
+                        AND l."CREATEDAT" >= ? AND l."CREATEDAT" <= ?
+                        AND EXTRACT(YEAR FROM l."CREATEDAT") = ?
+                        AND EXTRACT(MONTH FROM l."CREATEDAT") = ?',
+                    [$dealerId, $df, $dt, $dateFrom->year, $dateFrom->month]
+                );
+                if (!empty($trendRows)) {
+                    $t = $trendRows[0];
+                    $inquiryTrendData = [(int) ($t->W1 ?? 0), (int) ($t->W2 ?? 0), (int) ($t->W3 ?? 0), (int) ($t->W4 ?? 0)];
+                }
+            }
+
+            $rows = DB::select(
+                'SELECT l."LEADID",
+                    COALESCE(
+                        (SELECT FIRST 1 la."STATUS" FROM "LEAD_ACT" la WHERE la."LEADID" = l."LEADID" ORDER BY la."CREATIONDATE" DESC),
+                        l."CURRENTSTATUS",
+                        \'Pending\'
+                    ) AS "LATEST_STATUS"
+                FROM "LEAD" l
+                WHERE l."ASSIGNED_TO" = ? AND l."CREATEDAT" >= ? AND l."CREATEDAT" <= ?',
+                [$dealerId, $df, $dt]
+            );
+            $statusMap = [
+                'PENDING' => 'PENDING', 'Pending' => 'PENDING',
+                'FOLLOW UP' => 'FOLLOW UP', 'FOLLOWUP' => 'FOLLOW UP', 'FollowUp' => 'FOLLOW UP',
+                'DEMO' => 'DEMO', 'Demo' => 'DEMO',
+                'CONFIRMED' => 'CONFIRMED', 'Confirmed' => 'CONFIRMED', 'CASE CONFIRMED' => 'CONFIRMED',
+                'COMPLETED' => 'COMPLETED', 'Completed' => 'COMPLETED', 'CASE COMPLETED' => 'COMPLETED',
+                'REWARDED' => 'REWARDED', 'Rewarded' => 'REWARDED', 'REWARD' => 'REWARDED', 'REWARD DISTRIBUTED' => 'REWARDED', 'Reward Distributed' => 'REWARDED',
+            ];
+            foreach ($rows as $r) {
+                $raw = trim($r->LATEST_STATUS ?? '');
+                if (strtoupper($raw) === 'FAILED') {
+                    continue;
+                }
+                $normalized = $statusMap[strtoupper($raw)] ?? $statusMap[$raw] ?? 'PENDING';
+                if (isset($statusCounts[$normalized])) {
+                    $statusCounts[$normalized]++;
+                } else {
+                    $statusCounts['PENDING']++;
+                }
+            }
+
+            $productRows = DB::select(
+                'SELECT la."DEALTPRODUCT" FROM "LEAD_ACT" la
+                WHERE la."USERID" = ? AND la."CREATIONDATE" >= ? AND la."CREATIONDATE" <= ?
+                AND la."DEALTPRODUCT" IS NOT NULL AND la."DEALTPRODUCT" <> \'\'',
+                [$dealerId, $df, $dt]
+            );
+            foreach ($productRows as $pr) {
+                $val = trim($pr->DEALTPRODUCT ?? '');
+                $ids = array_map('intval', array_filter(preg_split('/[\s,\(\)]+/', $val)));
+                foreach ($ids as $pid) {
+                    if ($pid >= 1 && $pid <= 10) {
+                        $productCounts[$pid - 1]++;
+                    } elseif ($pid >= 11) {
+                        $productCounts[10]++;
+                    }
+                }
+            }
+        }
+
+        return view('dealer.reports', [
+            'currentPage' => 'reports',
+            'statusCounts' => $statusCounts,
+            'totalInquiry' => $totalInquiry,
+            'inquiryTrendData' => $inquiryTrendData,
+            'trendLabels' => $trendLabels,
+            'period' => $period,
+            'periodLabel' => $periodLabel,
+            'from' => $fromInput,
+            'to' => $toInput,
+            'productCounts' => $productCounts,
+        ]);
     }
 
     public function history(Request $request): View

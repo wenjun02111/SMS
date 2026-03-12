@@ -76,18 +76,25 @@
                     </div>
                     @forelse(($leads ?? []) as $i => $r)
                         @php
-                            $status = strtoupper($r->CURRENTSTATUS ?? 'PENDING');
-                            $stages = ['PENDING','FOLLOW UP','DEMO','CASE CONFIRMED','CASE COMPLETED','REWARD DISTRIBUTED'];
+                            $statusMap = [
+                                'PENDING' => 'PENDING', 'FOLLOW UP' => 'FOLLOW UP', 'FOLLOWUP' => 'FOLLOW UP',
+                                'DEMO' => 'DEMO', 'CONFIRMED' => 'CONFIRMED', 'CASE CONFIRMED' => 'CONFIRMED',
+                                'COMPLETED' => 'COMPLETED', 'CASE COMPLETED' => 'COMPLETED',
+                                'REWARD' => 'REWARDED', 'REWARDED' => 'REWARDED', 'REWARD DISTRIBUTED' => 'REWARDED'
+                            ];
+                            $rawStatus = strtoupper(trim($r->ACT_STATUS ?? $r->CURRENTSTATUS ?? 'PENDING'));
+                            $status = $statusMap[$rawStatus] ?? 'PENDING';
+                            $stages = ['PENDING', 'FOLLOW UP', 'DEMO', 'CONFIRMED', 'COMPLETED', 'REWARDED'];
                             $idx = array_search($status, $stages);
                             $idx = $idx !== false ? $idx : 0;
                             $filledCount = $idx + 1;
-                            $displayStatus = in_array($status, $stages) ? $status : 'PENDING';
+                            $displayStatus = $status;
                             $rowPage = (int) floor($i / ($inquiriesPerPage ?? 6)) + 1;
                         @endphp
                         <div class="dealer-table-row dealer-inquiry-row" data-page="{{ $rowPage }}">
-                            <span class="dealer-inquiry-id">#LX-{{ $r->LEADID }}</span>
-                            <span>{{ $r->CONTACTNAME ? 'Mr/Ms ' . $r->CONTACTNAME : ($r->COMPANYNAME ?? '—') }}</span>
-                            <span>{{ $r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED)) : '—' }}</span>
+                            <span class="dealer-inquiry-id">#SQL-{{ $r->LEADID }}</span>
+                            <span>{{ trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '')) ?: '—' }}</span>
+                            <span>{{ ($r->ACT_LAST_UPDATE ?? $r->LASTMODIFIED) ? date('M j, Y', strtotime($r->ACT_LAST_UPDATE ?? $r->LASTMODIFIED)) : '—' }}</span>
                             <div class="dealer-progress-cell">
                                 <span class="dealer-progress-text">{{ $displayStatus }}</span>
                                 <div class="dealer-status-bar">
