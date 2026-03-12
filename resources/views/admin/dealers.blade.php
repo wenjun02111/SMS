@@ -23,6 +23,7 @@
                         <th data-col="alias" class="dashboard-table-sortable" title="Sort">Alias</th>
                         <th data-col="totallead" class="dashboard-table-sortable" title="Sort">Total lead</th>
                         <th data-col="totalclosed" class="dashboard-table-sortable" title="Sort">Total closed</th>
+                        <th data-col="totalfailed" class="dashboard-table-sortable" title="Sort">Failed</th>
                         <th data-col="conversionrate" class="dashboard-table-sortable" title="Sort">Conversion rate</th>
                     </tr>
                 </thead>
@@ -38,10 +39,11 @@
                             <td data-col="alias">{{ $r->ALIAS ?? '—' }}</td>
                             <td data-col="totallead">{{ number_format((int)($r->TOTAL_LEAD ?? 0)) }}</td>
                             <td data-col="totalclosed">{{ number_format((int)($r->TOTAL_CLOSED ?? 0)) }}</td>
+                            <td data-col="totalfailed">{{ number_format((int)($r->TOTAL_FAILED ?? 0)) }}</td>
                             <td data-col="conversionrate">{{ number_format((float)($r->CONVERSION_RATE ?? 0), 1) }}%</td>
                         </tr>
                     @empty
-                        <tr><td colspan="10">No dealers yet.</td></tr>
+                        <tr><td colspan="11">No dealers yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

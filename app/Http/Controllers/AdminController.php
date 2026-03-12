@@ -65,8 +65,13 @@ class AdminController extends Controller
                     'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND "CURRENTSTATUS" = \'Closed\'',
                     [$userId]
                 );
+                $failedRow = DB::selectOne(
+                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND UPPER(TRIM("CURRENTSTATUS")) = \'FAILED\'',
+                    [$userId]
+                );
                 $leads = (int) ($leadsRow->c ?? $leadsRow->C ?? current((array) $leadsRow) ?? 0);
                 $closed = (int) ($closedRow->c ?? $closedRow->C ?? current((array) $closedRow) ?? 0);
+                $failed = (int) ($failedRow->c ?? $failedRow->C ?? current((array) $failedRow) ?? 0);
                 $conversion = $leads > 0 ? ($closed / $leads) : 0;
                 $company = trim((string) ($d->COMPANY ?? ''));
 
@@ -129,6 +134,7 @@ class AdminController extends Controller
                     'location' => $location,
                     'total_leads' => $leads,
                     'closed_count' => $closed,
+                    'failed_count' => $failed,
                     'conversion_rate' => round($conversion * 100, 1),
                     'avg_closing_time' => $avgClosingDisplay,
                 ];
@@ -698,7 +704,8 @@ class AdminController extends Controller
                 'SELECT
                     TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) AS UID,
                     COUNT(*) AS TOTAL_LEAD,
-                    SUM(CASE WHEN "CURRENTSTATUS" = \'Closed\' THEN 1 ELSE 0 END) AS TOTAL_CLOSED
+                    SUM(CASE WHEN "CURRENTSTATUS" = \'Closed\' THEN 1 ELSE 0 END) AS TOTAL_CLOSED,
+                    SUM(CASE WHEN UPPER(TRIM("CURRENTSTATUS")) = \'FAILED\' THEN 1 ELSE 0 END) AS TOTAL_FAILED
                  FROM "LEAD"
                  WHERE "ASSIGNED_TO" IS NOT NULL AND TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) <> \'\'
                  GROUP BY TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50)))'
@@ -708,9 +715,11 @@ class AdminController extends Controller
                 if ($uid === '') continue;
                 $totalLead = (int) ($sr->TOTAL_LEAD ?? $sr->total_lead ?? 0);
                 $totalClosed = (int) ($sr->TOTAL_CLOSED ?? $sr->total_closed ?? 0);
+                $totalFailed = (int) ($sr->TOTAL_FAILED ?? $sr->total_failed ?? 0);
                 $leadStats[$uid] = [
                     'totalLead' => $totalLead,
                     'totalClosed' => $totalClosed,
+                    'totalFailed' => $totalFailed,
                 ];
             }
         } catch (\Throwable $e) {
@@ -721,9 +730,11 @@ class AdminController extends Controller
             $uid = trim((string) ($r->USERID ?? ''));
             $totalLead = $leadStats[$uid]['totalLead'] ?? 0;
             $totalClosed = $leadStats[$uid]['totalClosed'] ?? 0;
+            $totalFailed = $leadStats[$uid]['totalFailed'] ?? 0;
             $conversion = $totalLead > 0 ? ($totalClosed / $totalLead) * 100 : 0;
             $r->TOTAL_LEAD = $totalLead;
             $r->TOTAL_CLOSED = $totalClosed;
+            $r->TOTAL_FAILED = $totalFailed;
             $r->CONVERSION_RATE = $conversion;
             return $r;
         }, $rows);

@@ -91,6 +91,7 @@
                         <th>Location</th>
                         <th>Leads</th>
                         <th>Closed</th>
+                        <th>Failed</th>
                         <th>Conversion</th>
                         <th>Avg. Closing Time</th>
                     </tr>
@@ -102,6 +103,7 @@
                             <td>{{ $d['location'] }}</td>
                             <td>{{ number_format($d['total_leads']) }}</td>
                             <td>{{ number_format($d['closed_count']) }}</td>
+                            <td>{{ number_format($d['failed_count'] ?? 0) }}</td>
                             @php
                                 $cr = (float) ($d['conversion_rate'] ?? 0);
                                 $crLabel = $cr >= 60 ? 'High' : ($cr >= 40 ? 'Medium' : 'Low');
@@ -116,7 +118,7 @@
                             <td>{{ $d['avg_closing_time'] }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6">No dealer data yet.</td></tr>
+                        <tr><td colspan="7">No dealer data yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

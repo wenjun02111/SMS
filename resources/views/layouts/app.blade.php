@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'SQL Sales Management System')</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 </head>
@@ -106,6 +107,36 @@
         overlay.addEventListener('click', function(e) {
             if (e.target === overlay) overlay.remove();
         });
+    }
+
+    // Strict client-side idle timeout: redirect to login after SESSION_LIFETIME minutes
+    // This handles the "no requests made" case where server can't enforce timeout.
+    var isLoggedIn = {{ session()->has('user_role') ? 'true' : 'false' }};
+    if (isLoggedIn) {
+        var lifetimeMinutes = {{ (int) config('session.lifetime', 120) }};
+        var maxIdleMs = Math.max(1, lifetimeMinutes) * 60 * 1000;
+        var lastActivity = Date.now();
+        function bump() { lastActivity = Date.now(); }
+        ['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(function(evt) {
+            document.addEventListener(evt, bump, { passive: true });
+        });
+        setInterval(function() {
+            if ((Date.now() - lastActivity) > maxIdleMs) {
+                // Best-effort logout, then go to login.
+                var token = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+                if (token) {
+                    fetch('{{ route('logout') }}', {
+                        method: 'POST',
+                        headers: { 'X-CSRF-TOKEN': token, 'X-Requested-With': 'XMLHttpRequest' },
+                        credentials: 'same-origin'
+                    }).finally(function() {
+                        window.location.href = '{{ route('login') }}';
+                    });
+                } else {
+                    window.location.href = '{{ route('login') }}';
+                }
+            }
+        }, 5000);
     }
 })();
 </script>

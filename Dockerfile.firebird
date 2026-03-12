@@ -1,0 +1,9 @@
+# Optional: custom Firebird image (docker-compose uses firebirdsql/firebird:5 directly)
+# Build with: docker build -f Dockerfile.firebird -t sms-firebird .
+FROM firebirdsql/firebird:5
+
+EXPOSE 3050/tcp
+VOLUME /var/lib/firebird/data
+
+# Defaults already set in base image; override if needed
+# ENV FIREBIRD_ROOT_PASSWORD=masterkey
