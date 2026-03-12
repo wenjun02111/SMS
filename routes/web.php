@@ -28,6 +28,8 @@ Route::middleware(['auth.sms', 'admin'])->prefix('admin')->name('admin.')->group
     Route::get('/inquiries/create', [AdminController::class, 'createInquiry'])->name('inquiries.create');
     Route::post('/inquiries', [AdminController::class, 'storeInquiry'])->name('inquiries.store');
     Route::post('/inquiries/assign', [AdminController::class, 'assignInquiry'])->name('inquiries.assign');
+    Route::post('/inquiries/mark-failed', [AdminController::class, 'markInquiryFailed'])->name('inquiries.mark-failed');
+    Route::get('/inquiries/{leadId}/status', [AdminController::class, 'leadStatus'])->name('inquiries.lead-status');
     Route::get('/dealers', [AdminController::class, 'dealers'])->name('dealers');
     Route::get('/rewards', [AdminController::class, 'rewards'])->name('rewards');
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');

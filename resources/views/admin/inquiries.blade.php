@@ -346,15 +346,17 @@
                             case 'CONFIRMED':  $astatusClass = 'inquiries-status-confirmed'; break;
                             case 'COMPLETED':  $astatusClass = 'inquiries-status-completed'; break;
                             case 'REWARDED':   $astatusClass = 'inquiries-status-rewarded'; break;
+                            case 'FAILED':     $astatusClass = 'inquiries-status-failed'; break;
                             default:           $astatusClass = 'inquiries-status-new'; break;
                         }
                     @endphp
+                    @php $canMarkFailed = !in_array($arawStatus, ['COMPLETED', 'REWARDED', 'FAILED'], true); @endphp
                     <td data-col="status"><span class="inquiries-status {{ $astatusClass }}">{{ $arawStatus !== '' ? $arawStatus : 'PENDING' }}</span></td>
-                    <td class="inquiries-col-action inquiries-action-cell">
-                        <button type="button" class="inquiries-icon-btn" title="Reassign"><i class="bi bi-arrow-repeat"></i></button>
-                        <button type="button" class="inquiries-icon-btn" title="View"><i class="bi bi-eye"></i></button>
-                        <a href="#" class="inquiries-text-link">View Info</a>
-                        <a href="#" class="inquiries-text-link">View Status</a>
+                    <td class="inquiries-col-action inquiries-action-cell {{ $canMarkFailed ? '' : 'inquiries-action-cell-single' }}">
+                        <button type="button" class="inquiries-btn inquiries-btn-small inquiries-view-status-btn" data-lead-id="{{ $r->LEADID }}" title="View Status">View Status</button>
+                        @if($canMarkFailed)
+                        <button type="button" class="inquiries-btn inquiries-btn-small inquiries-btn-secondary inquiries-mark-failed-btn" data-lead-id="{{ $r->LEADID }}" title="Mark As Failed">Mark As Failed</button>
+                        @endif
                     </td>
                 </tr>
                 @empty
@@ -464,8 +466,121 @@
     </div>
 </div>
 
+<div class="inquiries-assign-modal" id="statusModal" hidden>
+    <div class="inquiries-assign-backdrop" data-status-close="1"></div>
+    <div class="inquiries-assign-window" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
+        <div class="inquiries-assign-header">
+            <div class="inquiries-assign-title" id="statusModalTitle">Status — Lead #SQL-<span id="statusModalLeadId"></span></div>
+            <button type="button" class="inquiries-assign-close" aria-label="Close" data-status-close="1">&times;</button>
+        </div>
+        <div class="inquiries-assign-body">
+            <div class="inquiries-status-table-wrap">
+                <table class="inquiries-table">
+                    <thead><tr><th>Date</th><th>Subject</th><th>Status</th><th>Description</th><th>User</th></tr></thead>
+                    <tbody id="statusModalBody"></tbody>
+                </table>
+            </div>
+            <p id="statusModalEmpty" class="inquiries-empty" style="display:none;">No status history.</p>
+        </div>
+    </div>
+</div>
+
+<div class="inquiries-assign-modal" id="markFailedModal" hidden>
+    <div class="inquiries-assign-backdrop" data-markfailed-close="1"></div>
+    <div class="inquiries-assign-window" role="dialog" aria-modal="true" aria-labelledby="markFailedModalTitle">
+        <div class="inquiries-assign-header">
+            <div class="inquiries-assign-title" id="markFailedModalTitle">Mark as Failed — Lead #SQL-<span id="markFailedModalLeadId"></span></div>
+            <button type="button" class="inquiries-assign-close" aria-label="Close" data-markfailed-close="1">&times;</button>
+        </div>
+        <form id="markFailedForm" method="POST" action="{{ route('admin.inquiries.mark-failed') }}" class="inquiries-assign-body">
+            @csrf
+            <input type="hidden" name="LEADID" id="markFailedLeadId">
+            <div class="inquiries-assign-row">
+                <label class="inquiries-assign-label" for="markFailedDescription">Description <span class="required">*</span></label>
+                <textarea id="markFailedDescription" name="DESCRIPTION" class="inquiry-form-input" rows="4" maxlength="4000" required></textarea>
+            </div>
+            <div class="inquiries-assign-actions">
+                <button type="button" class="inquiries-btn inquiries-btn-secondary" data-markfailed-close="1">Cancel</button>
+                <button type="submit" class="inquiries-btn inquiries-btn-primary">Mark As Failed</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    (function initStatusModal() {
+        var modal = document.getElementById('statusModal');
+        var titleLeadId = document.getElementById('statusModalLeadId');
+        var body = document.getElementById('statusModalBody');
+        var emptyEl = document.getElementById('statusModalEmpty');
+        if (!modal || !body) return;
+        function closeStatus() { modal.hidden = true; }
+        function openStatus(leadId, items) {
+            if (titleLeadId) titleLeadId.textContent = leadId;
+            body.innerHTML = '';
+            if (!items || items.length === 0) {
+                if (emptyEl) emptyEl.style.display = 'block';
+            } else {
+                if (emptyEl) emptyEl.style.display = 'none';
+                items.forEach(function(it) {
+                    var tr = document.createElement('tr');
+                    var date = it.CREATIONDATE ? String(it.CREATIONDATE).substring(0, 19) : '—';
+                    tr.innerHTML = '<td>' + date + '</td><td>' + (it.SUBJECT || '—') + '</td><td>' + (it.STATUS || '—') + '</td><td>' + (it.DESCRIPTION || '—') + '</td><td>' + (it.USERID || '—') + '</td>';
+                    body.appendChild(tr);
+                });
+            }
+            modal.hidden = false;
+        }
+        document.addEventListener('click', function(e) {
+            var btn = e.target && e.target.closest ? e.target.closest('.inquiries-view-status-btn') : null;
+            if (btn) {
+                var leadId = btn.getAttribute('data-lead-id');
+                if (leadId) {
+                    fetch('{{ url("/admin/inquiries") }}/' + leadId + '/status', { headers: { 'Accept': 'application/json' } })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) { openStatus(leadId, data.items || []); })
+                        .catch(function() { openStatus(leadId, []); });
+                }
+                return;
+            }
+            if (e.target && (e.target.getAttribute('data-status-close') === '1')) closeStatus();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal && !modal.hidden) closeStatus();
+        });
+    })();
+    (function initMarkFailed() {
+        var modal = document.getElementById('markFailedModal');
+        var form = document.getElementById('markFailedForm');
+        var input = document.getElementById('markFailedLeadId');
+        var titleLeadId = document.getElementById('markFailedModalLeadId');
+        var textarea = document.getElementById('markFailedDescription');
+        if (!modal || !form || !input) return;
+        function close() {
+            modal.hidden = true;
+            if (textarea) textarea.value = '';
+        }
+        document.addEventListener('click', function(e) {
+            var btn = e.target && e.target.closest ? e.target.closest('.inquiries-mark-failed-btn') : null;
+            if (btn) {
+                var leadId = btn.getAttribute('data-lead-id');
+                if (leadId) {
+                    input.value = leadId;
+                    if (titleLeadId) titleLeadId.textContent = leadId;
+                    if (textarea) textarea.value = '';
+                    modal.hidden = false;
+                    if (textarea) textarea.focus();
+                }
+                return;
+            }
+            if (e.target && (e.target.getAttribute('data-markfailed-close') === '1')) close();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal && !modal.hidden) close();
+        });
+    })();
+
     // Message preview modal
     (function initMessageModal() {
         if (document.getElementById('inquiryMessageModal')) return;
@@ -784,6 +899,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var t = document.getElementById('unassignedTable');
             if (t) t.querySelectorAll('.inquiries-grid-filter').forEach(function(inp) { inp.value = ''; });
             applyGridFilters();
+            if (typeof clearInquiriesSort === 'function') clearInquiriesSort('unassignedTable');
         });
     }
 
@@ -800,6 +916,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var t = document.getElementById('assignedTable');
             if (t) t.querySelectorAll('.inquiries-grid-filter-assigned').forEach(function(inp) { inp.value = ''; });
             applyAssignedGridFilters();
+            if (typeof clearInquiriesSort === 'function') clearInquiriesSort('assignedTable');
         });
     }
 
@@ -815,6 +932,88 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     applyGridFilters();
     applyAssignedGridFilters();
+
+    // Sort by column (Incoming + Assigned)
+    var unassignedSort = { col: null, dir: 1 };
+    var assignedSort = { col: null, dir: 1 };
+    function getSortValue(row, col) {
+        var cell = row.querySelector('td[data-col="' + col + '"]');
+        return (cell && cell.textContent) ? cell.textContent.trim().toLowerCase() : '';
+    }
+    function sortInquiriesTable(tableId, state) {
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        var tbody = table.querySelector('tbody');
+        if (!tbody || !state.col) return;
+        var rows = [].slice.call(tbody.querySelectorAll('tr.inquiry-row'));
+        var emptyRow = tbody.querySelector('tr:not(.inquiry-row)');
+        rows.sort(function(a, b) {
+            var va = getSortValue(a, state.col);
+            var vb = getSortValue(b, state.col);
+            var cmp = va.localeCompare(vb, undefined, { numeric: true });
+            return state.dir * cmp;
+        });
+        rows.forEach(function(r) { tbody.appendChild(r); });
+        if (emptyRow) tbody.appendChild(emptyRow);
+    }
+    function setInitialOrder(tableId) {
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        var tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        tbody.querySelectorAll('tr.inquiry-row').forEach(function(row, i) {
+            row.setAttribute('data-initial-index', String(i));
+        });
+    }
+    function clearInquiriesSort(tableId) {
+        var table = document.getElementById(tableId);
+        if (!table) return;
+        var state = tableId === 'unassignedTable' ? unassignedSort : assignedSort;
+        state.col = null;
+        state.dir = 1;
+        table.querySelectorAll('thead th[data-col]').forEach(function(h) {
+            h.classList.remove('inquiries-sort-asc', 'inquiries-sort-desc');
+        });
+        var tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        var rows = [].slice.call(tbody.querySelectorAll('tr.inquiry-row'));
+        var emptyRow = tbody.querySelector('tr:not(.inquiry-row)');
+        rows.sort(function(a, b) {
+            var ia = parseInt(a.getAttribute('data-initial-index') || '0', 10);
+            var ib = parseInt(b.getAttribute('data-initial-index') || '0', 10);
+            return ia - ib;
+        });
+        rows.forEach(function(r) { tbody.appendChild(r); });
+        if (emptyRow) tbody.appendChild(emptyRow);
+    }
+    function initSortableInquiries() {
+        ['unassignedTable', 'assignedTable'].forEach(function(tableId) {
+            var table = document.getElementById(tableId);
+            if (!table) return;
+            var state = tableId === 'unassignedTable' ? unassignedSort : assignedSort;
+            table.querySelectorAll('thead th[data-col]').forEach(function(th) {
+                th.classList.add('inquiries-sortable');
+                th.style.cursor = 'pointer';
+                th.addEventListener('click', function(e) {
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+                    var col = th.getAttribute('data-col');
+                    if (!col) return;
+                    state.dir = (state.col === col) ? -state.dir : 1;
+                    state.col = col;
+                    table.querySelectorAll('thead th[data-col]').forEach(function(h) {
+                        h.classList.remove('inquiries-sort-asc', 'inquiries-sort-desc');
+                        if (h.getAttribute('data-col') === col) {
+                            h.classList.add(state.dir === 1 ? 'inquiries-sort-asc' : 'inquiries-sort-desc');
+                        }
+                    });
+                    sortInquiriesTable(tableId, state);
+                });
+            });
+        });
+        setInitialOrder('unassignedTable');
+        setInitialOrder('assignedTable');
+    }
+    initSortableInquiries();
 
     document.querySelectorAll('.inquiries-tab').forEach(function(tab) {
         tab.addEventListener('click', function() {
@@ -922,6 +1121,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 applyAssignedColumns(getAssignedVisibleColumns());
                 applyGridFilters();
                 applyAssignedGridFilters();
+                // Set initial order on new rows then clear sort state
+                if (typeof setInitialOrder === 'function') {
+                    setInitialOrder('unassignedTable');
+                    setInitialOrder('assignedTable');
+                }
+                if (typeof clearInquiriesSort === 'function') {
+                    clearInquiriesSort('unassignedTable');
+                    clearInquiriesSort('assignedTable');
+                }
             }).catch(function() {
                 // ignore errors, just stop spinner
             }).finally(function() {

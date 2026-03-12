@@ -47,7 +47,11 @@
     <div class="dashboard-row">
         <div class="dashboard-panel dashboard-chart-panel">
             <div class="dashboard-panel-header">
-                <div class="dashboard-panel-title">Closed Case</div>
+                <div class="dashboard-panel-title">
+                    Closed Case
+                    <i class="bi bi-info-circle dashboard-info-icon"
+                       title="Count of leads turned into closed cases grouped by creation date (week/month/year)."></i>
+                </div>
             </div>
             <div class="dashboard-panel-body">
                 <div class="dashboard-chart-container">
@@ -57,7 +61,11 @@
         </div>
         <div class="dashboard-panel dashboard-chart-panel">
             <div class="dashboard-panel-header">
-                <div class="dashboard-panel-title">Recent Referral Activity</div>
+                <div class="dashboard-panel-title">
+                    Recent Referral Activity
+                    <i class="bi bi-info-circle dashboard-info-icon"
+                       title="Count of leads turning into Follow-Up status by dealer (weekly/monthly/yearly)."></i>
+                </div>
                 <span class="dashboard-metric-pill dashboard-metric-pill-up">+14% vs last week</span>
             </div>
             <div class="dashboard-panel-body">
@@ -94,7 +102,17 @@
                             <td>{{ $d['location'] }}</td>
                             <td>{{ number_format($d['total_leads']) }}</td>
                             <td>{{ number_format($d['closed_count']) }}</td>
-                            <td>{{ $d['conversion_rate'] }}%</td>
+                            @php
+                                $cr = (float) ($d['conversion_rate'] ?? 0);
+                                $crLabel = $cr >= 60 ? 'High' : ($cr >= 40 ? 'Medium' : 'Low');
+                                $crClass = $cr >= 60 ? 'dashboard-badge-green' : ($cr >= 40 ? 'dashboard-badge-orange' : 'dashboard-badge-red');
+                            @endphp
+                            <td>
+                                <span class="dashboard-badge {{ $crClass }}">
+                                    <span class="dashboard-badge-dot"></span>
+                                    <span class="dashboard-badge-text">{{ rtrim(rtrim(number_format($cr, 1), '0'), '.') }}% {{ $crLabel }}</span>
+                                </span>
+                            </td>
                             <td>{{ $d['avg_closing_time'] }}</td>
                         </tr>
                     @empty

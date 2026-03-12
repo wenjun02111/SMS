@@ -77,15 +77,17 @@
             case 'CONFIRMED':  $astatusClass = 'inquiries-status-confirmed'; break;
             case 'COMPLETED':  $astatusClass = 'inquiries-status-completed'; break;
             case 'REWARDED':   $astatusClass = 'inquiries-status-rewarded'; break;
+            case 'FAILED':     $astatusClass = 'inquiries-status-failed'; break;
             default:           $astatusClass = 'inquiries-status-new'; break;
         }
     @endphp
+    @php $canMarkFailed = !in_array($arawStatus, ['COMPLETED', 'REWARDED', 'FAILED'], true); @endphp
     <td data-col="status"><span class="inquiries-status {{ $astatusClass }}">{{ $arawStatus !== '' ? $arawStatus : 'PENDING' }}</span></td>
-    <td class="inquiries-col-action inquiries-action-cell">
-        <button type="button" class="inquiries-icon-btn" title="Reassign"><i class="bi bi-arrow-repeat"></i></button>
-        <button type="button" class="inquiries-icon-btn" title="View"><i class="bi bi-eye"></i></button>
-        <a href="#" class="inquiries-text-link">View Info</a>
-        <a href="#" class="inquiries-text-link">View Status</a>
+    <td class="inquiries-col-action inquiries-action-cell {{ $canMarkFailed ? '' : 'inquiries-action-cell-single' }}">
+        <button type="button" class="inquiries-btn inquiries-btn-small inquiries-view-status-btn" data-lead-id="{{ $r->LEADID }}" title="View Status">View Status</button>
+        @if($canMarkFailed)
+        <button type="button" class="inquiries-btn inquiries-btn-small inquiries-btn-secondary inquiries-mark-failed-btn" data-lead-id="{{ $r->LEADID }}" title="Mark As Failed">Mark As Failed</button>
+        @endif
     </td>
 </tr>
 @empty

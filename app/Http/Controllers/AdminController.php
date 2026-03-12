@@ -16,9 +16,9 @@ class AdminController extends Controller
         $leadCountRow = DB::selectOne('SELECT COUNT(*) as cnt FROM "LEAD"');
         $totalLeads = (int) ($leadCountRow->cnt ?? $leadCountRow->CNT ?? current((array) $leadCountRow) ?? 0);
 
-        // Total closed: LEAD with CURRENTSTATUS = 'Closed'
+        // Total closed: LEAD_ACT with STATUS = 'Completed'
         $closedRow = DB::selectOne(
-            'SELECT COUNT(*) as cnt FROM "LEAD" WHERE "CURRENTSTATUS" = \'Closed\''
+            'SELECT COUNT(*) as cnt FROM "LEAD_ACT" WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\''
         );
         $totalClosed = (int) ($closedRow->cnt ?? $closedRow->CNT ?? current((array) $closedRow) ?? 0);
 
@@ -147,7 +147,7 @@ class AdminController extends Controller
             // Schema may differ; keep empty
         }
 
-        // Closed cases (Completed/Reward) - week/month/year
+        // Closed cases (LEAD_ACT STATUS = 'Completed') - week/month/year
         $chartLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         $chartData = [12, 19, 15, 22, 18, 24, 20];
         $referralWeekData = [0, 0, 0, 0, 0, 0, 0];
@@ -156,7 +156,7 @@ class AdminController extends Controller
             for ($i = 0; $i < 7; $i++) {
                 $day = $startOfWeek->copy()->addDays($i)->format('Y-m-d');
                 $r = DB::selectOne(
-                    'SELECT COUNT(*) as c FROM "LEAD_ACT" WHERE CAST("CREATIONDATE" AS DATE) = CAST(? AS DATE) AND ("STATUS" = \'Completed\' OR "STATUS" = \'Reward\')',
+                    'SELECT COUNT(*) as c FROM "LEAD_ACT" WHERE CAST("CREATIONDATE" AS DATE) = CAST(? AS DATE) AND UPPER(TRIM("STATUS")) = \'COMPLETED\'',
                     [$day]
                 );
                 $chartData[$i] = (int) ($r->c ?? $r->C ?? current((array) $r) ?? 0);
@@ -181,7 +181,7 @@ class AdminController extends Controller
                 $chartMonthLabels[] = (string) $i;
                 $day = $start->copy()->day($i)->format('Y-m-d');
                 $r = DB::selectOne(
-                    'SELECT COUNT(*) as c FROM "LEAD_ACT" WHERE CAST("CREATIONDATE" AS DATE) = CAST(? AS DATE) AND ("STATUS" = \'Completed\' OR "STATUS" = \'Reward\')',
+                    'SELECT COUNT(*) as c FROM "LEAD_ACT" WHERE CAST("CREATIONDATE" AS DATE) = CAST(? AS DATE) AND UPPER(TRIM("STATUS")) = \'COMPLETED\'',
                     [$day]
                 );
                 $chartMonthData[] = (int) ($r->c ?? $r->C ?? current((array) $r) ?? 0);
@@ -207,7 +207,7 @@ class AdminController extends Controller
                 $monthStart = $yearStart->copy()->addMonths($m);
                 $monthEnd = $monthStart->copy()->endOfMonth();
                 $r = DB::selectOne(
-                    'SELECT COUNT(*) as c FROM "LEAD_ACT" WHERE "CREATIONDATE" >= ? AND "CREATIONDATE" <= ? AND ("STATUS" = \'Completed\' OR "STATUS" = \'Reward\')',
+                    'SELECT COUNT(*) as c FROM "LEAD_ACT" WHERE "CREATIONDATE" >= ? AND "CREATIONDATE" <= ? AND UPPER(TRIM("STATUS")) = \'COMPLETED\'',
                     [$monthStart->format('Y-m-d 00:00:00'), $monthEnd->format('Y-m-d 23:59:59')]
                 );
                 $chartYearData[$m] = (int) ($r->c ?? $r->C ?? current((array) $r) ?? 0);
@@ -266,6 +266,18 @@ class AdminController extends Controller
                 $assigned[] = $r;
             }
         }
+
+        // Default order: incoming = date oldest first; assigned = assign date latest first
+        usort($unassigned, function ($a, $b) {
+            $ta = strtotime($a->CREATEDAT ?? '0');
+            $tb = strtotime($b->CREATEDAT ?? '0');
+            return $ta <=> $tb;
+        });
+        usort($assigned, function ($a, $b) {
+            $ta = strtotime($a->LASTMODIFIED ?? $a->CREATEDAT ?? '0');
+            $tb = strtotime($b->LASTMODIFIED ?? $b->CREATEDAT ?? '0');
+            return $tb <=> $ta;
+        });
 
         // Override CURRENTSTATUS from latest LEAD_ACT status per LEADID
         try {
@@ -492,24 +504,81 @@ class AdminController extends Controller
         $toLabel = $nameMap[$assignedTo] ?? $assignedTo;
 
         try {
+            // Set assigner in session context so the LEAD trigger can use it for LEAD_ACT.USERID (assigned-by, not assigned-to)
+            if ($fromUserId !== '') {
+                DB::statement(
+                    "SELECT RDB\$SET_CONTEXT('USER_SESSION', 'ASSIGNER', ?) FROM RDB\$DATABASE",
+                    [$fromUserId]
+                );
+            }
             DB::update(
                 'UPDATE "LEAD" SET "ASSIGNED_TO" = ?, "LASTMODIFIED" = CURRENT_TIMESTAMP WHERE "LEADID" = ?',
                 [$assignedTo, $leadId]
-            );
-
-            $desc = 'Lead assigned from ' . $fromLabel . ' to ' . $toLabel;
-            // Insert activity record
-            DB::selectOne(
-                'INSERT INTO "LEAD_ACT" ("LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS")
-                 VALUES (?,?,CURRENT_TIMESTAMP,?,?,?,?)
-                 RETURNING "LEAD_ACTID"',
-                [$leadId, $fromUserId !== '' ? $fromUserId : null, 'Lead Assigned', $desc, null, 'Pending']
             );
         } catch (\Throwable $e) {
             return back()->with('error', 'Could not assign lead: ' . $e->getMessage());
         }
 
         return redirect()->route('admin.inquiries')->with('success', 'Lead asssigned successfully.');
+    }
+
+    public function markInquiryFailed(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'LEADID' => 'required|integer|min:1',
+            'DESCRIPTION' => 'required|string|max:4000',
+        ]);
+        $leadId = (int) $validated['LEADID'];
+        $reason = trim((string) ($validated['DESCRIPTION'] ?? ''));
+        $userId = trim((string) ($request->session()->get('user_id') ?? ''));
+
+        $latest = DB::selectOne(
+            'SELECT FIRST 1 "STATUS" FROM "LEAD_ACT" WHERE "LEADID" = ? ORDER BY "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
+            [$leadId]
+        );
+        $currentStatus = $latest ? strtoupper(trim((string) ($latest->STATUS ?? ''))) : '';
+        if (in_array($currentStatus, ['COMPLETED', 'REWARDED', 'FAILED'], true)) {
+            return back()->with('error', 'Cannot mark as Failed: lead is already ' . $currentStatus . '.');
+        }
+
+        $message = 'Status changed to Failed by ' . ($userId !== '' ? $userId : 'Admin') . '. ' . $reason;
+        try {
+            DB::beginTransaction();
+            DB::update(
+                'UPDATE "LEAD" SET "LASTMODIFIED" = CURRENT_TIMESTAMP WHERE "LEADID" = ?',
+                [$leadId]
+            );
+            DB::insert(
+                'INSERT INTO "LEAD_ACT" ("LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS")
+                 VALUES (NEXT VALUE FOR GEN_LEAD_ACTID,?,?,CURRENT_TIMESTAMP,?,?,?,?)',
+                [$leadId, $userId !== '' ? $userId : null, 'Status changed to Failed', $message, null, 'Failed']
+            );
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Could not mark as failed: ' . $e->getMessage());
+        }
+
+        return redirect()->route('admin.inquiries')->with('success', 'Lead marked as Failed.');
+    }
+
+    public function leadStatus(int $leadId): \Illuminate\Http\JsonResponse
+    {
+        $rows = DB::select(
+            'SELECT "LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS"
+             FROM "LEAD_ACT" WHERE "LEADID" = ? ORDER BY "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
+            [$leadId]
+        );
+        $items = array_map(fn ($r) => [
+            'LEAD_ACTID' => $r->LEAD_ACTID,
+            'LEADID' => $r->LEADID,
+            'USERID' => $r->USERID,
+            'CREATIONDATE' => $r->CREATIONDATE,
+            'SUBJECT' => $r->SUBJECT,
+            'DESCRIPTION' => $r->DESCRIPTION,
+            'STATUS' => $r->STATUS,
+        ], $rows);
+        return response()->json(['items' => $items]);
     }
 
     public function createInquiry(): View
