@@ -33,6 +33,75 @@ class AdminController extends Controller
         // Conversion rate: closed / total leads
         $conversionRate = $totalLeads > 0 ? round(($totalClosed / $totalLeads) * 100, 1) : 0;
 
+        // Week-over-week comparison (this week vs last week by timestamp)
+        $startThisWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $endLastWeek = $startThisWeek->copy()->subSecond();
+        $startLastWeek = $startThisWeek->copy()->subWeek();
+        $leadsThisWeek = 0;
+        $leadsLastWeek = 0;
+        $closedThisWeek = 0;
+        $closedLastWeek = 0;
+        $referralThisWeek = 0;
+        $referralLastWeek = 0;
+        $activeThisWeek = 0;
+        $activeLastWeek = 0;
+        try {
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD" WHERE "CREATEDAT" >= ? AND "CREATEDAT" <= ?',
+                [$startThisWeek->format('Y-m-d H:i:s'), Carbon::now()->format('Y-m-d 23:59:59')]
+            );
+            $leadsThisWeek = (int) ($r->c ?? $r->C ?? 0);
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD" WHERE "CREATEDAT" >= ? AND "CREATEDAT" <= ?',
+                [$startLastWeek->format('Y-m-d H:i:s'), $endLastWeek->format('Y-m-d 23:59:59')]
+            );
+            $leadsLastWeek = (int) ($r->c ?? $r->C ?? 0);
+
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD_ACT" WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\' AND "CREATIONDATE" >= ? AND "CREATIONDATE" <= ?',
+                [$startThisWeek->format('Y-m-d H:i:s'), Carbon::now()->format('Y-m-d 23:59:59')]
+            );
+            $closedThisWeek = (int) ($r->c ?? $r->C ?? 0);
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD_ACT" WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\' AND "CREATIONDATE" >= ? AND "CREATIONDATE" <= ?',
+                [$startLastWeek->format('Y-m-d H:i:s'), $endLastWeek->format('Y-m-d 23:59:59')]
+            );
+            $closedLastWeek = (int) ($r->c ?? $r->C ?? 0);
+
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD_ACT" WHERE "STATUS" = \'FollowUp\' AND "CREATIONDATE" >= ? AND "CREATIONDATE" <= ?',
+                [$startThisWeek->format('Y-m-d H:i:s'), Carbon::now()->format('Y-m-d 23:59:59')]
+            );
+            $referralThisWeek = (int) ($r->c ?? $r->C ?? 0);
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD_ACT" WHERE "STATUS" = \'FollowUp\' AND "CREATIONDATE" >= ? AND "CREATIONDATE" <= ?',
+                [$startLastWeek->format('Y-m-d H:i:s'), $endLastWeek->format('Y-m-d 23:59:59')]
+            );
+            $referralLastWeek = (int) ($r->c ?? $r->C ?? 0);
+
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD" WHERE "CREATEDAT" >= ? AND "CREATEDAT" <= ? AND UPPER(TRIM("CURRENTSTATUS")) = \'ONGOING\'',
+                [$startThisWeek->format('Y-m-d H:i:s'), Carbon::now()->format('Y-m-d 23:59:59')]
+            );
+            $activeThisWeek = (int) ($r->c ?? $r->C ?? 0);
+            $r = DB::selectOne(
+                'SELECT COUNT(*) AS c FROM "LEAD" WHERE "CREATEDAT" >= ? AND "CREATEDAT" <= ? AND UPPER(TRIM("CURRENTSTATUS")) = \'ONGOING\'',
+                [$startLastWeek->format('Y-m-d H:i:s'), $endLastWeek->format('Y-m-d 23:59:59')]
+            );
+            $activeLastWeek = (int) ($r->c ?? $r->C ?? 0);
+        } catch (\Throwable $e) {
+            $activeThisWeek = 0;
+            $activeLastWeek = 0;
+        }
+
+        $pctLeads = $leadsLastWeek > 0 ? round((($leadsThisWeek - $leadsLastWeek) / $leadsLastWeek) * 100, 1) : ($leadsThisWeek > 0 ? 100 : 0);
+        $pctClosed = $closedLastWeek > 0 ? round((($closedThisWeek - $closedLastWeek) / $closedLastWeek) * 100, 1) : ($closedThisWeek > 0 ? 100 : 0);
+        $pctActive = $activeLastWeek > 0 ? round((($activeThisWeek - $activeLastWeek) / $activeLastWeek) * 100, 1) : ($activeThisWeek > 0 ? 100 : 0);
+        $pctReferral = $referralLastWeek > 0 ? round((($referralThisWeek - $referralLastWeek) / $referralLastWeek) * 100, 1) : ($referralThisWeek > 0 ? 100 : 0);
+        $convThisWeek = $leadsThisWeek > 0 ? ($closedThisWeek / $leadsThisWeek) * 100 : 0;
+        $convLastWeek = $leadsLastWeek > 0 ? ($closedLastWeek / $leadsLastWeek) * 100 : 0;
+        $conversionRateChange = round($convThisWeek - $convLastWeek, 1);
+
         $dealerStats = [];
         try {
             // Top Active Dealers (USERS + LEAD) per requested logic:
@@ -71,20 +140,25 @@ class AdminController extends Controller
                     'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND UPPER(TRIM("CURRENTSTATUS")) = \'FAILED\'',
                     [$userId]
                 );
+                $ongoingRow = DB::selectOne(
+                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND UPPER(TRIM("CURRENTSTATUS")) = \'ONGOING\'',
+                    [$userId]
+                );
                 $leads = (int) ($leadsRow->c ?? $leadsRow->C ?? current((array) $leadsRow) ?? 0);
                 $closed = (int) ($closedRow->c ?? $closedRow->C ?? current((array) $closedRow) ?? 0);
                 $failed = (int) ($failedRow->c ?? $failedRow->C ?? current((array) $failedRow) ?? 0);
+                $ongoing = (int) ($ongoingRow->c ?? $ongoingRow->C ?? current((array) $ongoingRow) ?? 0);
                 $conversion = $leads > 0 ? ($closed / $leads) : 0;
                 $company = trim((string) ($d->COMPANY ?? ''));
 
-                // Avg. Closing Time: average(Completed.CREATIONDATE - Pending.CREATIONDATE) per LEADID for this dealer.
+                // Avg. Closing Time: average(Completed status CREATIONDATE − Pending status CREATIONDATE) per LEADID for this dealer.
                 $avgClosingSeconds = null;
                 try {
                     $rows = DB::select(
                         'SELECT
                             a."LEADID" AS lead_id,
-                            MIN(CASE WHEN a."STATUS" = \'Pending\' THEN a."CREATIONDATE" END) AS pending_at,
-                            MIN(CASE WHEN a."STATUS" = \'Completed\' THEN a."CREATIONDATE" END) AS completed_at
+                            MIN(CASE WHEN UPPER(TRIM(a."STATUS")) = \'PENDING\' THEN a."CREATIONDATE" END) AS pending_at,
+                            MIN(CASE WHEN UPPER(TRIM(a."STATUS")) = \'COMPLETED\' THEN a."CREATIONDATE" END) AS completed_at
                          FROM "LEAD_ACT" a
                          JOIN "LEAD" l ON l."LEADID" = a."LEADID"
                          WHERE TRIM(CAST(l."ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50)))
@@ -135,18 +209,33 @@ class AdminController extends Controller
                     'dealer_name' => $company,
                     'location' => $location,
                     'total_leads' => $leads,
+                    'ongoing_count' => $ongoing,
                     'closed_count' => $closed,
                     'failed_count' => $failed,
                     'conversion_rate' => round($conversion * 100, 1),
                     'avg_closing_time' => $avgClosingDisplay,
+                    // raw seconds for sorting (smaller = faster closing)
+                    'avg_closing_seconds' => $avgClosingSeconds,
                 ];
             })
-                // Highest conversion rate first; tie-breakers: closed, leads
+                // Highest conversion rate first; tie-breakers: fastest avg closing, then closed, then leads
                 ->sort(function (array $a, array $b) {
                     $c = ($b['conversion_rate'] <=> $a['conversion_rate']);
                     if ($c !== 0) return $c;
-                    $c2 = ($b['closed_count'] <=> $a['closed_count']);
-                    if ($c2 !== 0) return $c2;
+                    // Prefer smaller average closing time (in seconds). Nulls go last.
+                    $ta = $a['avg_closing_seconds'] ?? null;
+                    $tb = $b['avg_closing_seconds'] ?? null;
+                    $hasA = is_int($ta);
+                    $hasB = is_int($tb);
+                    if ($hasA && $hasB) {
+                        $c2 = ($ta <=> $tb);
+                        if ($c2 !== 0) return $c2;
+                    } elseif ($hasA !== $hasB) {
+                        // Dealer with a real value comes before one without.
+                        return $hasA ? -1 : 1;
+                    }
+                    $c3 = ($b['closed_count'] <=> $a['closed_count']);
+                    if ($c3 !== 0) return $c3;
                     return ($b['total_leads'] <=> $a['total_leads']);
                 })
                 ->values()
@@ -236,6 +325,11 @@ class AdminController extends Controller
             'totalClosed' => $totalClosed,
             'activeInquiries' => $activeInquiries,
             'conversionRate' => $conversionRate,
+            'pctLeads' => $pctLeads,
+            'pctClosed' => $pctClosed,
+            'pctActive' => $pctActive,
+            'conversionRateChange' => $conversionRateChange,
+            'pctReferral' => $pctReferral,
             'topDealers' => $dealerStats,
             'chartLabels' => $chartLabels,
             'chartData' => $chartData,
@@ -381,11 +475,22 @@ class AdminController extends Controller
             // fall back to raw ids
         }
         $totalNewInquiries = count($unassigned);
+        // Total Ongoing: assigned leads where LEAD.CURRENTSTATUS = 'Ongoing'
         $totalOngoing = 0;
-        foreach ($assigned as $r) {
-            $status = strtoupper(trim((string)($r->CURRENTSTATUS ?? '')));
-            if ($status === 'ONGOING') {
-                $totalOngoing++;
+        try {
+            $ongoingRow = DB::selectOne(
+                'SELECT COUNT(*) AS cnt FROM "LEAD"
+                 WHERE "ASSIGNED_TO" IS NOT NULL AND TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) <> \'\'
+                 AND UPPER(TRIM("CURRENTSTATUS")) = \'ONGOING\''
+            );
+            $totalOngoing = (int) ($ongoingRow->cnt ?? $ongoingRow->CNT ?? 0);
+        } catch (\Throwable $e) {
+            // fallback: count from assigned array by status
+            foreach ($assigned as $r) {
+                $status = strtoupper(trim((string)($r->CURRENTSTATUS ?? '')));
+                if ($status === 'ONGOING') {
+                    $totalOngoing++;
+                }
             }
         }
         $productLabels = [
@@ -451,14 +556,139 @@ class AdminController extends Controller
             // leave empty
         }
 
+        $assignedPerPage = 10;
+        $assignedTotal = count($assigned);
+        $assignedForView = array_slice($assigned, 0, $assignedPerPage);
+        $assignedLastPage = $assignedTotal > 0 ? (int) ceil($assignedTotal / $assignedPerPage) : 1;
+
         return view('admin.inquiries', [
             'unassigned' => $unassigned,
-            'assigned' => $assigned,
+            'assigned' => $assignedForView,
+            'assignedTotal' => $assignedTotal,
+            'assignedPerPage' => $assignedPerPage,
+            'assignedCurrentPage' => 1,
+            'assignedLastPage' => $assignedLastPage,
             'totalNewInquiries' => $totalNewInquiries,
             'totalOngoing' => $totalOngoing,
             'productLabels' => $productLabels,
             'dealers' => $dealers,
             'currentPage' => 'inquiries',
+        ]);
+    }
+
+    public function inquiriesAssignedPage(Request $request): JsonResponse
+    {
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = 10;
+
+        $rows = DB::select(
+            'SELECT FIRST 200
+                "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL","ADDRESS1","ADDRESS2","CITY","POSTCODE",
+                "BUSINESSNATURE","USERCOUNT","EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
+                "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
+            FROM "LEAD"
+            ORDER BY "LEADID" DESC'
+        );
+        $assigned = [];
+        foreach ($rows as $r) {
+            if (trim((string) ($r->ASSIGNED_TO ?? '')) !== '') {
+                $assigned[] = $r;
+            }
+        }
+        usort($assigned, function ($a, $b) {
+            $ta = strtotime($a->LASTMODIFIED ?? $a->CREATEDAT ?? '0');
+            $tb = strtotime($b->LASTMODIFIED ?? $b->CREATEDAT ?? '0');
+            return $tb <=> $ta;
+        });
+
+        $leadIds = array_values(array_unique(array_filter(array_map(function ($r) { return (int)($r->LEADID ?? 0); }, $rows))));
+        if (!empty($leadIds)) {
+            $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
+            try {
+                $acts = DB::select(
+                    'SELECT a."LEADID", a."STATUS"
+                     FROM "LEAD_ACT" a
+                     JOIN (
+                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
+                         FROM "LEAD_ACT"
+                         WHERE "LEADID" IN (' . $placeholders . ')
+                         GROUP BY "LEADID"
+                     ) x
+                       ON x."LEADID" = a."LEADID" AND x.MAXCD = a."CREATIONDATE"
+                     WHERE a."LEADID" IN (' . $placeholders . ')',
+                    array_merge($leadIds, $leadIds)
+                );
+                $statusMap = [];
+                foreach ($acts as $a) {
+                    $lid = (int)($a->LEADID ?? 0);
+                    if ($lid > 0) $statusMap[$lid] = trim((string)($a->STATUS ?? ''));
+                }
+                foreach ($rows as $r) {
+                    $lid = (int)($r->LEADID ?? 0);
+                    if ($lid > 0 && isset($statusMap[$lid]) && $statusMap[$lid] !== '') {
+                        $r->CURRENTSTATUS = $statusMap[$lid];
+                    }
+                }
+            } catch (\Throwable $e) {
+                // keep CURRENTSTATUS from LEAD
+            }
+        }
+
+        $ids = [];
+        foreach ($rows as $r) {
+            $to = trim((string) ($r->ASSIGNED_TO ?? ''));
+            $by = trim((string) ($r->CREATEDBY ?? ''));
+            if ($to !== '') $ids[$to] = true;
+            if ($by !== '') $ids[$by] = true;
+        }
+        $ids = array_keys($ids);
+        if (!empty($ids)) {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            try {
+                $users = DB::select('SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')', $ids);
+                $userMap = [];
+                foreach ($users as $u) {
+                    $uid = trim((string) ($u->USERID ?? ''));
+                    if ($uid === '') continue;
+                    $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                    $alias = trim((string) ($u->ALIAS ?? ''));
+                    $fallback = trim((string) ($u->COMPANY ?? ''));
+                    if ($fallback === '') $fallback = trim((string) ($u->EMAIL ?? ''));
+                    if ($fallback === '') $fallback = $uid;
+                    $userMap[$uid] = ($role !== '' && $alias !== '') ? ($role . '- ' . $alias) : (($role !== '' ? $role . '- ' . $fallback : ($alias !== '' ? $alias : $fallback)));
+                }
+                foreach ($rows as $r) {
+                    $to = trim((string) ($r->ASSIGNED_TO ?? ''));
+                    $by = trim((string) ($r->CREATEDBY ?? ''));
+                    if ($to !== '' && isset($userMap[$to])) $r->ASSIGNED_TO_NAME = $userMap[$to];
+                    if ($by !== '' && isset($userMap[$by])) $r->CREATEDBY_NAME = $userMap[$by];
+                }
+            } catch (\Throwable $e) {
+                // fallback raw ids
+            }
+        }
+
+        $productLabels = [
+            1 => 'Account', 2 => 'Payroll', 3 => 'Production', 4 => 'Mobile Sales', 5 => 'Ecommerce',
+            6 => 'EBI POS', 7 => 'Sudu AI', 8 => 'X-Store', 9 => 'Vision', 10 => 'HRMS', 11 => 'Others',
+        ];
+        $assignedTotal = count($assigned);
+        $assignedLastPage = $assignedTotal > 0 ? (int) ceil($assignedTotal / $perPage) : 1;
+        $page = min($page, $assignedLastPage);
+        $offset = ($page - 1) * $perPage;
+        $assignedSlice = array_slice($assigned, $offset, $perPage);
+
+        $html = view('admin.partials.inquiries_assigned_rows', [
+            'assigned' => $assignedSlice,
+            'productLabels' => $productLabels,
+        ])->render();
+
+        return response()->json([
+            'html' => $html,
+            'assignedTotal' => $assignedTotal,
+            'assignedPerPage' => $perPage,
+            'currentPage' => $page,
+            'lastPage' => $assignedLastPage,
         ]);
     }
 
@@ -476,6 +706,8 @@ class AdminController extends Controller
             'assigned' => $assignedHtml,
             'totalNewInquiries' => $data['totalNewInquiries'] ?? 0,
             'totalOngoing' => $data['totalOngoing'] ?? 0,
+            'assignedTotal' => $data['assignedTotal'] ?? 0,
+            'assignedLastPage' => $data['assignedLastPage'] ?? 1,
         ]);
     }
 
@@ -521,7 +753,22 @@ class AdminController extends Controller
         $fromLabel = $fromUserId !== '' ? ($nameMap[$fromUserId] ?? $fromUserId) : 'System';
         $toLabel = $nameMap[$assignedTo] ?? $assignedTo;
 
+        // Remember previous assignee for possible undo
+        $prevAssignedTo = null;
         try {
+            $current = DB::selectOne(
+                'SELECT "ASSIGNED_TO" FROM "LEAD" WHERE "LEADID" = ?',
+                [$leadId]
+            );
+            if ($current) {
+                $prevAssignedTo = trim((string) ($current->ASSIGNED_TO ?? ''));
+            }
+        } catch (\Throwable $e) {
+            $prevAssignedTo = null;
+        }
+
+        try {
+            DB::beginTransaction();
             // Set assigner in session context so the LEAD trigger can use it for LEAD_ACT.USERID (assigned-by, not assigned-to)
             if ($fromUserId !== '') {
                 DB::statement(
@@ -533,11 +780,93 @@ class AdminController extends Controller
                 'UPDATE "LEAD" SET "ASSIGNED_TO" = ?, "LASTMODIFIED" = CURRENT_TIMESTAMP WHERE "LEADID" = ?',
                 [$assignedTo, $leadId]
             );
+            DB::commit();
         } catch (\Throwable $e) {
+            DB::rollBack();
             return back()->with('error', 'Could not assign lead: ' . $e->getMessage());
         }
 
-        return redirect()->route('admin.inquiries')->with('success', 'Lead asssigned successfully.');
+        $undoPayload = [
+            'lead_id' => $leadId,
+            'prev_assigned_to' => $prevAssignedTo,
+            'new_assigned_to' => $assignedTo,
+        ];
+
+        return redirect()->route('admin.inquiries')
+            ->with('success', 'Lead assigned successfully.')
+            ->with('assign_undo', $undoPayload);
+    }
+
+    public function undoAssignInquiry(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'LEADID' => 'required|integer|min:1',
+            'PREV_ASSIGNED_TO' => 'nullable|string|max:50',
+        ]);
+        $leadId = (int) $validated['LEADID'];
+        $prev = trim((string) ($validated['PREV_ASSIGNED_TO'] ?? ''));
+
+        try {
+            DB::beginTransaction();
+
+            $row = DB::selectOne(
+                'SELECT "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
+                    "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
+                    "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
+                    "CURRENTSTATUS","CREATEDAT","CREATEDBY"
+                 FROM "LEAD" WHERE "LEADID" = ?',
+                [$leadId]
+            );
+            if (!$row) {
+                DB::rollBack();
+                return redirect()->route('admin.inquiries')->with('error', 'Lead not found.');
+            }
+
+            $assignedTo = $prev !== '' ? $prev : null;
+
+            // Delete activity for this lead so we can delete the lead row (FK)
+            DB::delete('DELETE FROM "LEAD_ACT" WHERE "LEADID" = ?', [$leadId]);
+            DB::delete('DELETE FROM "LEAD" WHERE "LEADID" = ?', [$leadId]);
+
+            // Re-insert same lead with the same LEADID (get back the id we just deleted); status back to Open
+            DB::insert(
+                'INSERT INTO "LEAD" (
+                    "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
+                    "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
+                    "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
+                    "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)',
+                [
+                    $leadId,
+                    $row->PRODUCTID ?? null,
+                    $row->COMPANYNAME ?? null,
+                    $row->CONTACTNAME ?? null,
+                    $row->CONTACTNO ?? null,
+                    $row->EMAIL ?? null,
+                    $row->ADDRESS1 ?? null,
+                    $row->ADDRESS2 ?? null,
+                    $row->CITY ?? null,
+                    $row->POSTCODE ?? null,
+                    $row->BUSINESSNATURE ?? null,
+                    $row->USERCOUNT ?? null,
+                    $row->EXISTINGSOFTWARE ?? null,
+                    $row->DEMOMODE ?? null,
+                    $row->DESCRIPTION ?? null,
+                    $row->REFERRALCODE ?? null,
+                    'Open',
+                    $row->CREATEDAT ?? null,
+                    $row->CREATEDBY ?? null,
+                    $assignedTo,
+                ]
+            );
+
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return redirect()->route('admin.inquiries')->with('error', 'Could not undo assignment: ' . $e->getMessage());
+        }
+
+        return redirect()->route('admin.inquiries')->with('success', 'Assignment undone.');
     }
 
     public function markInquiryFailed(Request $request): RedirectResponse
@@ -597,6 +926,49 @@ class AdminController extends Controller
             'STATUS' => $r->STATUS,
         ], $rows);
         return response()->json(['items' => $items]);
+    }
+
+    public function companyLookup(Request $request): JsonResponse
+    {
+        $name = trim((string) $request->query('q', ''));
+        if ($name === '') {
+            return response()->json(['found' => false]);
+        }
+
+        try {
+            $row = DB::selectOne(
+                'SELECT FIRST 1
+                    "LEADID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
+                    "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE",
+                    "EXISTINGSOFTWARE","USERCOUNT","DEMOMODE"
+                 FROM "LEAD"
+                 WHERE UPPER(TRIM("COMPANYNAME")) = UPPER(TRIM(?))
+                 ORDER BY "LEADID" DESC',
+                [$name]
+            );
+            if (!$row) {
+                return response()->json(['found' => false]);
+            }
+
+            return response()->json([
+                'found' => true,
+                'leadId' => (int) ($row->LEADID ?? 0),
+                'companyname' => (string) ($row->COMPANYNAME ?? ''),
+                'contactname' => (string) ($row->CONTACTNAME ?? ''),
+                'contactno' => (string) ($row->CONTACTNO ?? ''),
+                'email' => (string) ($row->EMAIL ?? ''),
+                'address1' => (string) ($row->ADDRESS1 ?? ''),
+                'address2' => (string) ($row->ADDRESS2 ?? ''),
+                'city' => (string) ($row->CITY ?? ''),
+                'postcode' => (string) ($row->POSTCODE ?? ''),
+                'businessnature' => (string) ($row->BUSINESSNATURE ?? ''),
+                'existingsoftware' => (string) ($row->EXISTINGSOFTWARE ?? ''),
+                'usercount' => (string) ($row->USERCOUNT ?? ''),
+                'demomode' => (string) ($row->DEMOMODE ?? ''),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['found' => false]);
+        }
     }
 
     public function createInquiry(): View
@@ -728,11 +1100,11 @@ class AdminController extends Controller
         try {
             DB::insert(
                 'INSERT INTO "LEAD" (
-                    "PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
+                    "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
                     "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
                     "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
                     "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?,?,CURRENT_TIMESTAMP)',
+                ) VALUES (GEN_ID(GEN_LEADID, 1),?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,?,?,CURRENT_TIMESTAMP)',
                 [
                     $productIdValue,
                     $validated['COMPANYNAME'],
@@ -776,6 +1148,7 @@ class AdminController extends Controller
                 'SELECT
                     TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) AS UID,
                     COUNT(*) AS TOTAL_LEAD,
+                    SUM(CASE WHEN UPPER(TRIM("CURRENTSTATUS")) = \'ONGOING\' THEN 1 ELSE 0 END) AS TOTAL_ONGOING,
                     SUM(CASE WHEN "CURRENTSTATUS" = \'Closed\' THEN 1 ELSE 0 END) AS TOTAL_CLOSED,
                     SUM(CASE WHEN UPPER(TRIM("CURRENTSTATUS")) = \'FAILED\' THEN 1 ELSE 0 END) AS TOTAL_FAILED
                  FROM "LEAD"
@@ -786,10 +1159,12 @@ class AdminController extends Controller
                 $uid = trim((string) ($sr->UID ?? $sr->uid ?? ''));
                 if ($uid === '') continue;
                 $totalLead = (int) ($sr->TOTAL_LEAD ?? $sr->total_lead ?? 0);
+                $totalOngoing = (int) ($sr->TOTAL_ONGOING ?? $sr->total_ongoing ?? 0);
                 $totalClosed = (int) ($sr->TOTAL_CLOSED ?? $sr->total_closed ?? 0);
                 $totalFailed = (int) ($sr->TOTAL_FAILED ?? $sr->total_failed ?? 0);
                 $leadStats[$uid] = [
                     'totalLead' => $totalLead,
+                    'totalOngoing' => $totalOngoing,
                     'totalClosed' => $totalClosed,
                     'totalFailed' => $totalFailed,
                 ];
@@ -801,10 +1176,12 @@ class AdminController extends Controller
         $items = array_map(function ($r) use ($leadStats) {
             $uid = trim((string) ($r->USERID ?? ''));
             $totalLead = $leadStats[$uid]['totalLead'] ?? 0;
+            $totalOngoing = $leadStats[$uid]['totalOngoing'] ?? 0;
             $totalClosed = $leadStats[$uid]['totalClosed'] ?? 0;
             $totalFailed = $leadStats[$uid]['totalFailed'] ?? 0;
             $conversion = $totalLead > 0 ? ($totalClosed / $totalLead) * 100 : 0;
             $r->TOTAL_LEAD = $totalLead;
+            $r->TOTAL_ONGOING = $totalOngoing;
             $r->TOTAL_CLOSED = $totalClosed;
             $r->TOTAL_FAILED = $totalFailed;
             $r->CONVERSION_RATE = $conversion;
@@ -996,31 +1373,26 @@ class AdminController extends Controller
             'Rewarded' => $percentChange($payoutStatus['Paid'] ?? 0, $lastMonthPayout['Paid'] ?? 0),
         ];
 
-        // Product conversion by ProductID
-        $productRows = DB::select(
-            'SELECT "PRODUCTID" AS product_id, COUNT(*) AS c
-             FROM "LEAD"
-             WHERE "PRODUCTID" IS NOT NULL
-             GROUP BY "PRODUCTID"
-             ORDER BY "PRODUCTID"'
+        // Top 10 closed case dealers (LEAD.CURRENTSTATUS = Closed) for current month — Monthly Performance Conversion chart
+        $closedDealerRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL") AS name,
+                    COUNT(*) AS closed_c
+             FROM "LEAD" l
+             JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+               AND EXTRACT(MONTH FROM l."CREATEDAT") = EXTRACT(MONTH FROM CURRENT_TIMESTAMP)
+               AND EXTRACT(YEAR FROM l."CREATEDAT") = EXTRACT(YEAR FROM CURRENT_TIMESTAMP)
+             GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
+             ORDER BY closed_c DESC',
+            ['Closed']
         );
-        $productLabels = [
-            1 => 'SQL Account',
-            2 => 'SQL Payroll',
-            3 => 'Inventory Pro',
-            4 => 'Cloud Sync',
-            5 => 'SQL Suite',
-        ];
         $productConversion = [];
-        foreach ($productRows as $row) {
-            $pidRaw = $get($row, 'product_id');
-            $pidStr = trim((string) $pidRaw);
-            $pidInt = ctype_digit($pidStr) ? (int) $pidStr : null;
+        foreach (array_slice($closedDealerRows, 0, 10) as $row) {
             $productConversion[] = [
-                'label' => ($pidInt !== null && isset($productLabels[$pidInt]))
-                    ? $productLabels[$pidInt]
-                    : ($pidStr !== '' ? $pidStr : 'Unknown'),
-                'count' => (int) $get($row, 'c'),
+                'label' => (string) ($get($row, 'name') ?: $get($row, 'dealer_id') ?: 'Unknown'),
+                'count' => (int) $get($row, 'closed_c'),
             ];
         }
 
@@ -1037,18 +1409,25 @@ class AdminController extends Controller
         ]);
     }
 
-    public function reportsV2(): View
+    public function reportsV2(\Illuminate\Http\Request $request): View
     {
-        // Dynamic: derive metrics from LEAD / LEAD_ACT / USERS
+        $days = (int) $request->query('days', 90);
+        if (!in_array($days, [30, 60, 90], true)) {
+            $days = 90;
+        }
+
+        // Dynamic: derive metrics from LEAD / LEAD_ACT / USERS (filtered by last N days)
         $dealerTotals = DB::select(
-            'SELECT l."ASSIGNED_TO" AS dealer_id, u."EMAIL" AS email,
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL") AS name,
                     COUNT(*) AS total_c,
                     SUM(CASE WHEN l."CURRENTSTATUS" = ? THEN 1 ELSE 0 END) AS closed_c
              FROM "LEAD" l
              JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
              WHERE l."ASSIGNED_TO" IS NOT NULL
-             GROUP BY l."ASSIGNED_TO", u."EMAIL"',
-            ['Closed']
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
+             GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")',
+            ['Closed', -$days]
         );
 
         $totalsByDealer = [];
@@ -1059,7 +1438,7 @@ class AdminController extends Controller
             $closed = (int) ($r->CLOSED_C ?? $r->closed_c ?? 0);
             $totalsByDealer[$id] = [
                 'dealer_id' => $id,
-                'email' => (string) ($r->EMAIL ?? $r->email ?? $id),
+                'name' => (string) ($r->NAME ?? $r->name ?? $id),
                 'total' => $total,
                 'closed' => $closed,
                 'closed_rate' => $total > 0 ? ($closed / $total * 100) : 0,
@@ -1068,18 +1447,19 @@ class AdminController extends Controller
             ];
         }
 
-        // "Rejection" proxy: Closed leads without any Completed activity record
+        // "Rejection" proxy: Closed leads without any Completed activity record (same period)
         $rejectedRows = DB::select(
             'SELECT l."ASSIGNED_TO" AS dealer_id, COUNT(*) AS c
              FROM "LEAD" l
              WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
                AND l."CURRENTSTATUS" = ?
                AND NOT EXISTS (
                     SELECT 1 FROM "LEAD_ACT" a
                     WHERE a."LEADID" = l."LEADID" AND a."STATUS" = ?
                )
              GROUP BY l."ASSIGNED_TO"',
-            ['Closed', 'Completed']
+            [-$days, 'Closed', 'Completed']
         );
         foreach ($rejectedRows as $r) {
             $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
@@ -1088,6 +1468,55 @@ class AdminController extends Controller
             $totalsByDealer[$id]['rejected'] = $rej;
             $total = (int) $totalsByDealer[$id]['total'];
             $totalsByDealer[$id]['rejection_rate'] = $total > 0 ? ($rej / $total * 100) : 0;
+        }
+
+        // Failed count (CURRENTSTATUS = Failed) in current period — same filter as bar chart
+        $failedCountRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id, COUNT(*) AS failed_c
+             FROM "LEAD" l
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
+               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+             GROUP BY l."ASSIGNED_TO"',
+            [-$days, 'Failed']
+        );
+        foreach ($failedCountRows as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            if ($id === '' || !isset($totalsByDealer[$id])) continue;
+            $totalsByDealer[$id]['failed'] = (int) ($r->FAILED_C ?? $r->failed_c ?? 0);
+            $total = (int) $totalsByDealer[$id]['total'];
+            $totalsByDealer[$id]['fail_rate'] = $total > 0 ? round($totalsByDealer[$id]['failed'] / $total * 100, 1) : 0;
+        }
+        foreach ($totalsByDealer as $id => $d) {
+            if (!isset($d['failed'])) {
+                $totalsByDealer[$id]['failed'] = 0;
+                $totalsByDealer[$id]['fail_rate'] = 0.0;
+            }
+        }
+
+        // Comparison period (same $days last year): total and failed per dealer for increase fail rate
+        $compareTotals = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    COUNT(*) AS total_c,
+                    SUM(CASE WHEN TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ? THEN 1 ELSE 0 END) AS failed_c
+             FROM "LEAD" l
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, DATEADD(YEAR, -1, CURRENT_DATE))
+               AND l."CREATEDAT" <= DATEADD(YEAR, -1, CURRENT_DATE)
+             GROUP BY l."ASSIGNED_TO"',
+            ['Failed', -$days]
+        );
+        $compareByDealer = [];
+        foreach ($compareTotals as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            if ($id === '') continue;
+            $total = (int) ($r->TOTAL_C ?? $r->total_c ?? 0);
+            $failed = (int) ($r->FAILED_C ?? $r->failed_c ?? 0);
+            $compareByDealer[$id] = [
+                'total' => $total,
+                'failed' => $failed,
+                'fail_rate' => $total > 0 ? round($failed / $total * 100, 1) : 0,
+            ];
         }
 
         $highestClosed = null;
@@ -1101,16 +1530,16 @@ class AdminController extends Controller
             }
         }
 
-        // Variance %: last 90 days vs same period last year, per dealer
+        // Variance %: use same period as bar chart (for other uses if needed)
         $varianceRows = DB::select(
             'SELECT l."ASSIGNED_TO" AS dealer_id,
-                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(DAY, -90, CURRENT_DATE) AND l."CREATEDAT" <= CURRENT_DATE THEN 1 ELSE 0 END) AS curr_c,
-                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(YEAR, -1, DATEADD(DAY, -90, CURRENT_DATE)) AND l."CREATEDAT" <= DATEADD(YEAR, -1, CURRENT_DATE) THEN 1 ELSE 0 END) AS last_c
+                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE) AND l."CREATEDAT" <= CURRENT_DATE THEN 1 ELSE 0 END) AS curr_c,
+                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(DAY, ?, DATEADD(YEAR, -1, CURRENT_DATE)) AND l."CREATEDAT" <= DATEADD(YEAR, -1, CURRENT_DATE) THEN 1 ELSE 0 END) AS last_c
              FROM "LEAD" l
              WHERE l."ASSIGNED_TO" IS NOT NULL
-             GROUP BY l."ASSIGNED_TO"'
+             GROUP BY l."ASSIGNED_TO"',
+            [-$days, -$days]
         );
-
         $variance = [];
         foreach ($varianceRows as $r) {
             $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
@@ -1118,33 +1547,123 @@ class AdminController extends Controller
             $curr = (int) ($r->CURR_C ?? $r->curr_c ?? 0);
             $last = (int) ($r->LAST_C ?? $r->last_c ?? 0);
             $pct = $last > 0 ? (int) round(($curr - $last) / $last * 100) : ($curr > 0 ? 100 : 0);
-            $variance[] = [
-                'dealer_id' => $id,
-                'name' => $totalsByDealer[$id]['email'],
-                'delta' => $pct,
-            ];
+            $variance[] = ['dealer_id' => $id, 'name' => $totalsByDealer[$id]['name'], 'delta' => $pct];
         }
-        usort($variance, function ($a, $b) {
-            return abs($b['delta']) <=> abs($a['delta']);
-        });
+        usort($variance, function ($a, $b) { return abs($b['delta']) <=> abs($a['delta']); });
         $variance = array_slice($variance, 0, 10);
 
-        // Action list (at-risk): largest negative variance dealers
-        $neg = array_values(array_filter($variance, fn ($v) => $v['delta'] < 0));
-        usort($neg, fn ($a, $b) => $a['delta'] <=> $b['delta']);
-        $neg = array_slice($neg, 0, 8);
+        // Last activity per dealer (any lead activity)
+        $lastActivityRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    MAX(a."CREATIONDATE") AS last_at
+             FROM "LEAD_ACT" a
+             JOIN "LEAD" l ON l."LEADID" = a."LEADID"
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+             GROUP BY l."ASSIGNED_TO"'
+        );
+        $lastActivityByDealer = [];
+        foreach ($lastActivityRows as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            if ($id === '') continue;
+            $lastAt = $r->LAST_AT ?? $r->last_at ?? null;
+            if ($lastAt) {
+                $dt = \Carbon\Carbon::parse($lastAt);
+                $lastActivityByDealer[$id] = [
+                    'date' => $dt->format('Y-m-d'),
+                    'days_ago' => (int) $dt->diffInDays(now()),
+                ];
+            }
+        }
 
-        $atRisk = [];
-        foreach ($neg as $v) {
-            $id = $v['dealer_id'];
-            $atRisk[] = [
-                'name' => $totalsByDealer[$id]['email'],
+        // Action list (at-risk): dealers with increase in fail rate (same period filter as bar chart)
+        // Dealer name from USERS via ASSIGNED_TO; fail count & fail rate from LEAD (Failed) in period
+        $atRiskRows = [];
+        foreach ($totalsByDealer as $id => $d) {
+            $currentFailRate = (float) ($d['fail_rate'] ?? 0);
+            $lastFailRate = isset($compareByDealer[$id]) ? (float) $compareByDealer[$id]['fail_rate'] : 0;
+            // Percentage increase in fail rate vs comparison period
+            if ($lastFailRate > 0) {
+                $increasePct = round(($currentFailRate - $lastFailRate) / $lastFailRate * 100, 1);
+            } else {
+                $increasePct = $currentFailRate > 0 ? 100.0 : 0.0;
+            }
+            $atRiskRows[] = [
                 'id' => $id,
-                'comp' => 0,
-                'primary' => 0,
-                'variance' => $v['delta'],
-                'variance_pct' => (float) $v['delta'],
-                'last_activity' => '—',
+                'name' => $d['name'],
+                'fail_count' => (int) ($d['failed'] ?? 0),
+                'fail_rate' => $currentFailRate,
+                'increase_fail_rate' => $increasePct,
+                'last_activity_days' => $lastActivityByDealer[$id]['days_ago'] ?? null,
+                'last_activity' => $lastActivityByDealer[$id]['date'] ?? '—',
+            ];
+        }
+        usort($atRiskRows, function ($a, $b) {
+            return $b['increase_fail_rate'] <=> $a['increase_fail_rate'];
+        });
+        // Only dealers with increase_fail_rate >= 30%
+        $atRiskFiltered = array_values(array_filter($atRiskRows, fn ($r) => ($r['increase_fail_rate'] ?? 0) >= 30));
+        $criticalDropsCount = count($atRiskFiltered);
+
+        $atRiskPerPage = 10;
+        $atRiskTotal = $criticalDropsCount;
+        $atRiskPage = max(1, min((int) $request->query('page', 1), (int) ceil($atRiskTotal / $atRiskPerPage) ?: 1));
+        $atRiskOffset = ($atRiskPage - 1) * $atRiskPerPage;
+        $atRisk = array_slice($atRiskFiltered, $atRiskOffset, $atRiskPerPage);
+        $atRiskTotalPages = $atRiskTotal > 0 ? (int) ceil($atRiskTotal / $atRiskPerPage) : 1;
+
+        // Top 10 dealers by Failed count (CurrentStatus = Failed), last N days
+        $failedRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL") AS name,
+                    COUNT(*) AS failed_c
+             FROM "LEAD" l
+             JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
+               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+             GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
+             ORDER BY failed_c DESC',
+            [-$days, 'Failed']
+        );
+        $top10Failed = [];
+        foreach (array_slice($failedRows, 0, 10) as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            $failed = (int) ($r->FAILED_C ?? $r->failed_c ?? 0);
+            $total = isset($totalsByDealer[$id]) ? (int) $totalsByDealer[$id]['total'] : $failed;
+            $top10Failed[] = [
+                'dealer_id' => $id,
+                'name' => (string) ($r->NAME ?? $r->name ?? $id),
+                'count' => $failed,
+                'total_assigned' => $total,
+                'percentage' => $total > 0 ? round($failed / $total * 100, 1) : 0,
+            ];
+        }
+
+        // Top 10 dealers by Closed count (CurrentStatus = Closed), last N days
+        $closedRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL") AS name,
+                    COUNT(*) AS closed_c
+             FROM "LEAD" l
+             JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
+               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+             GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
+             ORDER BY closed_c DESC',
+            [-$days, 'Closed']
+        );
+        $top10Closed = [];
+        foreach (array_slice($closedRows, 0, 10) as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            $closed = (int) ($r->CLOSED_C ?? $r->closed_c ?? 0);
+            $total = isset($totalsByDealer[$id]) ? (int) $totalsByDealer[$id]['total'] : $closed;
+            $top10Closed[] = [
+                'dealer_id' => $id,
+                'name' => (string) ($r->NAME ?? $r->name ?? $id),
+                'count' => $closed,
+                'total_assigned' => $total,
+                'percentage' => $total > 0 ? round($closed / $total * 100, 1) : 0,
             ];
         }
 
@@ -1154,6 +1673,14 @@ class AdminController extends Controller
             'highestClosed' => $highestClosed,
             'highestRejected' => $highestRejected,
             'atRisk' => $atRisk,
+            'atRiskTotal' => $atRiskTotal,
+            'atRiskPage' => $atRiskPage,
+            'atRiskPerPage' => $atRiskPerPage,
+            'atRiskTotalPages' => $atRiskTotalPages,
+            'criticalDropsCount' => $criticalDropsCount,
+            'top10Failed' => $top10Failed,
+            'top10Closed' => $top10Closed,
+            'chartDays' => $days,
         ]);
     }
 
@@ -1179,13 +1706,17 @@ class AdminController extends Controller
         $startStr = $start->format('Y-m-d H:i:s');
         $endStr = $end->format('Y-m-d H:i:s');
 
-        // Dealer performance for selected quarter
+        // Dealer performance: total/closed from LEAD; rewarded from LEAD_ACT (STATUS = Rewarded)
         $rows = DB::select(
             'SELECT u."USERID" AS dealer_id,
                     u."EMAIL" AS email,
                     COUNT(*) AS total_leads,
-                    SUM(CASE WHEN l."CURRENTSTATUS" IN (?, ?) THEN 1 ELSE 0 END) AS closed_leads,
-                    SUM(CASE WHEN l."CURRENTSTATUS" = ? THEN 1 ELSE 0 END) AS rewarded_leads
+                    SUM(CASE WHEN TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ? THEN 1 ELSE 0 END) AS closed_leads,
+                    (SELECT COUNT(DISTINCT a."LEADID")
+                     FROM "LEAD_ACT" a
+                     INNER JOIN "LEAD" l2 ON l2."LEADID" = a."LEADID" AND l2."ASSIGNED_TO" = u."USERID"
+                       AND l2."CREATEDAT" >= ? AND l2."CREATEDAT" <= ?
+                     WHERE UPPER(TRIM(COALESCE(a."STATUS", \'\'))) = ?) AS rewarded_leads
              FROM "LEAD" l
              JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
              WHERE l."ASSIGNED_TO" IS NOT NULL
@@ -1193,7 +1724,7 @@ class AdminController extends Controller
                AND l."CREATEDAT" <= ?
              GROUP BY u."USERID", u."EMAIL"
              ORDER BY total_leads DESC',
-            ['Completed', 'reward', 'reward', $startStr, $endStr]
+            ['Closed', $startStr, $endStr, 'REWARDED', $startStr, $endStr]
         );
 
         $dealers = [];

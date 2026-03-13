@@ -12,7 +12,6 @@
             <div class="reports-title-dropdown">
                 <button id="dropdownHoverButton" data-dropdown-toggle="dropdownHover" data-dropdown-trigger="hover" class="reports-dropdown-btn" type="button">
                     Report - Monthly Performance Analytics
-                    Report - Monthly Performance Analytics
                     <svg class="reports-dropdown-caret" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
                 </button>
 
@@ -181,13 +180,23 @@
 
 <section class="dashboard-panel dashboard-table-panel reports-product-section">
     <div class="dashboard-panel-header">
-        <div class="dashboard-panel-title">Monthly Product Conversion</div>
+        <div>
+            <div class="dashboard-panel-title">Monthly Performance Conversion</div>
+            <div class="dashboard-panel-subtitle">Top 10 closed case dealers this month</div>
+        </div>
     </div>
     <div class="dashboard-panel-body">
         @if (count($productConversion) === 0)
-            <p class="text-muted">No product conversions yet.</p>
+            <p class="text-muted">No closed cases this month yet.</p>
         @else
-            <div class="reports-product-chart-wrapper">
+            @php
+                $dealerCount = count($productConversion);
+                $barHeightPx = 32;
+                $gapPx = 10;
+                $paddingPx = 60;
+                $chartHeightPx = max(140, $dealerCount * ($barHeightPx + $gapPx) + $paddingPx);
+            @endphp
+            <div class="reports-product-chart-wrapper" style="height: {{ $chartHeightPx }}px;">
                 <canvas id="productConversionChart"></canvas>
             </div>
         @endif
@@ -377,7 +386,7 @@
                 labels: labels,
                 datasets: [{
                     axis: 'y',
-                    label: 'Product Conversions',
+                    label: 'Closed cases',
                     data: dataValues,
                     backgroundColor: 'rgba(127, 90, 240, 0.9)',
                     borderColor: 'rgb(109, 61, 245)',

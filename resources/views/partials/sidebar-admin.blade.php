@@ -2,7 +2,7 @@
     $current = $currentPage ?? 'dashboard';
     $role = session('user_role');
 @endphp
-<aside class="dashboard-sidebar">
+<aside class="dashboard-sidebar" id="dashboardSidebar">
     <div class="dashboard-sidebar-top">
         <div class="dashboard-brand">
             <div class="dashboard-brand-main">
@@ -13,12 +13,12 @@
                 {{ $role === 'manager' ? 'Manager Console' : 'Admin Console' }}
             </div>
         </div>
+        <button type="button" class="dashboard-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+            <span class="dashboard-sidebar-toggle-inner"></span>
+        </button>
     </div>
     <nav class="dashboard-nav">
         <div class="dashboard-nav-group">
-            @if ($role === 'admin')
-                <div class="dashboard-nav-group-title">Main Menu</div>
-            @endif
         <a href="{{ route('admin.dashboard') }}" class="dashboard-nav-item {{ $current === 'dashboard' ? 'dashboard-nav-item-active' : '' }}">
             <span class="dashboard-nav-icon"><i class="bi {{ $current === 'dashboard' ? 'bi-grid-fill' : 'bi-grid' }}"></i></span>
             <span>Dashboard</span>
@@ -47,7 +47,7 @@
 
         @if ($role === 'admin')
         <div class="dashboard-nav-group dashboard-nav-group-maintain">
-            <div class="dashboard-nav-group-title">Maintenance</div>
+            <div class="sidebar-section">Maintenance</div>
             <a href="{{ route('admin.fulldatabase') }}" class="dashboard-nav-item {{ $current === 'fulldatabase' ? 'dashboard-nav-item-active' : '' }}">
                 <span class="dashboard-nav-icon"><i class="bi {{ $current === 'fulldatabase' ? 'bi-database-fill' : 'bi-database' }}"></i></span>
                 <span>Full Database</span>
