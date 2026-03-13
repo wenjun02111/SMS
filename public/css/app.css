@@ -487,8 +487,14 @@ body {
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
-  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1), padding 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.8s ease, padding 0.8s ease, min-width 0.8s ease;
   width: 240px;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-sidebar {
+  width: 60px;
+  min-width: 60px;
+  padding: 24px 6px 20px;
 }
 
 .dashboard-sidebar-collapsed {
@@ -498,15 +504,99 @@ body {
 
 .dashboard-root-sidebar-collapsed {
   grid-template-columns: 60px minmax(0, 1fr);
-  transition: grid-template-columns 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: grid-template-columns 0.8s ease;
+}
+
+/* Toggle: hamburger when sidebar collapsed, cross when sidebar open */
+.dashboard-sidebar-toggle {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  margin: 0;
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.dashboard-sidebar-toggle-inner {
+  display: block;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 2px;
+  top: calc(50% - 1px);
+  background: #6b7280;
+  transition: opacity 0.25s ease, background 0.2s ease;
+  box-shadow: 0 -5px 0 0 #6b7280, 0 5px 0 0 #6b7280;
+}
+
+/* When sidebar is open: show cross, hide hamburger */
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle-inner {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle::before,
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  top: calc(50% - 1px);
+  background: #6b7280;
+  transition: transform 0.25s ease, background 0.2s ease;
+}
+
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle::before {
+  transform: rotate(-45deg);
+}
+
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle::after {
+  transform: rotate(45deg);
+}
+
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle:hover::before,
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle:hover::after,
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle:focus-visible::before,
+.dashboard-root:not(.dashboard-root-sidebar-collapsed) .dashboard-sidebar-toggle:focus-visible::after {
+  background: #4f46e5;
+}
+
+.dashboard-sidebar-toggle:hover .dashboard-sidebar-toggle-inner,
+.dashboard-sidebar-toggle:focus-visible .dashboard-sidebar-toggle-inner {
+  background: #4f46e5;
+  box-shadow: 0 -5px 0 0 #4f46e5, 0 5px 0 0 #4f46e5;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-sidebar-toggle::before,
+.dashboard-root-sidebar-collapsed .dashboard-sidebar-toggle::after {
+  display: none;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-sidebar-toggle {
+  margin-left: 0;
+  order: -1;
 }
 
 .dashboard-sidebar-top {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-sidebar-top {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
 }
 
 .dashboard-brand {
@@ -514,7 +604,32 @@ body {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
-  margin-left: 20px;
+  margin-left: 4px;
+  transition: margin 0.8s ease, opacity 0.8s ease;
+}
+
+/* When minimized: hide SQL logo and SMS entirely */
+.dashboard-root-sidebar-collapsed .dashboard-brand {
+  display: none;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-brand-subtitle {
+  display: none;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-brand-main {
+  margin-left: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-brand-logo-img {
+  height: 18px;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-brand-sms {
+  font-size: 9px;
+  margin-top: 0;
 }
 
 .dashboard-brand-main {
@@ -526,15 +641,15 @@ body {
 
 .dashboard-brand-sms {
   font-weight: 1000;
-  font-size: 15px;
+  font-size: 12px;
   letter-spacing: 0.10em;
   text-transform: uppercase;
   color: #7f5af0;
-  margin-top: 5px;
+  margin-top: 3px;
 }
 
 .dashboard-brand-logo-img {
-  height: 26px;
+  height: 20px;
   width: auto;
 }
 
@@ -606,6 +721,7 @@ body {
   overflow-y: auto;
 }
 
+/* Fixed space for nav items: same row height and icon slot in both expanded and minimized */
 .dashboard-nav-item {
   border: none;
   background: transparent;
@@ -619,17 +735,43 @@ body {
   cursor: pointer;
   white-space: nowrap;
   min-height: 40px;
+  height: 40px;
   text-decoration: none;
   box-sizing: border-box;
   width: 100%;
 }
 
-.dashboard-sidebar-collapsed .dashboard-nav-item {
+.dashboard-sidebar-collapsed .dashboard-nav-item,
+.dashboard-root-sidebar-collapsed .dashboard-sidebar .dashboard-nav-item {
   justify-content: center;
+  padding: 10px 12px;
+  min-width: 44px;
 }
 
-.dashboard-sidebar-collapsed .dashboard-nav-icon {
+.dashboard-root-sidebar-collapsed .dashboard-sidebar .dashboard-nav-item span:not(.dashboard-nav-icon) {
+  overflow: hidden;
+  width: 0;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+  white-space: nowrap;
+  transition: width 0.8s ease, opacity 0.8s ease, padding 0.8s ease, margin 0.8s ease;
+}
+
+.dashboard-sidebar-collapsed .dashboard-nav-icon,
+.dashboard-root-sidebar-collapsed .dashboard-sidebar .dashboard-nav-icon {
   font-size: 18px;
+}
+
+.dashboard-root-sidebar-collapsed .dashboard-sidebar .dashboard-nav-group-title {
+  overflow: hidden;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  padding: 0;
+  margin: 0;
+  font-size: 0;
+  transition: width 0.8s ease, opacity 0.8s ease, height 0.8s ease, padding 0.8s ease, margin 0.8s ease;
 }
 
 .dashboard-nav-item-active {
@@ -637,14 +779,17 @@ body {
   color: var(--primary);
 }
 
+/* Fixed icon slot so nav icons keep same space when sidebar is open or minimized */
 .dashboard-nav-icon {
   width: 20px;
   min-width: 20px;
+  max-width: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #9ca3af;
   font-size: 18px;
+  flex-shrink: 0;
 }
 
 .dashboard-sidebar-footer {

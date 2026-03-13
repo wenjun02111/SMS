@@ -90,6 +90,7 @@
             <div class="rrp-legend">
                 <span class="rrp-legend-item"><span class="rrp-dot rrp-dot-purple"></span> Total Volume</span>
                 <span class="rrp-legend-item"><span class="rrp-dot rrp-dot-gold"></span> Closed Volume</span>
+                <span class="rrp-legend-item"><span class="rrp-dot rrp-dot-green"></span> Rewarded Only</span>
             </div>
         </div>
         <div class="rrp-panel-body">
@@ -245,6 +246,7 @@
             const closed = @json($chartClosed);
             const rewarded = @json($chartRewarded);
 
+            // Total bar first (main), then Closed and Rewarded; same categoryPercentage so each dealer's bars stick together
             const data = {
                 labels: labels,
                 datasets: [
@@ -252,16 +254,22 @@
                         label: 'Total Volume',
                         data: volume,
                         backgroundColor: 'rgba(124, 58, 237, 0.9)',
+                        barPercentage: 0.85,
+                        categoryPercentage: 0.9,
                     },
                     {
                         label: 'Closed Volume',
                         data: closed,
                         backgroundColor: 'rgba(234, 179, 8, 0.9)',
+                        barPercentage: 0.85,
+                        categoryPercentage: 0.9,
                     },
                     {
                         label: 'Rewarded Only',
                         data: rewarded,
                         backgroundColor: 'rgba(34, 197, 94, 0.9)',
+                        barPercentage: 0.85,
+                        categoryPercentage: 0.9,
                     }
                 ]
             };

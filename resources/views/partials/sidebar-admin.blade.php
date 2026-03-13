@@ -2,7 +2,7 @@
     $current = $currentPage ?? 'dashboard';
     $role = session('user_role');
 @endphp
-<aside class="dashboard-sidebar">
+<aside class="dashboard-sidebar" id="dashboardSidebar">
     <div class="dashboard-sidebar-top">
         <div class="dashboard-brand">
             <div class="dashboard-brand-main">
@@ -13,6 +13,9 @@
                 {{ $role === 'manager' ? 'Manager Console' : 'Admin Console' }}
             </div>
         </div>
+        <button type="button" class="dashboard-sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
+            <span class="dashboard-sidebar-toggle-inner"></span>
+        </button>
     </div>
     <nav class="dashboard-nav">
         <div class="dashboard-nav-group">

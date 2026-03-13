@@ -14,7 +14,7 @@
     @stack('styles')
 </head>
 <body>
-<div class="dashboard-root {{ isset($sidebarCollapsed) && $sidebarCollapsed ? 'dashboard-root-sidebar-collapsed' : '' }}">
+<div class="dashboard-root" id="dashboardRoot">
     @if (in_array(session('user_role'), ['admin', 'manager'], true))
         @include('partials.sidebar-admin')
     @elseif (session('user_role') === 'dealer')
@@ -113,6 +113,22 @@
             if (e.target === overlay) overlay.remove();
         });
     }
+
+    // Sidebar hamburger toggle: 0.8s expand/collapse, collapsed shows icon + SQL logo + SMS only
+    (function() {
+        var root = document.querySelector('.dashboard-root');
+        var toggle = document.getElementById('sidebarToggle');
+        var sidebar = document.getElementById('dashboardSidebar');
+        var storageKey = 'dashboard-sidebar-collapsed';
+        if (root && toggle) {
+            var collapsed = localStorage.getItem(storageKey) === '1';
+            if (collapsed) root.classList.add('dashboard-root-sidebar-collapsed');
+            toggle.addEventListener('click', function() {
+                collapsed = root.classList.toggle('dashboard-root-sidebar-collapsed');
+                localStorage.setItem(storageKey, collapsed ? '1' : '0');
+            });
+        }
+    })();
 
     // Strict client-side idle timeout: redirect to login after SESSION_LIFETIME minutes
     // This handles the "no requests made" case where server can't enforce timeout.

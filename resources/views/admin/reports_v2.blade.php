@@ -54,15 +54,15 @@
         </div>
     </header>
 
-    <section class="rv2-panel">
-        <div class="rv2-panel-head">
-            <div>
-                <div class="rv2-section-title">Top 10 Dealers — Failed vs Closed</div>
-                <div class="rv2-section-subtitle">Primary vs comparison period. Left: % failed (red). Right: % closed (green).</div>
-            </div>
-        </div>
-        <div class="rv2-panel-top">
+    <div class="rv2-filtered-layer">
+        <div class="rv2-filtered-layer-head">
+            <span class="rv2-filtered-layer-label">Filter applies to chart and table below</span>
             <form method="GET" class="rv2-filters rv2-filters-form">
+                @foreach(request()->query() as $key => $val)
+                    @if($key !== 'days' && $key !== 'compare_days' && $key !== 'page' && $key !== 'primary_from' && $key !== 'primary_to' && $key !== 'compare_from' && $key !== 'compare_to')
+                        <input type="hidden" name="{{ $key }}" value="{{ $val }}">
+                    @endif
+                @endforeach
                 <div class="rv2-filter">
                     <div class="rv2-filter-label">PRIMARY PERIOD</div>
                     <select name="days" class="rv2-filter-select">
@@ -98,69 +98,113 @@
                 </div>
             </form>
         </div>
-        <div class="rv2-panel-body">
-            <div class="rv2-bar-chart-title-row">
-                <div class="rv2-bar-chart-title rv2-bar-chart-title-failed">Top 10 Failed (left)</div>
-                <div class="rv2-bar-chart-title rv2-bar-chart-title-closed">Top 10 Closed (right)</div>
-            </div>
-            <div class="rv2-chart-wrap rv2-bar-chart-wrap rv2-bar-chart-wrap-full">
-                <canvas id="top10FailedClosedChart"></canvas>
-            </div>
-        </div>
-    </section>
 
-    <section class="rv2-panel">
-        <div class="rv2-panel-head">
-            <div>
-                <div class="rv2-section-title">Action List: At-Risk Dealers</div>
-                <div class="rv2-section-subtitle">Context: Core Accounting | Comparison: SAME PERIOD LAST YEAR</div>
-            </div>
-            <div class="rv2-badge-danger">8 CRITICAL DROPS</div>
-        </div>
-
-        <div class="rv2-table-wrap">
-            <table class="rv2-table">
-                <thead>
-                    <tr>
-                        <th>DEALER NAME</th>
-                        <th>COMP. PERIOD</th>
-                        <th>PRIMARY PERIOD</th>
-                        <th>SEASONAL VARIANCE</th>
-                        <th>LAST ACTIVITY</th>
-                        <th>ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($atRisk as $r)
-                        <tr>
-                            <td>
-                                <div class="rv2-dealer-name">{{ $r['name'] }}</div>
-                                <div class="rv2-dealer-id">{{ $r['id'] }}</div>
-                            </td>
-                            <td><span class="rv2-muted">{{ $r['comp'] ? number_format($r['comp']) : '—' }}</span> <span class="rv2-muted-xs">Core Units</span></td>
-                            <td><span class="rv2-muted">{{ $r['primary'] ? number_format($r['primary']) : '—' }}</span> <span class="rv2-muted-xs">Core Units</span></td>
-                            <td>
-                                <div class="rv2-variance-val">{{ $r['variance'] }}%</div>
-                                <div class="rv2-variance-sub">Drop-off vs last year</div>
-                            </td>
-                            <td><span class="rv2-pill-warn">{{ $r['last_activity'] }}</span></td>
-                            <td><button class="rv2-action-btn" type="button">Log Intervention</button></td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            <div class="rv2-table-footer">
-                <div class="rv2-muted-xs">Showing 1 to {{ count($atRisk) }} of 28 dealers at risk</div>
-                <div class="rv2-pagination">
-                    <button class="rv2-page-btn" type="button">Previous</button>
-                    <button class="rv2-page-btn rv2-page-active" type="button">1</button>
-                    <button class="rv2-page-btn" type="button">2</button>
-                    <button class="rv2-page-btn" type="button">3</button>
-                    <button class="rv2-page-btn" type="button">Next</button>
+        <section class="rv2-panel rv2-panel-in-layer">
+            <div class="rv2-panel-head">
+                <div>
+                    <div class="rv2-section-title">Top 10 Dealers — Failed vs Closed</div>
+                    <div class="rv2-section-subtitle">Primary vs comparison period. Left: % failed (red). Right: % closed (green).</div>
                 </div>
             </div>
-        </div>
-    </section>
+            <div class="rv2-panel-body">
+                <div class="rv2-bar-chart-title-row">
+                    <div class="rv2-bar-chart-title rv2-bar-chart-title-failed">Top 10 Failed (left)</div>
+                    <div class="rv2-bar-chart-title rv2-bar-chart-title-closed">Top 10 Closed (right)</div>
+                </div>
+                <div class="rv2-chart-wrap rv2-bar-chart-wrap rv2-bar-chart-wrap-full">
+                    <canvas id="top10FailedClosedChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section class="rv2-panel rv2-panel-in-layer">
+            <div class="rv2-panel-head">
+                <div>
+                    <div class="rv2-section-title">Action List: At-Risk Dealers</div>
+                    <div class="rv2-section-subtitle">Dealers with 30%+ increase in fail rate vs same period last year</div>
+                </div>
+                <div class="rv2-badge-danger">{{ $criticalDropsCount ?? 0 }} CRITICAL DROPS</div>
+            </div>
+
+            <div class="rv2-table-wrap">
+                <table class="rv2-table">
+                    <thead>
+                        <tr>
+                            <th>DEALER NAME</th>
+                            <th>INCREASED FAIL RATE</th>
+                            <th>FAIL RATE</th>
+                            <th>FAIL COUNT</th>
+                            <th>LAST ACTIVITY</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($atRisk as $r)
+                            <tr>
+                                <td>
+                                    <div class="rv2-dealer-name">{{ $r['name'] }}</div>
+                                    <div class="rv2-dealer-id">{{ $r['id'] }}</div>
+                                </td>
+                                <td>
+                                    <div class="rv2-variance-val">{{ number_format($r['increase_fail_rate'] ?? 0, 1) }}%</div>
+                                    <div class="rv2-variance-sub">vs same period last year</div>
+                                </td>
+                                <td>
+                                    <span class="rv2-muted">
+                                        {{ isset($r['fail_rate']) ? number_format($r['fail_rate'], 1) . '%' : '—' }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="rv2-muted">{{ isset($r['fail_count']) ? number_format($r['fail_count']) : '0' }}</span>
+                                </td>
+                                <td>
+                                    @if(isset($r['last_activity_days']) && $r['last_activity_days'] !== null)
+                                        <span class="rv2-pill-warn">
+                                            {{ $r['last_activity_days'] === 0 ? 'Today' : $r['last_activity_days'] . ' days ago' }}
+                                        </span>
+                                    @else
+                                        <span class="rv2-pill-warn">—</span>
+                                    @endif
+                                </td>
+                                <td><button class="rv2-action-btn" type="button">Log Intervention</button></td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                @php
+                    $atRiskTotal = $atRiskTotal ?? 0;
+                    $atRiskPage = $atRiskPage ?? 1;
+                    $atRiskPerPage = $atRiskPerPage ?? 10;
+                    $atRiskTotalPages = $atRiskTotalPages ?? 1;
+                    $from = $atRiskTotal === 0 ? 0 : ($atRiskPage - 1) * $atRiskPerPage + 1;
+                    $to = min($atRiskPage * $atRiskPerPage, $atRiskTotal);
+                    $query = request()->query();
+                @endphp
+                <div class="rv2-table-footer">
+                    <div class="rv2-muted-xs">Showing {{ $from }} to {{ $to }} of {{ $atRiskTotal }} dealers at risk (30%+ increase)</div>
+                    <div class="rv2-pagination">
+                        @if($atRiskPage > 1)
+                            <a href="{{ request()->url() . '?' . http_build_query(array_merge($query, ['page' => $atRiskPage - 1])) }}" class="rv2-page-btn">Previous</a>
+                        @else
+                            <span class="rv2-page-btn rv2-page-btn-disabled">Previous</span>
+                        @endif
+                        @for($p = 1; $p <= $atRiskTotalPages; $p++)
+                            @if($p == $atRiskPage)
+                                <span class="rv2-page-btn rv2-page-active">{{ $p }}</span>
+                            @else
+                                <a href="{{ request()->url() . '?' . http_build_query(array_merge($query, ['page' => $p])) }}" class="rv2-page-btn">{{ $p }}</a>
+                            @endif
+                        @endfor
+                        @if($atRiskPage < $atRiskTotalPages)
+                            <a href="{{ request()->url() . '?' . http_build_query(array_merge($query, ['page' => $atRiskPage + 1])) }}" class="rv2-page-btn">Next</a>
+                        @else
+                            <span class="rv2-page-btn rv2-page-btn-disabled">Next</span>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
 
     <section class="rv2-cards">
         <div class="rv2-mini-card">
@@ -271,6 +315,7 @@
                 datasets: [
                     {
                         label: 'Failed',
+                        yAxisID: 'y',
                         data: Array.from({ length: rowCount }, (_, i) => -Math.min(100, Math.abs(failedPct[i] ?? 0))),
                         backgroundColor: Array.from({ length: rowCount }, () => BAR_RED),
                         borderColor: Array.from({ length: rowCount }, () => BAR_RED_BORDER),
@@ -280,6 +325,7 @@
                     },
                     {
                         label: 'Closed',
+                        yAxisID: 'y',
                         data: Array.from({ length: rowCount }, (_, i) => Math.min(100, Math.abs(closedPct[i] ?? 0))),
                         backgroundColor: Array.from({ length: rowCount }, () => BAR_CLOSED),
                         borderColor: Array.from({ length: rowCount }, () => BAR_CLOSED_BORDER),
@@ -378,9 +424,11 @@
 
             const divergeEl = document.getElementById('top10FailedClosedChart');
             if (divergeEl && window.Chart && rowCount > 0) {
-                const base = 50;      // Height for the X axis
-                const perRow = 26;    // Bar is 21px thick, so 26px leaves only a tiny 5px gap between rows
-                divergeEl.height = base + (perRow * rowCount);
+                // Keep row gap the same for up to 10 dealers, then grow taller only beyond that.
+                const perRow = 26;         // row height + small gap (px)
+                const referenceRows = 10;  // target rows before stretching
+                const rowsForHeight = Math.max(rowCount, referenceRows);
+                divergeEl.height = perRow * rowsForHeight;
                 new Chart(divergeEl.getContext('2d'), config);
             }
         });

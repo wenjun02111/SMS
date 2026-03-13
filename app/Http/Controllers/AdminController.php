@@ -996,31 +996,26 @@ class AdminController extends Controller
             'Rewarded' => $percentChange($payoutStatus['Paid'] ?? 0, $lastMonthPayout['Paid'] ?? 0),
         ];
 
-        // Product conversion by ProductID
-        $productRows = DB::select(
-            'SELECT "PRODUCTID" AS product_id, COUNT(*) AS c
-             FROM "LEAD"
-             WHERE "PRODUCTID" IS NOT NULL
-             GROUP BY "PRODUCTID"
-             ORDER BY "PRODUCTID"'
+        // Top 10 closed case dealers (LEAD.CURRENTSTATUS = Closed) for current month — Monthly Performance Conversion chart
+        $closedDealerRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL") AS name,
+                    COUNT(*) AS closed_c
+             FROM "LEAD" l
+             JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+               AND EXTRACT(MONTH FROM l."CREATEDAT") = EXTRACT(MONTH FROM CURRENT_TIMESTAMP)
+               AND EXTRACT(YEAR FROM l."CREATEDAT") = EXTRACT(YEAR FROM CURRENT_TIMESTAMP)
+             GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
+             ORDER BY closed_c DESC',
+            ['Closed']
         );
-        $productLabels = [
-            1 => 'SQL Account',
-            2 => 'SQL Payroll',
-            3 => 'Inventory Pro',
-            4 => 'Cloud Sync',
-            5 => 'SQL Suite',
-        ];
         $productConversion = [];
-        foreach ($productRows as $row) {
-            $pidRaw = $get($row, 'product_id');
-            $pidStr = trim((string) $pidRaw);
-            $pidInt = ctype_digit($pidStr) ? (int) $pidStr : null;
+        foreach (array_slice($closedDealerRows, 0, 10) as $row) {
             $productConversion[] = [
-                'label' => ($pidInt !== null && isset($productLabels[$pidInt]))
-                    ? $productLabels[$pidInt]
-                    : ($pidStr !== '' ? $pidStr : 'Unknown'),
-                'count' => (int) $get($row, 'c'),
+                'label' => (string) ($get($row, 'name') ?: $get($row, 'dealer_id') ?: 'Unknown'),
+                'count' => (int) $get($row, 'closed_c'),
             ];
         }
 
@@ -1098,6 +1093,55 @@ class AdminController extends Controller
             $totalsByDealer[$id]['rejection_rate'] = $total > 0 ? ($rej / $total * 100) : 0;
         }
 
+        // Failed count (CURRENTSTATUS = Failed) in current period — same filter as bar chart
+        $failedCountRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id, COUNT(*) AS failed_c
+             FROM "LEAD" l
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
+               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+             GROUP BY l."ASSIGNED_TO"',
+            [-$days, 'Failed']
+        );
+        foreach ($failedCountRows as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            if ($id === '' || !isset($totalsByDealer[$id])) continue;
+            $totalsByDealer[$id]['failed'] = (int) ($r->FAILED_C ?? $r->failed_c ?? 0);
+            $total = (int) $totalsByDealer[$id]['total'];
+            $totalsByDealer[$id]['fail_rate'] = $total > 0 ? round($totalsByDealer[$id]['failed'] / $total * 100, 1) : 0;
+        }
+        foreach ($totalsByDealer as $id => $d) {
+            if (!isset($d['failed'])) {
+                $totalsByDealer[$id]['failed'] = 0;
+                $totalsByDealer[$id]['fail_rate'] = 0.0;
+            }
+        }
+
+        // Comparison period (same $days last year): total and failed per dealer for increase fail rate
+        $compareTotals = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    COUNT(*) AS total_c,
+                    SUM(CASE WHEN TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ? THEN 1 ELSE 0 END) AS failed_c
+             FROM "LEAD" l
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+               AND l."CREATEDAT" >= DATEADD(DAY, ?, DATEADD(YEAR, -1, CURRENT_DATE))
+               AND l."CREATEDAT" <= DATEADD(YEAR, -1, CURRENT_DATE)
+             GROUP BY l."ASSIGNED_TO"',
+            ['Failed', -$days]
+        );
+        $compareByDealer = [];
+        foreach ($compareTotals as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            if ($id === '') continue;
+            $total = (int) ($r->TOTAL_C ?? $r->total_c ?? 0);
+            $failed = (int) ($r->FAILED_C ?? $r->failed_c ?? 0);
+            $compareByDealer[$id] = [
+                'total' => $total,
+                'failed' => $failed,
+                'fail_rate' => $total > 0 ? round($failed / $total * 100, 1) : 0,
+            ];
+        }
+
         $highestClosed = null;
         $highestRejected = null;
         foreach ($totalsByDealer as $d) {
@@ -1109,16 +1153,16 @@ class AdminController extends Controller
             }
         }
 
-        // Variance %: last 90 days vs same period last year, per dealer
+        // Variance %: use same period as bar chart (for other uses if needed)
         $varianceRows = DB::select(
             'SELECT l."ASSIGNED_TO" AS dealer_id,
-                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(DAY, -90, CURRENT_DATE) AND l."CREATEDAT" <= CURRENT_DATE THEN 1 ELSE 0 END) AS curr_c,
-                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(YEAR, -1, DATEADD(DAY, -90, CURRENT_DATE)) AND l."CREATEDAT" <= DATEADD(YEAR, -1, CURRENT_DATE) THEN 1 ELSE 0 END) AS last_c
+                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE) AND l."CREATEDAT" <= CURRENT_DATE THEN 1 ELSE 0 END) AS curr_c,
+                    SUM(CASE WHEN l."CREATEDAT" >= DATEADD(DAY, ?, DATEADD(YEAR, -1, CURRENT_DATE)) AND l."CREATEDAT" <= DATEADD(YEAR, -1, CURRENT_DATE) THEN 1 ELSE 0 END) AS last_c
              FROM "LEAD" l
              WHERE l."ASSIGNED_TO" IS NOT NULL
-             GROUP BY l."ASSIGNED_TO"'
+             GROUP BY l."ASSIGNED_TO"',
+            [-$days, -$days]
         );
-
         $variance = [];
         foreach ($varianceRows as $r) {
             $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
@@ -1126,35 +1170,69 @@ class AdminController extends Controller
             $curr = (int) ($r->CURR_C ?? $r->curr_c ?? 0);
             $last = (int) ($r->LAST_C ?? $r->last_c ?? 0);
             $pct = $last > 0 ? (int) round(($curr - $last) / $last * 100) : ($curr > 0 ? 100 : 0);
-            $variance[] = [
-                'dealer_id' => $id,
-                'name' => $totalsByDealer[$id]['name'],
-                'delta' => $pct,
-            ];
+            $variance[] = ['dealer_id' => $id, 'name' => $totalsByDealer[$id]['name'], 'delta' => $pct];
         }
-        usort($variance, function ($a, $b) {
-            return abs($b['delta']) <=> abs($a['delta']);
-        });
+        usort($variance, function ($a, $b) { return abs($b['delta']) <=> abs($a['delta']); });
         $variance = array_slice($variance, 0, 10);
 
-        // Action list (at-risk): largest negative variance dealers
-        $neg = array_values(array_filter($variance, fn ($v) => $v['delta'] < 0));
-        usort($neg, fn ($a, $b) => $a['delta'] <=> $b['delta']);
-        $neg = array_slice($neg, 0, 8);
+        // Last activity per dealer (any lead activity)
+        $lastActivityRows = DB::select(
+            'SELECT l."ASSIGNED_TO" AS dealer_id,
+                    MAX(a."CREATIONDATE") AS last_at
+             FROM "LEAD_ACT" a
+             JOIN "LEAD" l ON l."LEADID" = a."LEADID"
+             WHERE l."ASSIGNED_TO" IS NOT NULL
+             GROUP BY l."ASSIGNED_TO"'
+        );
+        $lastActivityByDealer = [];
+        foreach ($lastActivityRows as $r) {
+            $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
+            if ($id === '') continue;
+            $lastAt = $r->LAST_AT ?? $r->last_at ?? null;
+            if ($lastAt) {
+                $dt = \Carbon\Carbon::parse($lastAt);
+                $lastActivityByDealer[$id] = [
+                    'date' => $dt->format('Y-m-d'),
+                    'days_ago' => (int) $dt->diffInDays(now()),
+                ];
+            }
+        }
 
-        $atRisk = [];
-        foreach ($neg as $v) {
-            $id = $v['dealer_id'];
-            $atRisk[] = [
-                'name' => $totalsByDealer[$id]['email'],
+        // Action list (at-risk): dealers with increase in fail rate (same period filter as bar chart)
+        // Dealer name from USERS via ASSIGNED_TO; fail count & fail rate from LEAD (Failed) in period
+        $atRiskRows = [];
+        foreach ($totalsByDealer as $id => $d) {
+            $currentFailRate = (float) ($d['fail_rate'] ?? 0);
+            $lastFailRate = isset($compareByDealer[$id]) ? (float) $compareByDealer[$id]['fail_rate'] : 0;
+            // Percentage increase in fail rate vs comparison period
+            if ($lastFailRate > 0) {
+                $increasePct = round(($currentFailRate - $lastFailRate) / $lastFailRate * 100, 1);
+            } else {
+                $increasePct = $currentFailRate > 0 ? 100.0 : 0.0;
+            }
+            $atRiskRows[] = [
                 'id' => $id,
-                'comp' => 0,
-                'primary' => 0,
-                'variance' => $v['delta'],
-                'variance_pct' => (float) $v['delta'],
-                'last_activity' => '—',
+                'name' => $d['name'],
+                'fail_count' => (int) ($d['failed'] ?? 0),
+                'fail_rate' => $currentFailRate,
+                'increase_fail_rate' => $increasePct,
+                'last_activity_days' => $lastActivityByDealer[$id]['days_ago'] ?? null,
+                'last_activity' => $lastActivityByDealer[$id]['date'] ?? '—',
             ];
         }
+        usort($atRiskRows, function ($a, $b) {
+            return $b['increase_fail_rate'] <=> $a['increase_fail_rate'];
+        });
+        // Only dealers with increase_fail_rate >= 30%
+        $atRiskFiltered = array_values(array_filter($atRiskRows, fn ($r) => ($r['increase_fail_rate'] ?? 0) >= 30));
+        $criticalDropsCount = count($atRiskFiltered);
+
+        $atRiskPerPage = 10;
+        $atRiskTotal = $criticalDropsCount;
+        $atRiskPage = max(1, min((int) $request->query('page', 1), (int) ceil($atRiskTotal / $atRiskPerPage) ?: 1));
+        $atRiskOffset = ($atRiskPage - 1) * $atRiskPerPage;
+        $atRisk = array_slice($atRiskFiltered, $atRiskOffset, $atRiskPerPage);
+        $atRiskTotalPages = $atRiskTotal > 0 ? (int) ceil($atRiskTotal / $atRiskPerPage) : 1;
 
         // Top 10 dealers by Failed count (CurrentStatus = Failed), last N days
         $failedRows = DB::select(
@@ -1218,6 +1296,11 @@ class AdminController extends Controller
             'highestClosed' => $highestClosed,
             'highestRejected' => $highestRejected,
             'atRisk' => $atRisk,
+            'atRiskTotal' => $atRiskTotal,
+            'atRiskPage' => $atRiskPage,
+            'atRiskPerPage' => $atRiskPerPage,
+            'atRiskTotalPages' => $atRiskTotalPages,
+            'criticalDropsCount' => $criticalDropsCount,
             'top10Failed' => $top10Failed,
             'top10Closed' => $top10Closed,
             'chartDays' => $days,
@@ -1246,13 +1329,17 @@ class AdminController extends Controller
         $startStr = $start->format('Y-m-d H:i:s');
         $endStr = $end->format('Y-m-d H:i:s');
 
-        // Dealer performance for selected quarter
+        // Dealer performance: total/closed from LEAD; rewarded from LEAD_ACT (STATUS = Rewarded)
         $rows = DB::select(
             'SELECT u."USERID" AS dealer_id,
                     u."EMAIL" AS email,
                     COUNT(*) AS total_leads,
-                    SUM(CASE WHEN l."CURRENTSTATUS" IN (?, ?) THEN 1 ELSE 0 END) AS closed_leads,
-                    SUM(CASE WHEN l."CURRENTSTATUS" = ? THEN 1 ELSE 0 END) AS rewarded_leads
+                    SUM(CASE WHEN TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ? THEN 1 ELSE 0 END) AS closed_leads,
+                    (SELECT COUNT(DISTINCT a."LEADID")
+                     FROM "LEAD_ACT" a
+                     INNER JOIN "LEAD" l2 ON l2."LEADID" = a."LEADID" AND l2."ASSIGNED_TO" = u."USERID"
+                       AND l2."CREATEDAT" >= ? AND l2."CREATEDAT" <= ?
+                     WHERE UPPER(TRIM(COALESCE(a."STATUS", \'\'))) = ?) AS rewarded_leads
              FROM "LEAD" l
              JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
              WHERE l."ASSIGNED_TO" IS NOT NULL
@@ -1260,7 +1347,7 @@ class AdminController extends Controller
                AND l."CREATEDAT" <= ?
              GROUP BY u."USERID", u."EMAIL"
              ORDER BY total_leads DESC',
-            ['Completed', 'reward', 'reward', $startStr, $endStr]
+            ['Closed', $startStr, $endStr, 'REWARDED', $startStr, $endStr]
         );
 
         $dealers = [];

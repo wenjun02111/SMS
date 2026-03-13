@@ -264,6 +264,7 @@
 .reports-page .text-heading { color: #1e293b; font-size: 1.75rem; }
 .reports-page .text-body { color: #64748b; font-size: 17px; }
 .reports-page .dashboard-panel-title { font-size: 1.05rem; }
+.reports-page .dashboard-panel-header .dashboard-panel-subtitle { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
 .reports-page .text-fg-success { color: #22c55e; }
 .reports-page .text-fg-danger { color: #ef4444; }
 .reports-page .bg-neutral-primary-soft { background: #fcfcff; }
@@ -282,7 +283,8 @@
 #inquiryRangeText { margin: 0 0 4px 0; font-size: 12px; }
 #inquiryTotal { margin: 0; font-size: 1.25rem; }
 
-.reports-page .reports-product-chart-wrapper { height: 290px; }
+/* Height set inline from dealer count so chart grows with more dealers; min for 1–2 bars */
+.reports-page .reports-product-chart-wrapper { min-height: 140px; }
 
 /* Status Report: legend with color beside each status name (reduced size) */
 .reports-page .report-legend {
