@@ -43,6 +43,7 @@ Route::middleware(['auth.sms', 'admin'])->prefix('admin')->name('admin.')->group
     Route::get('/rewards', [AdminController::class, 'rewards'])->name('rewards');
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
     Route::get('/reports-v2', [AdminController::class, 'reportsV2'])->name('reports.v2');
+    Route::get('/reports/dealer-activity/{userid}', [AdminController::class, 'dealerActivity'])->name('reports.dealer-activity');
     Route::get('/reports-revenue', [AdminController::class, 'reportsRevenue'])->name('reports.revenue');
     Route::get('/history', [AdminController::class, 'history'])->name('history');
     Route::get('/fulldatabase', [AdminController::class, 'fulldatabase'])->name('fulldatabase');

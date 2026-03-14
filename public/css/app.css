@@ -4949,24 +4949,24 @@ button.dealer-pagination-btn:disabled {
   display: flex;
   align-items: center;
   flex: 1;
-  min-width: 280px;
+  min-width: 180px;
   max-width: 960px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
 }
 .inquiries-search-icon {
-  padding: 0 14px;
+  padding: 0 10px;
   color: #9ca3af;
-  font-size: 18px;
+  font-size: 14px;
 }
 .inquiries-search-input {
   flex: 1;
-  min-width: 200px;
+  min-width: 120px;
   border: none;
-  padding: 12px 8px 12px 0;
-  font-size: 14px;
+  padding: 8px 6px 8px 0;
+  font-size: 13px;
 }
 .inquiries-search-input:focus {
   outline: none;
@@ -5025,7 +5025,34 @@ button.dealer-pagination-btn:disabled {
   margin-bottom: 0;
 }
 .maintain-users-filters-form .inquiries-search-wrap {
-  max-width: 420px;
+  max-width: 320px;
+}
+
+/* Compact overall table search (Dealers, Rewards, History, Full DB, Maintain Users) */
+.inquiries-search-section .inquiries-search-wrap {
+  min-width: 160px;
+  max-width: 260px;
+}
+.inquiries-search-section .inquiries-search-input {
+  padding: 6px 4px 6px 0;
+  font-size: 12px;
+  min-width: 80px;
+}
+.inquiries-search-section .inquiries-search-icon {
+  padding: 0 8px;
+  font-size: 12px;
+}
+.dashboard-panel-header .inquiries-search-wrap {
+  min-width: 140px;
+  max-width: 220px;
+}
+.dashboard-panel-header .inquiries-search-input {
+  padding: 6px 4px 6px 0;
+  font-size: 12px;
+}
+.dashboard-panel-header .inquiries-search-icon {
+  padding: 0 8px;
+  font-size: 12px;
 }
 
 /* Maintain Users table: same font size, padding, and column sizing as Inquiries table */

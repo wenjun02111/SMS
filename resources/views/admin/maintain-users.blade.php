@@ -236,22 +236,22 @@
             align-items: center;
             background: #fff;
             border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 0 12px;
-            min-width: 200px;
-            max-width: 320px;
+            border-radius: 8px;
+            padding: 0 10px;
+            min-width: 140px;
+            max-width: 220px;
         }
         .maintain-users-table-search-icon {
             color: #9ca3af;
-            font-size: 16px;
-            margin-right: 8px;
+            font-size: 12px;
+            margin-right: 6px;
         }
         .maintain-users-table-search-input {
             flex: 1;
             border: none;
             outline: none;
-            padding: 10px 0;
-            font-size: 14px;
+            padding: 6px 0;
+            font-size: 12px;
             min-width: 0;
         }
         .maintain-users-table-search-input::placeholder {

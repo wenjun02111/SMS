@@ -1983,6 +1983,28 @@ class AdminController extends Controller
         ]);
     }
 
+    /** Dealer activity (LEAD_ACT) for a dealer — view-only for Reports V2 "Log Intervention" popout */
+    public function dealerActivity(string $userid): \Illuminate\Http\JsonResponse
+    {
+        $rows = DB::select(
+            'SELECT a."LEAD_ACTID", a."LEADID", a."USERID", a."CREATIONDATE", a."SUBJECT", a."DESCRIPTION", a."STATUS"
+             FROM "LEAD_ACT" a
+             INNER JOIN "LEAD" l ON l."LEADID" = a."LEADID" AND l."ASSIGNED_TO" = ?
+             ORDER BY a."CREATIONDATE" DESC, a."LEAD_ACTID" DESC',
+            [$userid]
+        );
+        $items = array_map(fn ($r) => [
+            'LEAD_ACTID' => $r->LEAD_ACTID,
+            'LEADID' => $r->LEADID,
+            'USERID' => $r->USERID,
+            'CREATIONDATE' => $r->CREATIONDATE,
+            'SUBJECT' => $r->SUBJECT,
+            'DESCRIPTION' => $r->DESCRIPTION,
+            'STATUS' => $r->STATUS,
+        ], $rows);
+        return response()->json(['items' => $items]);
+    }
+
     public function reportsRevenue(Request $request): View
     {
         $quarter = strtoupper((string) $request->query('quarter', ''));
