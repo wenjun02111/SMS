@@ -999,7 +999,7 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
 .dashboard-main-body {
   flex: 1;
   min-height: 0;
-  padding: 0px 28px 24px 24px;
+  padding: 24px 28px 24px 24px;
   background: #f3f4ff;
   overflow-y: auto;
   display: flex;
@@ -2021,6 +2021,154 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
   content: ' \2193';
   font-size: 10px;
   opacity: 0.8;
+}
+
+/* Dealer table: sort icon follow inquiries design (arrow on label) */
+.dealers-table-with-filters thead th.inquiries-sortable {
+  cursor: pointer;
+}
+.dealers-table-with-filters thead th .inquiries-header-label {
+  white-space: nowrap;
+}
+.dealers-table-with-filters thead th.inquiries-sort-asc .inquiries-header-label::after {
+  content: ' \2191';
+  font-size: 10px;
+  opacity: 0.8;
+}
+.dealers-table-with-filters thead th.inquiries-sort-desc .inquiries-header-label::after {
+  content: ' \2193';
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* Dealer table: conversion rate colour labels */
+.dealer-conversion-label {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.dealer-conversion-high {
+  background: #bbf7d0;
+  color: #15803d;
+}
+.dealer-conversion-mid {
+  background: #fef08a;
+  color: #854d0e;
+}
+.dealer-conversion-low {
+  background: #fecaca;
+  color: #b91c1c;
+}
+
+/* Dealers panel: Columns button on the right */
+.dealers-panel-actions-right {
+  display: flex;
+  justify-content: flex-end;
+}
+.dealers-panel-buttons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.dealers-columns-right.inquiries-columns-dropdown .inquiries-columns-menu {
+  left: auto;
+  right: 0;
+}
+
+/* Dealers page: responsive table – keep table inside box on small screens */
+.dashboard-table-panel .table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  min-width: 0;
+}
+#dealersTable {
+  table-layout: auto;
+  width: max-content;
+  min-width: 100%;
+}
+/* Columns follow max content length; cap width so they don’t consume too much space */
+#dealersTable th[data-col="userid"],
+#dealersTable td[data-col="userid"] {
+  width: 1%;
+  white-space: nowrap;
+}
+#dealersTable th[data-col="alias"],
+#dealersTable td[data-col="alias"] {
+  width: 140px;
+  max-width: 140px;
+  word-wrap: break-word;
+}
+/* Company: fixed at length of "Alphine Technology Sdn Bhd" so box matches content */
+#dealersTable th[data-col="company"],
+#dealersTable td[data-col="company"] {
+  width: 220px;
+  max-width: 220px;
+  word-wrap: break-word;
+}
+#dealersTable th[data-col="email"],
+#dealersTable td[data-col="email"] {
+  width: 200px;
+  max-width: 200px;
+  word-wrap: break-word;
+}
+#dealersTable th[data-col="postcode"],
+#dealersTable td[data-col="postcode"] {
+  width: 1%;
+  white-space: nowrap;
+}
+#dealersTable th[data-col="city"],
+#dealersTable td[data-col="city"] {
+  width: 1%;
+  white-space: nowrap;
+}
+#dealersTable th[data-col="totallead"],
+#dealersTable th[data-col="totalongoing"],
+#dealersTable th[data-col="totalclosed"],
+#dealersTable th[data-col="totalfailed"],
+#dealersTable td[data-col="totallead"],
+#dealersTable td[data-col="totalongoing"],
+#dealersTable td[data-col="totalclosed"],
+#dealersTable td[data-col="totalfailed"] {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
+}
+#dealersTable th[data-col="conversionrate"],
+#dealersTable td[data-col="conversionrate"] {
+  width: 1%;
+  min-width: 90px;
+  max-width: 110px;
+  white-space: nowrap;
+}
+#dealersTable td[data-col="conversionrate"] .dealer-conversion-label {
+  max-width: 100%;
+  box-sizing: border-box;
+  display: inline-block;
+}
+#dealersTable th[data-col="active"],
+#dealersTable td[data-col="active"] {
+  width: 1%;
+  white-space: nowrap;
+}
+/* Filter inputs match column width – box fixed at column length */
+#dealersTable .inquiries-header-cell .dealer-grid-filter {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+#dealersTable .inquiries-header-cell .inquiries-filter-wrap {
+  max-width: 100%;
+  min-width: 0;
+}
+@media (max-width: 1024px) {
+  .dealer-conversion-label {
+    padding: 3px 6px;
+    font-size: 11px;
+  }
 }
 
 .dashboard-link-btn {
@@ -5480,7 +5628,8 @@ button.dealer-pagination-btn:disabled {
   min-width: 0;
 }
 .inquiries-header-cell .inquiries-grid-filter,
-.inquiries-header-cell .inquiries-grid-filter-assigned {
+.inquiries-header-cell .inquiries-grid-filter-assigned,
+.inquiries-header-cell .dealer-grid-filter {
   width: 100%;
   min-width: 50px;
   padding: 6px 28px 6px 8px;
@@ -5491,7 +5640,8 @@ button.dealer-pagination-btn:disabled {
   color: #374151;
 }
 .inquiries-header-cell .inquiries-grid-filter:focus,
-.inquiries-header-cell .inquiries-grid-filter-assigned:focus {
+.inquiries-header-cell .inquiries-grid-filter-assigned:focus,
+.inquiries-header-cell .dealer-grid-filter:focus {
   outline: none;
   border-color: #7f5af0;
   box-shadow: 0 0 0 2px rgba(127, 90, 240, 0.15);
@@ -5640,10 +5790,10 @@ button.dealer-pagination-btn:disabled {
 
 #unassignedTable th[data-col="address"],
 #unassignedTable td[data-col="address"] {
-  max-width: 180px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-width: 120px;
+  max-width: 280px;
+  white-space: normal;
+  word-break: break-word;
 }
 #unassignedTable th[data-col="message"],
 #unassignedTable td[data-col="message"] {
@@ -5753,6 +5903,13 @@ button.dealer-pagination-btn:disabled {
   width: 1%;
   max-width: 105px; /* +5px */
   white-space: nowrap;
+}
+#assignedTable th[data-col="address"],
+#assignedTable td[data-col="address"] {
+  min-width: 120px;
+  max-width: 280px;
+  white-space: normal;
+  word-break: break-word;
 }
 #assignedTable th[data-col="businessnature"],
 #assignedTable td[data-col="businessnature"] {
