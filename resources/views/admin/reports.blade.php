@@ -27,9 +27,6 @@
             <p class="dashboard-subtitle">Overview of system activities and performance</p>
         </div>
     </div>
-    <div class="dashboard-header-actions">
-        <button class="btn btn-outline" id="monthlyDownloadPdfBtn">Download PDF</button>
-    </div>
 </header>
 
 @php
@@ -211,14 +208,6 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Download PDF: use browser print (user can "Save as PDF")
-            const monthlyPdfBtn = document.getElementById('monthlyDownloadPdfBtn');
-            if (monthlyPdfBtn) {
-                monthlyPdfBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    window.print();
-                });
-            }
             // Title dropdown (light purple)
             const dropdownBtn = document.getElementById('dropdownHoverButton');
             const dropdown = document.getElementById('dropdownHover');

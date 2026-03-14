@@ -524,36 +524,112 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   transition: none !important;
 }
 
-/* Print styles: for reports, include only main report content (no layout chrome) */
+.dashboard-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 900;
+}
+.dashboard-root-sidebar-open .dashboard-sidebar-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .dashboard-root {
+    display: block;
+  }
+  .dashboard-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    min-height: 100vh;
+    width: 260px;
+    max-width: 80%;
+    transform: translateX(-105%);
+    transition: transform 0.25s ease;
+    z-index: 1000;
+    overflow-y: auto;
+  }
+  /* Ensure collapsed styling doesn't shrink the overlay sidebar on mobile (width and height) */
+  .dashboard-root-sidebar-collapsed .dashboard-sidebar {
+    width: 260px;
+    min-width: 0;
+    min-height: 100vh;
+    padding: 24px 18px 20px;
+  }
+  .dashboard-root-sidebar-open .dashboard-sidebar {
+    transform: translateX(0);
+  }
+  .dashboard-main {
+    margin-left: 0;
+  }
+}
+
+/* Print/PDF: full page like desktop, but without sidebar and layout header */
 @media print {
-  /* Hide global layout chrome */
   .dashboard-sidebar,
   .dashboard-topbar,
   .dashboard-bottombar {
     display: none !important;
   }
-
-  /* Make main area full width */
   .dashboard-root {
     grid-template-columns: minmax(0, 1fr) !important;
   }
-
-  /* Remove background/padding so PDF is clean */
-  .reports-page,
-  .rv2-page,
-  .rrp-page {
-    padding: 0 !important;
-    background: #ffffff !important;
+  /* Force desktop report layout so PDF looks like desktop screen (not mobile view) */
+  .rv2-header {
+    flex-direction: row !important;
+    align-items: center !important;
   }
+  .rv2-search {
+    min-width: 290px !important;
+  }
+  .rv2-variance-grid {
+    grid-template-columns: 220px minmax(0, 1fr) 220px !important;
+  }
+  .rv2-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .rv2-bar-chart-title-row {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  .rv2-dual-label-chart {
+    grid-template-columns: 220px minmax(0, 1fr) 220px !important;
+  }
+  .rv2-dual-label-col-left .rv2-dual-label-item {
+    text-align: right !important;
+  }
+  .rv2-dual-label-col-right .rv2-dual-label-item {
+    text-align: left !important;
+  }
+  .rrp-header {
+    flex-direction: row !important;
+    align-items: center !important;
+  }
+  .rrp-top-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .reports-page .dashboard-metrics-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+  .reports-page .dashboard-panels-two-column {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  }
+}
 
-  /* Hide buttons/controls we don't want in PDF */
-  .rv2-export-btn,
-  .rrp-pill,
-  .btn.btn-outline,
-  .rv2-filters,
-  .inquiry-chart-filters,
-  .maintain-users-add-btn {
-    display: none !important;
+/* Report title dropdown: on mobile open below (normal dropdown) instead of to the side */
+@media (max-width: 768px) {
+  .reports-title-dropdown .reports-dropdown-menu {
+    top: calc(100% + 6px);
+    left: 0;
+    right: auto;
+    min-width: 100%;
   }
 }
 
@@ -940,9 +1016,64 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-.dashboard-hamburger {
-  display: flex;
-  align-items: center;
+/* Mobile only: keep header visible while scrolling; hide on scroll down, show on scroll up */
+@media (max-width: 767px) {
+  .dashboard-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 800;
+    transition: transform 0.25s ease;
+  }
+
+  .dashboard-topbar-hidden {
+    transform: translateY(-100%);
+  }
+}
+
+/* Desktop: no scroll hide/show, disable transition so resize doesn't animate */
+@media (min-width: 48rem) {
+  .dashboard-topbar {
+    transition: none;
+  }
+}
+
+.dashboard-topbar-toggle {
+  display: none;
+  border: none;
+  background: transparent;
+  padding: 6px;
+  margin-right: auto;
+  cursor: pointer;
+}
+.dashboard-topbar-toggle-inner {
+  display: block;
+  width: 18px;
+  height: 2px;
+  background: #6b7280;
+  position: relative;
+}
+.dashboard-topbar-toggle-inner::before,
+.dashboard-topbar-toggle-inner::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 2px;
+  background: #6b7280;
+}
+.dashboard-topbar-toggle-inner::before {
+  top: -5px;
+}
+.dashboard-topbar-toggle-inner::after {
+  top: 5px;
+}
+
+@media (max-width: 768px) {
+  .dashboard-topbar-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .dashboard-topbar-actions {
@@ -5872,7 +6003,8 @@ button.dealer-pagination-btn:disabled {
   padding: 24px !important;
 }
 
-@media (max-width: 960px) {
+/* Tablet only: narrow sidebar. Do not apply on mobile (≤768px) where sidebar is a full overlay. */
+@media (min-width: 769px) and (max-width: 960px) {
   .dashboard-root {
     grid-template-columns: 60px minmax(0, 1fr);
   }

@@ -44,13 +44,6 @@
                 </svg>
             </div>
 
-            <button type="button" class="rv2-export-btn" id="rv2DownloadPdfBtn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 3v12m0 0 4-4m-4 4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M4 17v3h16v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                Download PDF
-            </button>
         </div>
     </header>
 
@@ -242,14 +235,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Download PDF for this report (browser print -> Save as PDF)
-            const pdfBtn = document.getElementById('rv2DownloadPdfBtn');
-            if (pdfBtn) {
-                pdfBtn.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    window.print();
-                });
-            }
             // Title dropdown (shared across reports)
             const dropdownBtn = document.getElementById('dropdownHoverButton');
             const dropdown = document.getElementById('dropdownHover');
