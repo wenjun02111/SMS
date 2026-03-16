@@ -1541,13 +1541,175 @@ class AdminController extends Controller
 
     public function rewards(): View
     {
+        // Base LEAD data – same as inquiries() / assigned tab
         $rows = DB::select(
-            'SELECT FIRST 100
-                "REFERRERPAYOUTID","DEALSUBMISSIONID","USERID","REFERRERID","STATUS","DATEGENERATED","DATEPAID"
-            FROM "REFERRER_PAYOUT"
-            ORDER BY "REFERRERPAYOUTID" DESC'
+            'SELECT FIRST 200
+                "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
+                "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
+                "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
+                "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
+            FROM "LEAD"
+            ORDER BY "LEADID" DESC'
         );
-        return view('admin.rewards', ['items' => $rows, 'currentPage' => 'rewards']);
+
+        // Only assigned leads
+        $assigned = [];
+        foreach ($rows as $r) {
+            if (trim((string) ($r->ASSIGNED_TO ?? '')) !== '') {
+                $assigned[] = $r;
+            }
+        }
+
+        // Sort: latest assigned first
+        usort($assigned, function ($a, $b) {
+            $ta = strtotime($a->LASTMODIFIED ?? $a->CREATEDAT ?? '0');
+            $tb = strtotime($b->LASTMODIFIED ?? $b->CREATEDAT ?? '0');
+            return $tb <=> $ta;
+        });
+
+        // Override CURRENTSTATUS from latest LEAD_ACT per LEADID (same approach as inquiries())
+        try {
+            $leadIds = array_values(array_unique(array_filter(array_map(
+                fn ($r) => (int) ($r->LEADID ?? 0),
+                $rows
+            ))));
+            if (!empty($leadIds)) {
+                $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
+                $acts = DB::select(
+                    'SELECT a."LEADID", a."STATUS"
+                     FROM "LEAD_ACT" a
+                     JOIN (
+                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
+                         FROM "LEAD_ACT"
+                         WHERE "LEADID" IN (' . $placeholders . ')
+                         GROUP BY "LEADID"
+                     ) x
+                       ON x."LEADID" = a."LEADID" AND x.MAXCD = a."CREATIONDATE"
+                     WHERE a."LEADID" IN (' . $placeholders . ')',
+                    array_merge($leadIds, $leadIds)
+                );
+                $statusMap = [];
+                foreach ($acts as $a) {
+                    $lid = (int) ($a->LEADID ?? 0);
+                    if ($lid > 0) {
+                        $statusMap[$lid] = trim((string) ($a->STATUS ?? ''));
+                    }
+                }
+                if (!empty($statusMap)) {
+                    foreach ($assigned as $r) {
+                        $lid = (int) ($r->LEADID ?? 0);
+                        if ($lid > 0 && isset($statusMap[$lid])) {
+                            $r->CURRENTSTATUS = $statusMap[$lid];
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // keep CURRENTSTATUS from LEAD if override fails
+        }
+
+        // Split into Completed vs Rewarded/Paid by latest status
+        $completed = [];
+        $rewarded = [];
+        foreach ($assigned as $r) {
+            $status = strtoupper(trim((string) ($r->CURRENTSTATUS ?? '')));
+            if ($status === 'COMPLETED') {
+                $completed[] = $r;
+            } elseif (in_array($status, ['REWARDED', 'PAID'], true)) {
+                $rewarded[] = $r;
+            }
+        }
+
+        // Resolve CREATEDBY_NAME and ASSIGNED_TO_NAME for display (same as inquiries)
+        try {
+            $ids = [];
+            foreach (array_merge($completed, $rewarded) as $r) {
+                $to = trim((string) ($r->ASSIGNED_TO ?? ''));
+                $by = trim((string) ($r->CREATEDBY ?? ''));
+                if ($to !== '') $ids[$to] = true;
+                if ($by !== '') $ids[$by] = true;
+            }
+            $ids = array_keys($ids);
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $users = DB::select('SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')', $ids);
+                $assignedToMap = [];
+                $createdByMap = [];
+                foreach ($users as $u) {
+                    $uid = trim((string) ($u->USERID ?? ''));
+                    if ($uid === '') continue;
+                    $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                    $company = trim((string) ($u->COMPANY ?? ''));
+                    $alias = trim((string) ($u->ALIAS ?? ''));
+                    $email = trim((string) ($u->EMAIL ?? ''));
+                    $fallback = $email !== '' ? $email : $uid;
+                    if ($company !== '' && $alias !== '') {
+                        $assignedToMap[$uid] = $company . '- ' . $alias;
+                    } elseif ($company !== '') {
+                        $assignedToMap[$uid] = $company;
+                    } elseif ($alias !== '') {
+                        $assignedToMap[$uid] = $alias;
+                    } else {
+                        $assignedToMap[$uid] = $fallback;
+                    }
+                    if ($role !== '' && $alias !== '') {
+                        $createdByMap[$uid] = $role . '- ' . $alias;
+                    } elseif ($role !== '') {
+                        $createdByMap[$uid] = $role . '-' . ($company !== '' ? $company : ($email !== '' ? $email : $uid));
+                    } elseif ($alias !== '') {
+                        $createdByMap[$uid] = $alias;
+                    } else {
+                        $createdByMap[$uid] = $fallback;
+                    }
+                }
+                foreach (array_merge($completed, $rewarded) as $r) {
+                    $to = trim((string) ($r->ASSIGNED_TO ?? ''));
+                    $by = trim((string) ($r->CREATEDBY ?? ''));
+                    if ($to !== '' && isset($assignedToMap[$to])) $r->ASSIGNED_TO_NAME = $assignedToMap[$to];
+                    if ($by !== '' && isset($createdByMap[$by])) $r->CREATEDBY_NAME = $createdByMap[$by];
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        // Total pending reward: leads whose LATEST LEAD_ACT status is Completed (not Rewarded/Paid)
+        $closedRow = DB::selectOne(
+            'SELECT COUNT(*) as cnt
+             FROM (
+                 SELECT a."LEADID", a."STATUS"
+                 FROM "LEAD_ACT" a
+                 JOIN (
+                     SELECT "LEADID", MAX("CREATIONDATE") AS max_created
+                     FROM "LEAD_ACT"
+                     GROUP BY "LEADID"
+                 ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
+             ) latest
+             WHERE UPPER(TRIM(latest."STATUS")) = \'COMPLETED\''
+        );
+        $totalCompletedLeads = (int) ($closedRow->cnt ?? $closedRow->CNT ?? current((array) $closedRow) ?? 0);
+
+        // Product labels for PRODUCTS column (if needed later)
+        $productLabels = [
+            1 => 'Account',
+            2 => 'Payroll',
+            3 => 'Production',
+            4 => 'Mobile Sales',
+            5 => 'Ecommerce',
+            6 => 'EBI POS',
+            7 => 'Sudu AI',
+            8 => 'X-Store',
+            9 => 'Vision',
+            10 => 'HRMS',
+            11 => 'Others',
+        ];
+
+        return view('admin.rewards', [
+            'completed' => $completed,
+            'rewarded' => $rewarded,
+            'totalCompletedLeads' => $totalCompletedLeads,
+            'productLabels' => $productLabels,
+            'currentPage' => 'rewards',
+        ]);
     }
 
     public function reports(): View
