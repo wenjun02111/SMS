@@ -299,8 +299,8 @@ class DealerController extends Controller
             $leads = DB::select(
                 'SELECT FIRST 200
                     l."LEADID", l."PRODUCTID", l."COMPANYNAME", l."CONTACTNAME", l."CONTACTNO", l."EMAIL",
-                    l."CITY", l."POSTCODE", l."BUSINESSNATURE", l."USERCOUNT", l."EXISTINGSOFTWARE", l."DEMOMODE",
-                    l."DESCRIPTION", l."REFERRALCODE", l."CREATEDAT", l."CREATEDBY",
+                    l."ADDRESS1", l."ADDRESS2", l."CITY", l."POSTCODE", l."BUSINESSNATURE", l."USERCOUNT",
+                    l."EXISTINGSOFTWARE", l."DEMOMODE", l."DESCRIPTION", l."REFERRALCODE", l."CREATEDAT", l."CREATEDBY",
                     l."ASSIGNED_TO", l."LASTMODIFIED",
                     u."EMAIL" AS "ASSIGNED_BY_EMAIL",
                     COALESCE(
@@ -317,6 +317,54 @@ class DealerController extends Controller
                 ORDER BY l."LEADID" DESC',
                 [$dealerId]
             );
+
+            // Assigned By: same logic as admin assigned inquiries — SYSTEMROLE-ALIAS (e.g. Admin-Wei Jian)
+            try {
+                $ids = [];
+                foreach ($leads as $r) {
+                    $by = trim((string) ($r->CREATEDBY ?? ''));
+                    if ($by !== '') {
+                        $ids[$by] = true;
+                    }
+                }
+                $ids = array_keys($ids);
+                if (!empty($ids)) {
+                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                    $users = DB::select(
+                        'SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')',
+                        $ids
+                    );
+                    $createdByMap = [];
+                    foreach ($users as $u) {
+                        $uid = trim((string) ($u->USERID ?? ''));
+                        if ($uid === '') {
+                            continue;
+                        }
+                        $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                        $alias = trim((string) ($u->ALIAS ?? ''));
+                        $company = trim((string) ($u->COMPANY ?? ''));
+                        $email = trim((string) ($u->EMAIL ?? ''));
+                        $fallback = $email !== '' ? $email : $uid;
+                        if ($role !== '' && $alias !== '') {
+                            $createdByMap[$uid] = $role . '- ' . $alias;
+                        } elseif ($role !== '') {
+                            $createdByMap[$uid] = $role . '- ' . ($company !== '' ? $company : ($email !== '' ? $email : $uid));
+                        } elseif ($alias !== '') {
+                            $createdByMap[$uid] = $alias;
+                        } else {
+                            $createdByMap[$uid] = $fallback;
+                        }
+                    }
+                    foreach ($leads as $r) {
+                        $by = trim((string) ($r->CREATEDBY ?? ''));
+                        if ($by !== '' && isset($createdByMap[$by])) {
+                            $r->CREATEDBY_NAME = $createdByMap[$by];
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // leave ASSIGNED_BY_EMAIL / no CREATEDBY_NAME
+            }
         }
         return view('dealer.inquiries', ['leads' => $leads, 'currentPage' => 'inquiries']);
     }
@@ -369,6 +417,51 @@ class DealerController extends Controller
             [$leadId]
         );
         $description = trim($row->DESCRIPTION ?? '');
+
+        // Replace raw USERIDs like "U001" in the failed message with friendly names (SYSTEMROLE-ALIAS),
+        // so it reads "Status changed to Failed by Admin- Wei Jian" instead of by U001.
+        if ($description !== '') {
+            try {
+                preg_match_all('/\b[Uu]\d{3,}\b/', $description, $matches);
+                $ids = array_values(array_unique(array_filter($matches[0] ?? [])));
+                if (!empty($ids)) {
+                    $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                    $users = DB::select(
+                        'SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL"
+                         FROM "USERS"
+                         WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')',
+                        $ids
+                    );
+                    $map = [];
+                    foreach ($users as $u) {
+                        $uid = trim((string) ($u->USERID ?? ''));
+                        if ($uid === '') {
+                            continue;
+                        }
+                        $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                        $alias = trim((string) ($u->ALIAS ?? ''));
+                        $company = trim((string) ($u->COMPANY ?? ''));
+                        $email = trim((string) ($u->EMAIL ?? ''));
+                        $fallback = $email !== '' ? $email : $uid;
+                        if ($role !== '' && $alias !== '') {
+                            $map[$uid] = $role . '- ' . $alias;
+                        } elseif ($role !== '') {
+                            $map[$uid] = $role . '- ' . ($company !== '' ? $company : $fallback);
+                        } elseif ($alias !== '') {
+                            $map[$uid] = $alias;
+                        } else {
+                            $map[$uid] = $fallback;
+                        }
+                    }
+                    foreach ($map as $uid => $label) {
+                        $description = str_replace($uid, $label, $description);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // If name resolution fails, fall back to original description
+            }
+        }
+
         return response()->json(['description' => $description]);
     }
 
@@ -387,14 +480,80 @@ class DealerController extends Controller
         $activities = [];
         $lastProductIds = [];
         $rows = DB::select(
-            'SELECT la."LEAD_ACTID", la."CREATIONDATE", la."SUBJECT", la."DESCRIPTION", la."STATUS",
-                    la."ATTACHMENT", la."DEALTPRODUCT", u."EMAIL" AS "USER_EMAIL"
+            'SELECT la."LEAD_ACTID", la."CREATIONDATE", la."SUBJECT", la."DESCRIPTION", la."STATUS", la."ATTACHMENT", u."EMAIL" AS "USER_EMAIL"
              FROM "LEAD_ACT" la
              LEFT JOIN "USERS" u ON u."USERID" = la."USERID"
              WHERE la."LEADID" = ?
              ORDER BY la."CREATIONDATE" ASC, la."LEAD_ACTID" ASC',
             [$leadId]
         );
+
+        // Collect user IDs that appear either as activity USERID or inside
+        // assignment descriptions like "Lead Assigned by U001 to U003"
+        $assignUserIds = [];
+        foreach ($rows as $r) {
+            $desc = trim((string) ($r->DESCRIPTION ?? ''));
+            if ($desc !== '' && stripos($desc, 'Lead Assigned by') === 0) {
+                if (preg_match('/Lead Assigned by\s+(\S+)\s+to\s+(\S+)/i', $desc, $m)) {
+                    $fromId = trim($m[1] ?? '');
+                    $toId = trim($m[2] ?? '');
+                    if ($fromId !== '') {
+                        $assignUserIds[$fromId] = true;
+                    }
+                    if ($toId !== '') {
+                        $assignUserIds[$toId] = true;
+                    }
+                }
+            }
+        }
+
+        // Resolve human-friendly names for activity user (same style as admin: SYSTEMROLE-ALIAS)
+        $userNameMap = [];
+        try {
+            $ids = [];
+            foreach ($rows as $r) {
+                $uid = trim((string) ($r->USERID ?? ''));
+                if ($uid !== '') {
+                    $ids[$uid] = true;
+                }
+            }
+            foreach (array_keys($assignUserIds) as $aid) {
+                $ids[$aid] = true;
+            }
+            $ids = array_keys($ids);
+            if (!empty($ids)) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $users = DB::select(
+                    'SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL"
+                     FROM "USERS"
+                     WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')',
+                    $ids
+                );
+                foreach ($users as $u) {
+                    $uid = trim((string) ($u->USERID ?? ''));
+                    if ($uid === '') {
+                        continue;
+                    }
+                    $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                    $alias = trim((string) ($u->ALIAS ?? ''));
+                    $company = trim((string) ($u->COMPANY ?? ''));
+                    $email = trim((string) ($u->EMAIL ?? ''));
+                    $fallback = $email !== '' ? $email : $uid;
+
+                    if ($role !== '' && $alias !== '') {
+                        $userNameMap[$uid] = $role . '- ' . $alias;
+                    } elseif ($role !== '') {
+                        $userNameMap[$uid] = $role . '- ' . ($company !== '' ? $company : ($email !== '' ? $email : $uid));
+                    } elseif ($alias !== '') {
+                        $userNameMap[$uid] = $alias;
+                    } else {
+                        $userNameMap[$uid] = $fallback;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $userNameMap = [];
+        }
 
         foreach ($rows as $r) {
             $status = trim($r->STATUS ?? '');
@@ -413,7 +572,6 @@ class DealerController extends Controller
             }
 
             $attachmentUrls = [];
-            $productIds = [];
             $attachmentRaw = $r->ATTACHMENT ?? $r->attachment ?? null;
             if ($attachmentRaw !== null && trim((string) $attachmentRaw) !== '') {
                 $attachmentStr = trim((string) $attachmentRaw);
@@ -462,10 +620,9 @@ class DealerController extends Controller
 
             $activities[] = [
                 'type' => 'activity',
-                'lead_act_id' => (int) ($r->LEAD_ACTID ?? 0),
-                'user' => trim($r->USER_EMAIL ?? 'System'),
+                'user' => $userDisplay,
                 'subject' => trim($r->SUBJECT ?? ''),
-                'description' => trim($r->DESCRIPTION ?? ''),
+                'description' => $description,
                 'status' => $status,
                 'created_at' => $createdAtIso,
                 'attachment_urls' => $attachmentUrls,

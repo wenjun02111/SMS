@@ -2063,6 +2063,20 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
   background: #f9fafb;       /* same hover as inquiries */
 }
 
+/* Payouts: placeholder rows so table always has 10 row slots and pagination stays fixed */
+.rewards-placeholder-row td {
+  background: transparent;
+  border-bottom: none;
+}
+.rewards-placeholder-row:hover td {
+  background: transparent !important;
+}
+/* No hover effect on placeholder (blank) rows */
+.dashboard-table tbody tr.rewards-placeholder-row:hover,
+.inquiries-table tbody tr.rewards-placeholder-row:hover {
+  background: transparent !important;
+}
+
 .dashboard-table th.dashboard-table-sortable {
   cursor: pointer;
 }
@@ -2464,6 +2478,17 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
 
 .inquiries-table td.inquiries-col-action {
   border-bottom: none; /* remove horizontal line behind action buttons */
+}
+
+/* Payouts: placeholder rows = blank space only, no lines (override .inquiries-table td border) */
+.inquiries-table .rewards-placeholder-row td {
+  border-bottom: none !important;
+  border-top: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.inquiries-table .rewards-placeholder-row:hover td {
+  background: transparent !important;
 }
 
 .inquiries-table td {
@@ -3044,9 +3069,9 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
   color: #1f2937;
 }
 
+/* Update window activity: status is bold only, no colored pill */
 .inquiry-activity-status {
-  color: #0969da;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .inquiry-activity-timeline {
@@ -5260,6 +5285,8 @@ button.dealer-pagination-btn:disabled {
   padding: 20px 24px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   max-width: 320px;
+  width: 320px;      /* ensure consistent width for all summary cards (Incoming + Pending Reward) */
+  min-height: 140px; /* keep summary cards (including Pending Reward) same height as Total New Inquiries */
   position: relative;
   padding-right: 72px;
 }
@@ -5853,9 +5880,30 @@ button.dealer-pagination-btn:disabled {
 /* Inquiries page: fixed table height for 10 rows on both Incoming and Assigned so layout doesn't shrink */
 .inquiries-page-wrap .inquiries-table-scroll,
 #incomingPanel .inquiries-table-scroll,
-#assignedPanel .inquiries-table-scroll {
+#assignedPanel .inquiries-table-scroll,
+#completedPanel .inquiries-table-scroll,
+#rewardedPanel .inquiries-table-scroll {
   min-height: 460px;
 }
+
+/* Dealer inquiries: scrollbar at the very bottom of the table area */
+.dealer-inquiries-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.dealer-inquiries-panel .inquiries-table-wrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dealer-inquiries-panel .inquiries-table-scroll {
+  flex: 1;
+  min-height: 460px;
+  overflow: auto;
+}
+
 .inquiries-table-wrap::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -6603,7 +6651,8 @@ button.dealer-pagination-btn:disabled {
 }
 /* Icon-only action buttons: no purple, transparent background, bigger icons */
 .inquiries-action-cell .inquiries-view-status-btn,
-.inquiries-action-cell .inquiries-mark-failed-btn {
+.inquiries-action-cell .inquiries-mark-failed-btn,
+.inquiries-action-cell .rewards-email-btn {
   background: transparent !important;
   color: #4b5563;
   min-width: 36px;
@@ -6611,11 +6660,13 @@ button.dealer-pagination-btn:disabled {
   border: none;
 }
 .inquiries-action-cell .inquiries-view-status-btn .bi,
-.inquiries-action-cell .inquiries-mark-failed-btn .bi {
+.inquiries-action-cell .inquiries-mark-failed-btn .bi,
+.inquiries-action-cell .rewards-email-btn .bi {
   font-size: 1.35rem;
 }
 .inquiries-action-cell .inquiries-view-status-btn:hover,
-.inquiries-action-cell .inquiries-mark-failed-btn:hover {
+.inquiries-action-cell .inquiries-mark-failed-btn:hover,
+.inquiries-action-cell .rewards-email-btn:hover {
   background: rgba(0, 0, 0, 0.06) !important;
   color: #374151;
 }
@@ -6869,24 +6920,6 @@ button.dealer-pagination-btn:disabled {
 }
 
 .reports-range-apply:hover {
-  background: #6d3df5;
-}
-
-.reports-download-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 10px;
-  background: #7f5af0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff;
-  cursor: pointer;
-}
-
-.reports-download-btn:hover {
   background: #6d3df5;
 }
 
