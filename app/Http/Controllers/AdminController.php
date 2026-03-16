@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Mail\InquiryAssignedToDealer;
+use App\Mail\PayoutCompletedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -1710,6 +1711,66 @@ class AdminController extends Controller
             'productLabels' => $productLabels,
             'currentPage' => 'rewards',
         ]);
+    }
+
+    /**
+     * Send email to the dealer (assigned user) for a completed payout (uses SMTP).
+     * Dealer email is taken from USERS table by ASSIGNED_TO.
+     */
+    public function sendPayoutEmail(Request $request): JsonResponse
+    {
+        $request->validate(['lead_id' => 'required|integer|min:1']);
+
+        $leadId = (int) $request->input('lead_id');
+        $lead = DB::selectOne(
+            'SELECT "LEADID","COMPANYNAME","CONTACTNAME","ASSIGNED_TO","REFERRALCODE" FROM "LEAD" WHERE "LEADID" = ?',
+            [$leadId]
+        );
+        if (!$lead) {
+            return response()->json(['success' => false, 'message' => 'Lead not found.'], 404);
+        }
+
+        $assignedTo = trim((string) ($lead->ASSIGNED_TO ?? ''));
+        if ($assignedTo === '') {
+            return response()->json(['success' => false, 'message' => 'No dealer assigned to this lead.'], 400);
+        }
+
+        $user = DB::selectOne(
+            'SELECT "USERID","EMAIL","ALIAS","COMPANY" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) = ?',
+            [$assignedTo]
+        );
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Assigned dealer not found in users.'], 400);
+        }
+
+        $email = trim((string) ($user->EMAIL ?? ''));
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return response()->json(['success' => false, 'message' => 'No valid email address for the assigned dealer.'], 400);
+        }
+
+        $dealerName = trim((string) ($user->ALIAS ?? '')) ?: trim((string) ($user->COMPANY ?? '')) ?: 'Dealer';
+
+        $senderAlias = '';
+        $currentUserId = trim((string) ($request->session()->get('user_id') ?? ''));
+        if ($currentUserId !== '') {
+            $senderRow = DB::selectOne('SELECT "ALIAS" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) = ?', [$currentUserId]);
+            $senderAlias = $senderRow ? trim((string) ($senderRow->ALIAS ?? '')) : '';
+        }
+
+        try {
+            Mail::to($email)->send(new PayoutCompletedNotification(
+                toEmail: $email,
+                dealerName: $dealerName,
+                leadId: $leadId,
+                inquiryId: 'SQL-' . (string) ($lead->LEADID ?? $leadId),
+                referralCode: trim((string) ($lead->REFERRALCODE ?? '')),
+                senderAlias: $senderAlias !== '' ? $senderAlias : 'SQL LMS',
+                companyName: trim((string) ($lead->COMPANYNAME ?? ''))
+            ));
+            return response()->json(['success' => true, 'message' => 'Email sent to dealer: ' . $email . '.']);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Failed to send email.'], 500);
+        }
     }
 
     public function reports(): View

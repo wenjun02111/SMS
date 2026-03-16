@@ -76,7 +76,7 @@
     </div>
     <div class="inquiries-table-wrap">
         <div class="inquiries-table-scroll">
-            <table class="dashboard-table inquiries-table" id="completedTable">
+            <table class="inquiries-table" id="completedTable">
                 <thead>
                     <tr class="inquiries-header-row">
                         <th data-col="inquiryid" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY ID</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="inquiryid"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
@@ -181,16 +181,13 @@
                                         data-lead-id="{{ $r->LEADID }}"
                                         title="Send Email"
                                         aria-label="Send Email">
-                                    <i class="bi bi-envelope-fill" aria-hidden="true"></i>
+                                    <i class="bi bi-envelope" aria-hidden="true"></i>
                                 </button>
                             </td>
                         </tr>
                     @empty
                         <tr><td colspan="20" class="inquiries-empty">No completed payouts.</td></tr>
                     @endforelse
-                    @for ($i = 0; $i < 10; $i++)
-                        <tr class="rewards-placeholder-row" data-placeholder-index="{{ $i }}" style="display:none" aria-hidden="true"><td colspan="20">&nbsp;</td></tr>
-                    @endfor
                 </tbody>
             </table>
         </div>
@@ -218,7 +215,7 @@
     </div>
     <div class="inquiries-table-wrap">
         <div class="inquiries-table-scroll">
-            <table class="dashboard-table inquiries-table" id="rewardedTable">
+            <table class="inquiries-table" id="rewardedTable">
                 <thead>
                     <tr class="inquiries-header-row">
                         <th data-col="inquiryid" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY ID</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="inquiryid"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
@@ -268,9 +265,6 @@
                     @empty
                         <tr><td colspan="7" class="inquiries-empty">No rewarded payouts.</td></tr>
                     @endforelse
-                    @for ($i = 0; $i < 10; $i++)
-                        <tr class="rewards-placeholder-row" data-placeholder-index="{{ $i }}" style="display:none" aria-hidden="true"><td colspan="7">&nbsp;</td></tr>
-                    @endfor
                 </tbody>
             </table>
         </div>
@@ -287,6 +281,32 @@
     </div>
 </section>
 </div>
+    <div class="inquiries-assign-modal" id="statusModal" hidden>
+        <div class="inquiries-assign-backdrop" data-status-close="1"></div>
+        <div class="inquiries-assign-window" role="dialog" aria-modal="true" aria-labelledby="statusModalTitle">
+            <div class="inquiries-assign-header">
+                <div class="inquiries-assign-title" id="statusModalTitle">Status — Lead #SQL-<span id="statusModalLeadId"></span></div>
+                <button type="button" class="inquiries-assign-close" aria-label="Close" data-status-close="1">&times;</button>
+            </div>
+            <div class="inquiries-assign-body">
+                <div class="inquiries-status-table-wrap">
+                    <table class="inquiries-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                                <th>Description</th>
+                                <th>User</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statusModalBody"></tbody>
+                    </table>
+                </div>
+                <p id="statusModalEmpty" class="inquiries-empty" style="display:none;">No status history.</p>
+            </div>
+        </div>
+    </div>
 </div>
 @endsection
 @push('scripts')
@@ -404,6 +424,82 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    var COMPLETED_PER_PAGE = 10;
+    var REWARDED_PER_PAGE = 10;
+
+    var EMAIL_COUNT_KEY = 'payoutEmailCountByLead';
+    function loadEmailCounts() {
+        try {
+            var raw = localStorage.getItem(EMAIL_COUNT_KEY);
+            if (raw) {
+                var obj = JSON.parse(raw);
+                if (obj && typeof obj === 'object') return obj;
+            }
+        } catch (e) {}
+        return {};
+    }
+    function saveEmailCounts(map) {
+        try { localStorage.setItem(EMAIL_COUNT_KEY, JSON.stringify(map)); } catch (e) {}
+    }
+    var emailCounts = loadEmailCounts();
+
+    document.querySelectorAll('.rewards-email-btn').forEach(function(btn) {
+        var leadId = btn.getAttribute('data-lead-id');
+        if (!leadId) return;
+        var icon = btn.querySelector('i.bi');
+        var count = emailCounts[leadId] || 0;
+        if (icon) {
+            if (count > 0) {
+                icon.classList.remove('bi-envelope');
+                icon.classList.add('bi-envelope-fill');
+            } else {
+                icon.classList.remove('bi-envelope-fill');
+                icon.classList.add('bi-envelope');
+            }
+        }
+    });
+
+    document.querySelectorAll('.rewards-email-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var leadId = btn.getAttribute('data-lead-id');
+            if (!leadId) return;
+            if (!confirm('Remind the assigned dealer to pay out the referral fee?')) return;
+            var token = (document.querySelector('meta[name="csrf-token"]') || {}).content;
+            if (!token) { alert('Session expired. Please refresh the page.'); return; }
+            btn.disabled = true;
+            fetch('{{ route('admin.rewards.send-email') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': token,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ lead_id: parseInt(leadId, 10) })
+            }).then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+            .then(function(result) {
+                if (result.ok && result.data.success) {
+                    alert(result.data.message || 'Email sent.');
+                    var current = emailCounts[leadId] || 0;
+                    var next = current + 1;
+                    emailCounts[leadId] = next;
+                    saveEmailCounts(emailCounts);
+                    var icon = btn.querySelector('i.bi');
+                    if (icon) {
+                        icon.classList.remove('bi-envelope');
+                        icon.classList.add('bi-envelope-fill');
+                    }
+                } else {
+                    alert(result.data.message || 'Failed to send email.');
+                }
+            }).catch(function() {
+                alert('Failed to send email.');
+            }).finally(function() {
+                btn.disabled = false;
+            });
+        });
+    });
+
     var completedClearFilters = document.getElementById('completedClearFilters');
     if (completedClearFilters) {
         completedClearFilters.addEventListener('click', function() {
@@ -412,9 +508,6 @@ document.addEventListener('DOMContentLoaded', function() {
             applyTableFilter('completedTable');
         });
     }
-
-    var COMPLETED_PER_PAGE = 10;
-    var REWARDED_PER_PAGE = 10;
 
     function getVisibleDataRows(table) {
         if (!table) return [];
@@ -445,14 +538,8 @@ document.addEventListener('DOMContentLoaded', function() {
         pagEl.setAttribute('data-current-page', String(current));
         var start = (current - 1) * perPage;
         var end = Math.min(start + perPage, total);
-        var visibleOnPage = end - start;
         for (var i = 0; i < visible.length; i++) {
             visible[i].style.display = (i >= start && i < end) ? '' : 'none';
-        }
-        var placeholders = table.querySelectorAll('tbody tr.rewards-placeholder-row');
-        var slotsToFill = (total === 0) ? 0 : Math.max(0, 10 - visibleOnPage);
-        for (var pi = 0; pi < placeholders.length; pi++) {
-            placeholders[pi].style.display = pi < slotsToFill ? '' : 'none';
         }
         var from = total === 0 ? 0 : start + 1;
         var to = end;
@@ -497,14 +584,8 @@ document.addEventListener('DOMContentLoaded', function() {
         pagEl.setAttribute('data-current-page', String(current));
         var start = (current - 1) * perPage;
         var end = Math.min(start + perPage, total);
-        var visibleOnPage = end - start;
         for (var i = 0; i < visible.length; i++) {
             visible[i].style.display = (i >= start && i < end) ? '' : 'none';
-        }
-        var placeholders = table.querySelectorAll('tbody tr.rewards-placeholder-row');
-        var slotsToFill = (total === 0) ? 0 : Math.max(0, 10 - visibleOnPage);
-        for (var pi = 0; pi < placeholders.length; pi++) {
-            placeholders[pi].style.display = pi < slotsToFill ? '' : 'none';
         }
         var from = total === 0 ? 0 : start + 1;
         var to = end;
@@ -649,6 +730,53 @@ document.addEventListener('DOMContentLoaded', function() {
             if (rewardedPanel) { rewardedPanel.classList.toggle('active', t === 'rewarded'); rewardedPanel.hidden = t !== 'rewarded'; }
         });
     });
+
+    (function initStatusModal() {
+        var modal = document.getElementById('statusModal');
+        var titleLeadId = document.getElementById('statusModalLeadId');
+        var body = document.getElementById('statusModalBody');
+        var emptyEl = document.getElementById('statusModalEmpty');
+        if (!modal || !body) return;
+        function closeStatus() { modal.hidden = true; }
+        function openStatus(leadId, items) {
+            if (titleLeadId) titleLeadId.textContent = leadId;
+            body.innerHTML = '';
+            if (!items || items.length === 0) {
+                if (emptyEl) emptyEl.style.display = 'block';
+            } else {
+                if (emptyEl) emptyEl.style.display = 'none';
+                items.forEach(function(it) {
+                    var tr = document.createElement('tr');
+                    var date = it.CREATIONDATE ? String(it.CREATIONDATE).substring(0, 19) : '—';
+                    tr.innerHTML =
+                        '<td>' + date + '</td>' +
+                        '<td>' + (it.SUBJECT || '—') + '</td>' +
+                        '<td>' + (it.STATUS || '—') + '</td>' +
+                        '<td>' + (it.DESCRIPTION || '—') + '</td>' +
+                        '<td>' + (it.USERID || '—') + '</td>';
+                    body.appendChild(tr);
+                });
+            }
+            modal.hidden = false;
+        }
+        document.addEventListener('click', function(e) {
+            var btn = e.target && e.target.closest ? e.target.closest('.inquiries-view-status-btn') : null;
+            if (btn) {
+                var leadId = btn.getAttribute('data-lead-id');
+                if (leadId) {
+                    fetch('{{ url("/admin/inquiries") }}/' + leadId + '/status', { headers: { 'Accept': 'application/json' } })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) { openStatus(leadId, data.items || []); })
+                        .catch(function() { openStatus(leadId, []); });
+                }
+                return;
+            }
+            if (e.target && (e.target.getAttribute('data-status-close') === '1')) closeStatus();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal && !modal.hidden) closeStatus();
+        });
+    })();
 });
 </script>
 @endpush

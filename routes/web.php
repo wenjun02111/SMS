@@ -42,6 +42,7 @@ Route::middleware(['auth.sms', 'admin'])->prefix('admin')->name('admin.')->group
     Route::post('/dealers', [AdminController::class, 'dealersStore'])->name('dealers.store');
     Route::post('/dealers/{userId}', [AdminController::class, 'dealersUpdate'])->name('dealers.update');
     Route::get('/rewards', [AdminController::class, 'rewards'])->name('rewards');
+    Route::post('/rewards/send-email', [AdminController::class, 'sendPayoutEmail'])->name('rewards.send-email');
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
     Route::get('/reports-v2', [AdminController::class, 'reportsV2'])->name('reports.v2');
     Route::get('/reports/dealer-activity/{userid}', [AdminController::class, 'dealerActivity'])->name('reports.dealer-activity');
