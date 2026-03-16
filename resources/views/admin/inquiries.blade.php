@@ -1022,10 +1022,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return searchable.indexOf(normQ) !== -1;
     }
 
+    window.bigSearchSubmitted = false;
+    window.getBigSearchQuery = function() {
+        if (!window.bigSearchSubmitted) return '';
+        var searchInput = document.getElementById('inquirySearchInput');
+        return (searchInput && searchInput.value) ? (searchInput.value || '').toLowerCase().trim().replace(/\s+/g, ' ') : '';
+    };
+
     function applyGridFilters() {
         var table = document.getElementById('unassignedTable');
-        var searchInput = document.getElementById('inquirySearchInput');
-        var q = (searchInput && searchInput.value) ? (searchInput.value || '').toLowerCase().trim().replace(/\s+/g, ' ') : '';
+        var q = window.getBigSearchQuery ? window.getBigSearchQuery() : '';
         var filters = {};
         if (table) {
             table.querySelectorAll('.inquiries-grid-filter').forEach(function(inp) {
@@ -1088,6 +1094,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var clearSearchBtn = document.getElementById('inquiryClearSearchBtn');
     if (clearSearchBtn) {
         clearSearchBtn.addEventListener('click', function() {
+            window.bigSearchSubmitted = false;
             var searchInput = document.getElementById('inquirySearchInput');
             if (searchInput) searchInput.value = '';
             applyGridFilters();
@@ -1101,6 +1108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var btn = document.getElementById('inquirySearchBtn');
     if (input) {
         function filterRows() {
+            window.bigSearchSubmitted = true;
             applyGridFilters();
             applyAssignedGridFilters();
             if (typeof window.refreshIncomingPagination === 'function') window.refreshIncomingPagination();
@@ -1459,8 +1467,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function getMatchingRows() {
-            var searchInput = document.getElementById('inquirySearchInput');
-            var q = (searchInput && searchInput.value) ? (searchInput.value || '').toLowerCase().trim().replace(/\s+/g, ' ') : '';
+            var q = typeof window.getBigSearchQuery === 'function' ? window.getBigSearchQuery() : '';
             var filters = {};
             if (table) {
                 table.querySelectorAll('.inquiries-grid-filter').forEach(function(inp) {
@@ -1585,8 +1592,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function getMatchingRowsAssigned() {
-            var searchInput = document.getElementById('inquirySearchInput');
-            var q = (searchInput && searchInput.value) ? (searchInput.value || '').toLowerCase().trim().replace(/\s+/g, ' ') : '';
+            var q = typeof window.getBigSearchQuery === 'function' ? window.getBigSearchQuery() : '';
             var filters = {};
             if (assignedTable) {
                 assignedTable.querySelectorAll('.inquiries-grid-filter-assigned').forEach(function(inp) {

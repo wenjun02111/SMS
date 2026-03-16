@@ -521,13 +521,14 @@ class AdminController extends Controller
             11 => 'Others',
         ];
 
-        // Dealer list for Assign dropdown (with stats similar to Dealers page)
+        // Dealer list for Assign dropdown: only active dealers (with stats similar to Dealers page)
         $dealers = [];
         try {
             $baseDealers = DB::select(
                 'SELECT "USERID","EMAIL","POSTCODE","CITY","ISACTIVE","COMPANY","ALIAS"
                  FROM "USERS"
                  WHERE TRIM("SYSTEMROLE") = \'Dealer\'
+                   AND "ISACTIVE" = TRUE
                  ORDER BY "COMPANY"'
             );
 
@@ -758,6 +759,26 @@ class AdminController extends Controller
 
         if ($leadId <= 0 || $assignedTo === '') {
             return back()->with('error', 'Invalid assignment request.');
+        }
+
+        // Ensure assignee is an active dealer
+        try {
+            $assignee = DB::selectOne(
+                'SELECT "USERID","SYSTEMROLE","ISACTIVE" FROM "USERS" WHERE CAST("USERID" AS VARCHAR(50)) = ?',
+                [$assignedTo]
+            );
+            if (!$assignee) {
+                return back()->with('error', 'Selected user not found.');
+            }
+            if (trim((string) ($assignee->SYSTEMROLE ?? '')) !== 'Dealer') {
+                return back()->with('error', 'Lead can only be assigned to a dealer.');
+            }
+            $isActive = $assignee->ISACTIVE ?? false;
+            if ($isActive !== true && $isActive !== 1 && $isActive !== '1') {
+                return back()->with('error', 'Lead can only be assigned to an active dealer.');
+            }
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Could not verify assignee.');
         }
 
         // Resolve nice names for description (SYSTEMROLE- ALIAS)
