@@ -10,44 +10,21 @@
 @section('content')
 <div class="rv2-page">
     <header class="rv2-header">
-        <div class="rv2-header-left">
-            <div id="reportsTitleHover" class="reports-title-hover">
-                <div class="reports-title-dropdown">
-                    <button id="dropdownHoverButton" data-dropdown-toggle="dropdownHover" data-dropdown-trigger="hover" class="reports-dropdown-btn" type="button">
-                        Report - Dealer Sales Overtime
-                        <svg class="reports-dropdown-caret" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
-                    </button>
-
-                    <div id="dropdownHover" class="reports-dropdown-menu" role="menu" aria-labelledby="dropdownHoverButton">
-                        <ul class="reports-dropdown-list">
-                            <li><a href="{{ route('admin.reports') }}" class="reports-dropdown-item">Report - Monthly Performance Analytics</a></li>
-                            <li><a href="{{ route('admin.reports.v2') }}" class="reports-dropdown-item">Report - Dealer Sales Overtime</a></li>
-                            <li><a href="{{ route('admin.reports.revenue') }}" class="reports-dropdown-item">Report - Dealer Revenue Production</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="rv2-subtitle">Identifying at-risk partners with seasonality and trends</div>
-            </div>
-        </div>
-
-        <div class="rv2-header-right">
-            <div class="rv2-search">
-                <svg class="rv2-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M21 21l-4.3-4.3m1.8-5.2a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                <input class="rv2-search-input" type="text" placeholder="Search Dealer Name or ID..." />
-            </div>
-
-            <div class="rv2-pill">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 7h16M4 12h10M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                <span>Core Accounting</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                    <path d="m19 9-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-
+        <div class="reports-tabs-row">
+            <nav class="reports-tabs-nav" aria-label="Report views">
+                <a href="{{ route('admin.reports') }}"
+                   class="reports-tab-link {{ request()->routeIs('admin.reports') ? 'is-active' : '' }}">
+                    Monthly Performance
+                </a>
+                <a href="{{ route('admin.reports.v2') }}"
+                   class="reports-tab-link {{ request()->routeIs('admin.reports.v2') ? 'is-active' : '' }}">
+                    Dealer Sales Overtime
+                </a>
+                <a href="{{ route('admin.reports.revenue') }}"
+                   class="reports-tab-link {{ request()->routeIs('admin.reports.revenue') ? 'is-active' : '' }}">
+                    Dealer Revenue Production
+                </a>
+            </nav>
         </div>
     </header>
 

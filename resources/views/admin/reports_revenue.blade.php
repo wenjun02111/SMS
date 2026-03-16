@@ -5,57 +5,22 @@
 @endpush
 @section('content')
 <div class="rrp-page">
-    <header class="rrp-header">
-        <div class="rrp-header-left">
-            <div class="rrp-title-eyebrow">Quarterly Overview</div>
-            <div id="reportsTitleHover" class="reports-title-hover">
-                <div class="reports-title-dropdown">
-                    <button id="dropdownHoverButton" data-dropdown-toggle="dropdownHover" data-dropdown-trigger="hover" class="reports-dropdown-btn" type="button">
-                        Report - Dealer Revenue Production
-                        <svg class="reports-dropdown-caret" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 9-7 7-7-7"/></svg>
-                    </button>
-
-                    <!-- Dropdown menu -->
-                    <div id="dropdownHover" class="reports-dropdown-menu" role="menu" aria-labelledby="dropdownHoverButton">
-                        <ul class="reports-dropdown-list">
-                            <li><a href="{{ route('admin.reports') }}" class="reports-dropdown-item">Report - Monthly Performance Analytics</a></li>
-                            <li><a href="{{ route('admin.reports.v2') }}" class="reports-dropdown-item">Report - Dealer Sales Overtime</a></li>
-                            <li><a href="{{ route('admin.reports.revenue') }}" class="reports-dropdown-item">Report - Dealer Revenue Production</a></li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="rrp-title-sub">Managing growth and partner efficiency for {{ $selectedQuarter ?? 'Q3' }}, {{ $selectedYear ?? now()->format('Y') }}.</div>
-            </div>
-        </div>
-        <div class="rrp-header-right">
-            <div class="rrp-dd">
-                <button type="button" class="rrp-pill" id="rrpQuarterBtn">
-                    {{ $selectedQuarter ?? 'Q3' }}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                        <path d="m19 9-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <div class="rrp-dd-menu" id="rrpQuarterMenu">
-                    @foreach (['Q1','Q2','Q3','Q4'] as $q)
-                        <button type="button" class="rrp-dd-item" data-quarter="{{ $q }}">{{ $q }}</button>
-                    @endforeach
-                </div>
-            </div>
-            <div class="rrp-dd">
-                <button type="button" class="rrp-pill" id="rrpYearBtn">
-                    {{ $selectedYear ?? now()->format('Y') }}
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-                        <path d="m19 9-7 7-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                </button>
-                <div class="rrp-dd-menu" id="rrpYearMenu">
-                    @foreach (($yearOptions ?? []) as $y)
-                        <button type="button" class="rrp-dd-item" data-year="{{ $y }}">{{ $y }}</button>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </header>
+    <div class="reports-tabs-row rrp-tabs-row">
+        <nav class="reports-tabs-nav" aria-label="Report views">
+            <a href="{{ route('admin.reports') }}"
+               class="reports-tab-link {{ request()->routeIs('admin.reports') ? 'is-active' : '' }}">
+                Monthly Performance
+            </a>
+            <a href="{{ route('admin.reports.v2') }}"
+               class="reports-tab-link {{ request()->routeIs('admin.reports.v2') ? 'is-active' : '' }}">
+                Dealer Sales Overtime
+            </a>
+            <a href="{{ route('admin.reports.revenue') }}"
+               class="reports-tab-link {{ request()->routeIs('admin.reports.revenue') ? 'is-active' : '' }}">
+                Dealer Revenue Production
+            </a>
+        </nav>
+    </div>
 
     <section class="rrp-top-grid">
         <div class="rrp-metric-card">
@@ -144,61 +109,6 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Quarter/Year dropdowns -> reload with query params
-            const quarterBtn = document.getElementById('rrpQuarterBtn');
-            const quarterMenu = document.getElementById('rrpQuarterMenu');
-            const yearBtn = document.getElementById('rrpYearBtn');
-            const yearMenu = document.getElementById('rrpYearMenu');
-
-            const toggleMenu = (menu) => menu && menu.classList.toggle('is-open');
-            const closeMenus = () => {
-                if (quarterMenu) quarterMenu.classList.remove('is-open');
-                if (yearMenu) yearMenu.classList.remove('is-open');
-            };
-
-            if (quarterBtn && quarterMenu) {
-                quarterBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleMenu(quarterMenu);
-                    if (yearMenu) yearMenu.classList.remove('is-open');
-                });
-            }
-            if (yearBtn && yearMenu) {
-                yearBtn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    toggleMenu(yearMenu);
-                    if (quarterMenu) quarterMenu.classList.remove('is-open');
-                });
-            }
-
-            const currentQuarter = quarterBtn ? quarterBtn.textContent.trim() : 'Q3';
-            const currentYear = yearBtn ? yearBtn.textContent.trim() : String(new Date().getFullYear());
-
-            const apply = (q, y) => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('quarter', q);
-                url.searchParams.set('year', y);
-                window.location.href = url.toString();
-            };
-
-            document.querySelectorAll('.rrp-dd-item[data-quarter]').forEach((btn) => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    apply(btn.dataset.quarter, currentYear);
-                });
-            });
-            document.querySelectorAll('.rrp-dd-item[data-year]').forEach((btn) => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    apply(currentQuarter, btn.dataset.year);
-                });
-            });
-
-            document.addEventListener('click', () => closeMenus());
-            window.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
-
             // Title dropdown (shared across reports)
             const dropdownBtn = document.getElementById('dropdownHoverButton');
             const dropdown = document.getElementById('dropdownHover');
@@ -300,4 +210,3 @@
         });
     </script>
 @endpush
-

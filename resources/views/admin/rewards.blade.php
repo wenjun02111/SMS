@@ -3,11 +3,11 @@
 @section('content')
 <div class="inquiries-page-wrap">
 <div class="inquiries-mgmt-top-row" style="margin-bottom: 16px;">
-    <section class="inquiries-mgmt-summary">
+<section class="inquiries-mgmt-summary">
         <div class="inquiries-summary-card" id="payoutSummaryCard"
              data-pending-count="{{ number_format($totalCompletedLeads ?? 0) }}"
              data-rewarded-count="{{ number_format($totalRewardedLeads ?? 0) }}">
-            <div class="inquiries-summary-icon"><i class="bi bi-check2-circle"></i></div>
+            <div class="inquiries-summary-icon"><i class="bi bi-coin" id="payoutSummaryIcon"></i></div>
             <div class="inquiries-summary-label" id="payoutSummaryLabel">PENDING REWARD</div>
             <div class="inquiries-summary-value-row">
                 <span class="inquiries-summary-value" id="payoutSummaryValue">{{ number_format($totalCompletedLeads ?? 0) }}</span>
@@ -54,7 +54,7 @@
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="source"> SOURCE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="postcode"> POSTCODE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="city"> CITY</label>
-                    <label class="inquiries-columns-check"><input type="checkbox" data-col="completiondate"> COMPLETION DATE</label>
+                    <label class="inquiries-columns-check"><input type="checkbox" data-col="completiondate"> PAYOUTS DATE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="address"> ADDRESS</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="contactno"> CONTACT NO</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="businessnature"> BUSINESS NATURE</label>
@@ -83,12 +83,16 @@
                 <thead>
                     <tr class="inquiries-header-row">
                         <th data-col="inquiryid" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY ID</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="inquiryid"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="date" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="date"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="customername" class="inquiries-header-cell"><span class="inquiries-header-label">CUSTOMER NAME</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="customername"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="assignedto" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGNED TO</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="assignedto"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="referralcode" class="inquiries-header-cell"><span class="inquiries-header-label">REFERRAL CODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="referralcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="completiondate" class="inquiries-header-cell"><span class="inquiries-header-label">PAYOUTS DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="completiondate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="status" class="inquiries-header-cell"><span class="inquiries-header-label">STATUS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="status"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+
+                        <th data-col="date" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="date"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="source" class="inquiries-header-cell"><span class="inquiries-header-label">SOURCE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="source"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="postcode" class="inquiries-header-cell"><span class="inquiries-header-label">POSTCODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="postcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="city" class="inquiries-header-cell"><span class="inquiries-header-label">CITY</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="city"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="completiondate" class="inquiries-header-cell"><span class="inquiries-header-label">COMPLETION DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="completiondate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="address" class="inquiries-header-cell"><span class="inquiries-header-label">ADDRESS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="address"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="contactno" class="inquiries-header-cell"><span class="inquiries-header-label">CONTACT NO</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="contactno"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="businessnature" class="inquiries-header-cell"><span class="inquiries-header-label">BUSINESS NATURE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="businessnature"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
@@ -97,11 +101,8 @@
                         <th data-col="demomode" class="inquiries-header-cell"><span class="inquiries-header-label">DEMO MODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="demomode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="products" class="inquiries-header-cell"><span class="inquiries-header-label">PRODUCTS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="products"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="message" class="inquiries-header-cell"><span class="inquiries-header-label">MESSAGE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="message"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="referralcode" class="inquiries-header-cell"><span class="inquiries-header-label">REFERRAL CODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="referralcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="assignedby" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGNED BY</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="assignedby"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="assignedto" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGNED TO</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="assignedto"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="assigndate" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGN DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="assigndate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="status" class="inquiries-header-cell"><span class="inquiries-header-label">STATUS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="status"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th class="inquiries-col-action inquiries-header-cell"><span class="inquiries-header-label">ACTION</span><button type="button" class="inquiries-filter-clear" id="completedClearFilters">Clear filters</button></th>
                     </tr>
                 </thead>
@@ -142,17 +143,21 @@
                         @endphp
                         <tr class="rewards-row inquiry-row" data-search="{{ $searchHaystack }}">
                             <td data-col="inquiryid">#SQL-{{ $r->LEADID }}</td>
-                            <td data-col="date">{{ $r->CREATEDAT ? date('d/m/Y', strtotime($r->CREATEDAT)) : '—' }}</td>
                             <td data-col="customername">{{ $custDisp }}</td>
-                            <td data-col="source">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '—') }}</td>
-                            <td data-col="postcode">{{ $r->POSTCODE ?? '—' }}</td>
-                            <td data-col="city">{{ $r->CITY ?? '—' }}</td>
+                            <td data-col="assignedto">{{ $r->ASSIGNED_TO_NAME ?? ($r->ASSIGNED_TO ?? '—') }}</td>
+                            <td data-col="referralcode">{{ $r->REFERRALCODE ?? '—' }}</td>
                             <td data-col="completiondate">
                                 @php
                                     $completedAt = $r->COMPLETED_AT ?? null;
                                 @endphp
                                 {{ $completedAt ? date('d/m/Y', strtotime($completedAt)) : '—' }}
                             </td>
+                            <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $statusDisp }}</span></td>
+
+                            <td data-col="date">{{ $r->CREATEDAT ? date('d/m/Y', strtotime($r->CREATEDAT)) : '—' }}</td>
+                            <td data-col="source">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '—') }}</td>
+                            <td data-col="postcode">{{ $r->POSTCODE ?? '—' }}</td>
+                            <td data-col="city">{{ $r->CITY ?? '—' }}</td>
                             <td data-col="address">{{ $addr !== '' ? $addr : '—' }}</td>
                             <td data-col="contactno">{{ $r->CONTACTNO ?? '—' }}</td>
                             <td data-col="businessnature">{{ $r->BUSINESSNATURE ?? '—' }}</td>
@@ -173,11 +178,8 @@
                                 @endif
                             </td>
                             <td data-col="message" class="inquiries-msg-cell {{ $aisLongMsg ? 'inquiries-msg-clickable' : '' }}" @if($aisLongMsg) data-full-message="{{ e($afullMsgTrim) }}" @endif>{{ $amsgPreview }}</td>
-                            <td data-col="referralcode">{{ $r->REFERRALCODE ?? '—' }}</td>
                             <td data-col="assignedby">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '—') }}</td>
-                            <td data-col="assignedto">{{ $r->ASSIGNED_TO_NAME ?? ($r->ASSIGNED_TO ?? '—') }}</td>
                             <td data-col="assigndate">{{ $assignDate }}</td>
-                            <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $statusDisp }}</span></td>
                             <td class="inquiries-col-action inquiries-action-cell">
                                 <button type="button"
                                         class="inquiries-btn inquiries-btn-assign inquiries-view-status-btn"
@@ -237,7 +239,7 @@
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="source"> SOURCE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="postcode"> POSTCODE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="city"> CITY</label>
-                    <label class="inquiries-columns-check"><input type="checkbox" data-col="completiondate"> COMPLETION DATE</label>
+                    <label class="inquiries-columns-check"><input type="checkbox" data-col="completiondate"> PAYOUTS DATE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="address"> ADDRESS</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="contactno"> CONTACT NO</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="businessnature"> BUSINESS NATURE</label>
@@ -249,6 +251,7 @@
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="referralcode"> REFERRAL CODE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="assignedby"> ASSIGNED BY</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="assignedto"> ASSIGNED TO</label>
+                    <label class="inquiries-columns-check"><input type="checkbox" data-col="assigndate"> ASSIGN DATE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="status"> STATUS</label>
                     <div class="inquiries-columns-actions">
                         <button type="button" class="inquiries-columns-action-btn" id="rewardedColumnsAll">All</button>
@@ -265,12 +268,26 @@
                 <thead>
                     <tr class="inquiries-header-row">
                         <th data-col="inquiryid" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY ID</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="inquiryid"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="date" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="date"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="customername" class="inquiries-header-cell"><span class="inquiries-header-label">CUSTOMER NAME</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="customername"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="source" class="inquiries-header-cell"><span class="inquiries-header-label">SOURCE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="source"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="postcode" class="inquiries-header-cell"><span class="inquiries-header-label">POSTCODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="postcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="city" class="inquiries-header-cell"><span class="inquiries-header-label">CITY</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="city"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="completiondate" class="inquiries-header-cell"><span class="inquiries-header-label">COMPLETION DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="completiondate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="completiondate" class="inquiries-header-cell"><span class="inquiries-header-label">PAYOUTS DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="completiondate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="address" class="inquiries-header-cell"><span class="inquiries-header-label">ADDRESS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="address"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="contactno" class="inquiries-header-cell"><span class="inquiries-header-label">CONTACT NO</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="contactno"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="businessnature" class="inquiries-header-cell"><span class="inquiries-header-label">BUSINESS NATURE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="businessnature"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="users" class="inquiries-header-cell"><span class="inquiries-header-label">USERS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="users"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="existingsw" class="inquiries-header-cell"><span class="inquiries-header-label">EXISTING SW</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="existingsw"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="demomode" class="inquiries-header-cell"><span class="inquiries-header-label">DEMO MODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="demomode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="products" class="inquiries-header-cell"><span class="inquiries-header-label">PRODUCTS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="products"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="message" class="inquiries-header-cell"><span class="inquiries-header-label">MESSAGE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="message"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="referralcode" class="inquiries-header-cell"><span class="inquiries-header-label">REFERRAL CODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="referralcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="assignedby" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGNED BY</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="assignedby"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="assignedto" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGNED TO</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="assignedto"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="assigndate" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGN DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="assigndate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="status" class="inquiries-header-cell"><span class="inquiries-header-label">STATUS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="rewarded" data-col="status"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th class="inquiries-col-action inquiries-header-cell"><span class="inquiries-header-label">ACTION</span><button type="button" class="inquiries-filter-clear" id="rewardedClearFilters">Clear filters</button></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -281,6 +298,13 @@
                             $custDisp = $ccompany !== '' && $ccontact !== ''
                                 ? ($ccompany . ' - ' . $ccontact)
                                 : ($ccompany !== '' ? $ccompany : ($ccontact !== '' ? $ccontact : '—'));
+                            $addr1 = trim((string)($r->ADDRESS1 ?? ''));
+                            $addr2 = trim((string)($r->ADDRESS2 ?? ''));
+                            $addr = trim($addr1 . ' ' . $addr2);
+                            $afullMsg = (string)($r->DESCRIPTION ?? '');
+                            $afullMsgTrim = trim($afullMsg);
+                            $amsgPreview = $afullMsgTrim === '' ? '—' : (mb_strlen($afullMsgTrim) > 30 ? (mb_substr($afullMsgTrim, 0, 30) . '…') : $afullMsgTrim);
+                            $aisLongMsg = $afullMsgTrim !== '' && mb_strlen($afullMsgTrim) > 30;
                             $rawStatus = strtoupper(trim((string)($r->CURRENTSTATUS ?? '')));
                             $statusClass = 'inquiries-status-new';
                             switch ($rawStatus) {
@@ -290,24 +314,64 @@
                                 case 'CONFIRMED': $statusClass = 'inquiries-status-confirmed'; break;
                                 case 'COMPLETED': $statusClass = 'inquiries-status-completed'; break;
                                 case 'REWARDED':  $statusClass = 'inquiries-status-rewarded'; break;
+                                case 'PAID':      $statusClass = 'inquiries-status-rewarded'; break;
                                 case 'FAILED':    $statusClass = 'inquiries-status-failed'; break;
                                 default:          $statusClass = 'inquiries-status-new'; break;
                             }
-                            $statusDisp = $rawStatus !== '' ? $rawStatus : 'PENDING';
+                            $statusDisp = $rawStatus !== '' ? $rawStatus : 'REWARDED';
                             $completedAt = $r->COMPLETED_AT ?? null;
                             $searchHaystack = strtolower(($r->COMPANYNAME ?? '').' '.($r->CONTACTNAME ?? '').' '.($r->LEADID ?? ''));
+                            $assignDate = $r->LASTMODIFIED ? date('d/m/Y', strtotime($r->LASTMODIFIED)) : ($r->CREATEDAT ? date('d/m/Y', strtotime($r->CREATEDAT)) : '—');
+                            $productIds = $r->PRODUCTID ? array_map('trim', explode(',', (string)$r->PRODUCTID)) : [];
+                            $pillOrder = [1=>10,3=>11,4=>12,2=>20,10=>21,8=>30,5=>31,6=>40,9=>50,7=>60,11=>70];
+                            $productIds = array_values(array_filter(array_unique(array_map('intval', $productIds)), fn($v) => $v > 0));
+                            usort($productIds, function($a,$b) use ($pillOrder) { return ($pillOrder[$a] ?? 1000+$a) <=> ($pillOrder[$b] ?? 1000+$b); });
                         @endphp
                         <tr class="rewards-row inquiry-row" data-search="{{ $searchHaystack }}">
                             <td data-col="inquiryid">#SQL-{{ $r->LEADID }}</td>
+                            <td data-col="date">{{ $r->CREATEDAT ? date('d/m/Y', strtotime($r->CREATEDAT)) : '—' }}</td>
                             <td data-col="customername">{{ $custDisp }}</td>
+                            <td data-col="source">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '—') }}</td>
                             <td data-col="postcode">{{ $r->POSTCODE ?? '—' }}</td>
                             <td data-col="city">{{ $r->CITY ?? '—' }}</td>
                             <td data-col="completiondate">{{ $completedAt ? date('d/m/Y', strtotime($completedAt)) : '—' }}</td>
+                            <td data-col="address">{{ $addr !== '' ? $addr : '—' }}</td>
+                            <td data-col="contactno">{{ $r->CONTACTNO ?? '—' }}</td>
+                            <td data-col="businessnature">{{ $r->BUSINESSNATURE ?? '—' }}</td>
+                            <td data-col="users">{{ $r->USERCOUNT ?? '—' }}</td>
+                            <td data-col="existingsw">{{ $r->EXISTINGSOFTWARE ?? '—' }}</td>
+                            <td data-col="demomode">{{ $r->DEMOMODE ?? '—' }}</td>
+                            <td data-col="products">
+                                @if(!empty($productIds))
+                                    <div class="inquiries-pill-group">
+                                        @foreach($productIds as $id)
+                                            @if(isset($productLabels[(int)$id]))
+                                                <span class="inquiries-pill inquiries-pill-p{{ (int)$id }}">{{ $productLabels[(int)$id] }}</span>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td data-col="message" class="inquiries-msg-cell {{ $aisLongMsg ? 'inquiries-msg-clickable' : '' }}" @if($aisLongMsg) data-full-message="{{ e($afullMsgTrim) }}" @endif>{{ $amsgPreview }}</td>
+                            <td data-col="referralcode">{{ $r->REFERRALCODE ?? '—' }}</td>
+                            <td data-col="assignedby">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '—') }}</td>
                             <td data-col="assignedto">{{ $r->ASSIGNED_TO_NAME ?? ($r->ASSIGNED_TO ?? '—') }}</td>
+                            <td data-col="assigndate">{{ $assignDate }}</td>
                             <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $statusDisp }}</span></td>
+                            <td class="inquiries-col-action inquiries-action-cell">
+                                <button type="button"
+                                        class="inquiries-btn inquiries-btn-assign inquiries-view-status-btn"
+                                        data-lead-id="{{ $r->LEADID }}"
+                                        title="View Status"
+                                        aria-label="View Status">
+                                    <i class="bi bi-eye-fill" aria-hidden="true"></i>
+                                </button>
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="inquiries-empty">No rewarded payouts.</td></tr>
+                        <tr><td colspan="20" class="inquiries-empty">No rewarded payouts.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -357,11 +421,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var COMPLETED_STORAGE_KEY = 'payoutCompletedVisibleColumns';
-    var COMPLETED_DEFAULT_COLUMNS = ['inquiryid','customername','postcode','city','completiondate','assignedto','status'];
+    var COMPLETED_DEFAULT_COLUMNS = ['inquiryid','customername','assignedto','referralcode','completiondate','status'];
     var COMPLETED_ALL_COLUMNS = ['inquiryid','date','customername','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','products','message','referralcode','assignedby','assignedto','completiondate','assigndate','status'];
     var REWARDED_STORAGE_KEY = 'payoutRewardedVisibleColumns';
-    var REWARDED_DEFAULT_COLUMNS = ['inquiryid','customername','postcode','city','completiondate','assignedto','status'];
-    var REWARDED_ALL_COLUMNS = ['inquiryid','date','customername','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','products','message','referralcode','assignedby','assignedto','completiondate','status'];
+    var REWARDED_DEFAULT_COLUMNS = ['inquiryid','customername','assignedto','referralcode','completiondate','status'];
+    var REWARDED_ALL_COLUMNS = ['inquiryid','date','customername','source','postcode','city','completiondate','address','contactno','businessnature','users','existingsw','demomode','products','message','referralcode','assignedby','assignedto','assigndate','status'];
 
     function getCompletedVisibleColumns() {
         try {
@@ -425,6 +489,10 @@ document.addEventListener('DOMContentLoaded', function() {
             table.querySelectorAll('th[data-col="' + col + '"], td[data-col="' + col + '"]').forEach(function(el) {
                 el.style.display = show ? '' : 'none';
             });
+        });
+        var showAction = Array.isArray(visible) && visible.length > 0;
+        table.querySelectorAll('th.inquiries-col-action, td.inquiries-col-action').forEach(function(el) {
+            el.style.display = showAction ? '' : 'none';
         });
     }
     function syncRewardedCheckboxes(visible) {
@@ -663,6 +731,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    var rewardedClearFilters = document.getElementById('rewardedClearFilters');
+    if (rewardedClearFilters) {
+        rewardedClearFilters.addEventListener('click', function() {
+            var table = document.getElementById('rewardedTable');
+            if (table) table.querySelectorAll('thead .rewards-grid-filter').forEach(function(inp) { inp.value = ''; });
+            applyTableFilter('rewardedTable');
+        });
+    }
+
     function getVisibleDataRows(table) {
         if (!table) return [];
         var rows = table.querySelectorAll('tbody tr.rewards-row');
@@ -768,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyTableFilter(tableId) {
         var table = document.getElementById(tableId);
         var searchInput = document.getElementById('payoutSearchInput');
-        if (!table) return;
+    if (!table) return;
         var q = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
         var filters = {};
         table.querySelectorAll('thead .rewards-grid-filter').forEach(function(inp) {
@@ -887,6 +964,7 @@ document.addEventListener('DOMContentLoaded', function() {
             var label = document.getElementById('payoutSummaryLabel');
             var value = document.getElementById('payoutSummaryValue');
             var note = document.getElementById('payoutSummaryNote');
+            var iconEl = document.getElementById('payoutSummaryIcon');
             if (card && label && value && note) {
                 var pendingCount = card.getAttribute('data-pending-count') || '0';
                 var rewardedCount = card.getAttribute('data-rewarded-count') || '0';
@@ -894,14 +972,34 @@ document.addEventListener('DOMContentLoaded', function() {
                     label.textContent = 'TOTAL REWARDED';
                     value.textContent = rewardedCount;
                     note.textContent = 'Completed Referral Payouts';
+                    if (iconEl) {
+                        iconEl.classList.remove('bi-coin');
+                        iconEl.classList.remove('bi-check2-circle');
+                        iconEl.classList.add('bi-piggy-bank');
+                    }
                 } else {
                     label.textContent = 'PENDING REWARD';
                     value.textContent = pendingCount;
                     note.textContent = 'Pending Referral Payout';
+                    if (iconEl) {
+                        iconEl.classList.remove('bi-piggy-bank');
+                        iconEl.classList.remove('bi-check2-circle');
+                        iconEl.classList.add('bi-coin');
+                    }
                 }
             }
         });
     });
+
+    // Ensure tab + summary reflect initial tab from query (?tab=rewarded|completed)
+    (function initInitialTab() {
+        var params = new URLSearchParams(window.location.search || '');
+        var tab = params.get('tab') === 'rewarded' ? 'rewarded' : 'completed';
+        var fakeTab = document.querySelector('.inquiries-tab[data-tab="' + tab + '"]');
+        if (fakeTab && typeof fakeTab.click === 'function') {
+            fakeTab.click();
+        }
+    })();
 
     (function initStatusModal() {
         var modal = document.getElementById('statusModal');

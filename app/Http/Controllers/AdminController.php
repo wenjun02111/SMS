@@ -2007,30 +2007,54 @@ class AdminController extends Controller
             'Demo' => $percentChange($activityStatus['Demo'] ?? 0, $lastMonthActivity['Demo'] ?? 0),
             'Confirmed' => $percentChange($activityStatus['Confirmed'] ?? 0, $lastMonthActivity['Confirmed'] ?? 0),
             'Completed' => $percentChange($activityStatus['Completed'] ?? 0, $lastMonthActivity['Completed'] ?? 0),
-            'Pending Reward' => $percentChange($payoutStatus['Pending'] ?? 0, $lastMonthPayout['Pending'] ?? 0),
-            'Rewarded' => $percentChange($payoutStatus['Paid'] ?? 0, $lastMonthPayout['Paid'] ?? 0),
+            'CompletedPendingReward' => $percentChange(
+                ($activityStatus['Completed'] ?? 0) + ($payoutStatus['Pending'] ?? 0),
+                ($lastMonthActivity['Completed'] ?? 0) + ($lastMonthPayout['Pending'] ?? 0)
+            ),
+            'Rewarded' => $percentChange($activityStatus['reward'] ?? 0, $lastMonthActivity['reward'] ?? 0),
         ];
 
-        // Top 10 closed case dealers (LEAD.CURRENTSTATUS = Closed) for current month — Monthly Performance Conversion chart
-        $closedDealerRows = DB::select(
-            'SELECT l."ASSIGNED_TO" AS dealer_id,
-                    COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL") AS name,
-                    COUNT(*) AS closed_c
-             FROM "LEAD" l
-             JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
-             WHERE l."ASSIGNED_TO" IS NOT NULL
-               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
-               AND EXTRACT(MONTH FROM l."CREATEDAT") = EXTRACT(MONTH FROM CURRENT_TIMESTAMP)
-               AND EXTRACT(YEAR FROM l."CREATEDAT") = EXTRACT(YEAR FROM CURRENT_TIMESTAMP)
-             GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
-             ORDER BY closed_c DESC',
-            ['Closed']
+        // Product Conversion Rate (from LEAD_ACT.DEALTPRODUCT) for current month
+        $productIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        $productNames = [
+            1 => 'SQL Account',
+            2 => 'SQL Payroll',
+            3 => 'SQL Production',
+            4 => 'Mobile Sales',
+            5 => 'SQL Ecommerce',
+            6 => 'SQL EBI Wellness POS',
+            7 => 'SQL X Suduai',
+            8 => 'SQL X-Store',
+            9 => 'SQL Vision',
+            10 => 'SQL HRMS',
+            11 => 'Others',
+        ];
+        $productCounts = array_fill_keys($productIds, 0);
+        $dealRows = DB::select(
+            'SELECT a."DEALTPRODUCT" AS dealt
+             FROM "LEAD_ACT" a
+             WHERE a."DEALTPRODUCT" IS NOT NULL
+               AND TRIM(a."DEALTPRODUCT") <> \'\'
+               AND EXTRACT(MONTH FROM a."CREATIONDATE") = EXTRACT(MONTH FROM CURRENT_TIMESTAMP)
+               AND EXTRACT(YEAR FROM a."CREATIONDATE") = EXTRACT(YEAR FROM CURRENT_TIMESTAMP)'
         );
+        foreach ($dealRows as $row) {
+            $val = trim((string) ($get($row, 'dealt') ?? ''));
+            if ($val === '') {
+                continue;
+            }
+            $ids = array_map('intval', array_filter(preg_split('/[\s,\(\)]+/', $val)));
+            foreach ($ids as $pid) {
+                if (isset($productCounts[$pid])) {
+                    $productCounts[$pid]++;
+                }
+            }
+        }
         $productConversion = [];
-        foreach (array_slice($closedDealerRows, 0, 10) as $row) {
+        foreach ($productIds as $pid) {
             $productConversion[] = [
-                'label' => (string) ($get($row, 'name') ?: $get($row, 'dealer_id') ?: 'Unknown'),
-                'count' => (int) $get($row, 'closed_c'),
+                'label' => $productNames[$pid] ?? ('Product ' . $pid),
+                'count' => (int) ($productCounts[$pid] ?? 0),
             ];
         }
 
