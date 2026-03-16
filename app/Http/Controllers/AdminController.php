@@ -1609,6 +1609,43 @@ class AdminController extends Controller
             // keep CURRENTSTATUS from LEAD if override fails
         }
 
+        // Fetch latest COMPLETED date from LEAD_ACT per LEADID for completion date column
+        $completedDateMap = [];
+        try {
+            $leadIdsForActs = array_values(array_unique(array_filter(array_map(
+                fn ($r) => (int) ($r->LEADID ?? 0),
+                $rows
+            ))));
+            if (!empty($leadIdsForActs)) {
+                $placeholders = implode(',', array_fill(0, count($leadIdsForActs), '?'));
+                $actRows = DB::select(
+                    'SELECT "LEADID", MAX("CREATIONDATE") AS COMPLETED_AT
+                     FROM "LEAD_ACT"
+                     WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\' AND "LEADID" IN (' . $placeholders . ')
+                     GROUP BY "LEADID"',
+                    $leadIdsForActs
+                );
+                foreach ($actRows as $ar) {
+                    $lid = (int) ($ar->LEADID ?? 0);
+                    if ($lid > 0) {
+                        $completedDateMap[$lid] = $ar->COMPLETED_AT ?? $ar->completed_at ?? null;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $completedDateMap = [];
+        }
+
+        // Attach completion date to all assigned rows where available
+        if (!empty($completedDateMap)) {
+            foreach ($assigned as $r) {
+                $lid = (int) ($r->LEADID ?? 0);
+                if ($lid > 0 && isset($completedDateMap[$lid])) {
+                    $r->COMPLETED_AT = $completedDateMap[$lid];
+                }
+            }
+        }
+
         // Split into Completed vs Rewarded/Paid by latest status
         $completed = [];
         $rewarded = [];
@@ -1689,6 +1726,21 @@ class AdminController extends Controller
         );
         $totalCompletedLeads = (int) ($closedRow->cnt ?? $closedRow->CNT ?? current((array) $closedRow) ?? 0);
 
+        $rewardedRow = DB::selectOne(
+            'SELECT COUNT(*) as cnt
+             FROM (
+                 SELECT a."LEADID", a."STATUS"
+                 FROM "LEAD_ACT" a
+                 JOIN (
+                     SELECT "LEADID", MAX("CREATIONDATE") AS max_created
+                     FROM "LEAD_ACT"
+                     GROUP BY "LEADID"
+                 ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
+             ) latest
+             WHERE UPPER(TRIM(latest."STATUS")) = \'REWARDED\''
+        );
+        $totalRewardedLeads = (int) ($rewardedRow->cnt ?? $rewardedRow->CNT ?? current((array) $rewardedRow) ?? 0);
+
         // Product labels for PRODUCTS column (if needed later)
         $productLabels = [
             1 => 'Account',
@@ -1708,6 +1760,7 @@ class AdminController extends Controller
             'completed' => $completed,
             'rewarded' => $rewarded,
             'totalCompletedLeads' => $totalCompletedLeads,
+            'totalRewardedLeads' => $totalRewardedLeads,
             'productLabels' => $productLabels,
             'currentPage' => 'rewards',
         ]);

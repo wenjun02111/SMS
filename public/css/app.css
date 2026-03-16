@@ -5478,6 +5478,7 @@ button.dealer-pagination-btn:disabled {
   font-size: 12px;
 }
 
+
 /* Maintain Users table: same font size, padding, and column sizing as Inquiries table */
 .maintain-users-table-wrap .dashboard-table-wrapper {
   background: #ffffff;
@@ -6130,6 +6131,14 @@ button.dealer-pagination-btn:disabled {
   white-space: nowrap;
 }
 
+/* Completed: keep compact ID/postcode/city similar to Incoming */
+#completedTable th[data-col="inquiryid"],
+#completedTable td[data-col="inquiryid"] {
+  width: 1%;
+  max-width: 110px;
+  white-space: nowrap;
+}
+
 #dealerInquiriesTable th[data-col="inquiryid"],
 #dealerInquiriesTable td[data-col="inquiryid"] {
   width: 1%;
@@ -6203,10 +6212,22 @@ button.dealer-pagination-btn:disabled {
   max-width: 85px;
   white-space: nowrap;
 }
+#completedTable th[data-col="postcode"],
+#completedTable td[data-col="postcode"] {
+  width: 1%;
+  max-width: 85px;
+  white-space: nowrap;
+}
 #unassignedTable th[data-col="city"],
 #unassignedTable td[data-col="city"] {
   width: 1%;
   max-width: 115px; /* +5px */
+  white-space: nowrap;
+}
+#completedTable th[data-col="city"],
+#completedTable td[data-col="city"] {
+  width: 1%;
+  max-width: 115px;
   white-space: nowrap;
 }
 

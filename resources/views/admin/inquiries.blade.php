@@ -1118,6 +1118,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (btn) btn.addEventListener('click', filterRows);
         input.addEventListener('keydown', function(e) { if (e.key === 'Enter') filterRows(); });
+        input.addEventListener('input', function() {
+            // Auto search as user types, same behaviour as payouts search
+            filterRows();
+        });
     }
     applyGridFilters();
     applyAssignedGridFilters();
