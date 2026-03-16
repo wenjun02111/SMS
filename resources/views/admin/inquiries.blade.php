@@ -3,6 +3,7 @@
 @section('content')
 @php $assignUndo = session('assign_undo'); @endphp
 <div class="inquiries-page-wrap">
+<div class="inquiries-mgmt-top-row">
 <section class="inquiries-mgmt-summary">
     <div class="inquiries-summary-card" id="incomingSummaryCard">
         <div class="inquiries-summary-icon"><i class="bi bi-inbox"></i></div>
@@ -60,6 +61,7 @@
         <button type="button" class="inquiries-btn inquiries-btn-secondary inquiries-search-clear-btn" id="inquiryClearSearchBtn" title="Clear search">Clear</button>
     </div>
 </section>
+</div>
 
 <div class="inquiries-tabs">
     <button type="button" class="inquiries-tab active" data-tab="incoming" aria-selected="true">Incoming</button>

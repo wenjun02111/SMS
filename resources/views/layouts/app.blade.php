@@ -41,13 +41,17 @@
             <div class="dashboard-topbar-actions">
                 <a href="#" class="dashboard-icon-btn top-right-btn" type="button" title="Bookmark"><img src="{{ asset('Guide.ico') }}" alt="Bookmark" class="dashboard-icon-img"></a>
                 <a href="#" class="dashboard-icon-btn top-right-btn" type="button" title="Notifications"><img src="{{ asset('Notification.ico') }}" alt="Notifications" class="dashboard-icon-img"></a>
+                @php
+                    $avatarInitial = strtoupper(substr(session('user_email', 'U'), 0, 1));
+                    $avatarLetter = (ctype_alpha($avatarInitial) ? $avatarInitial : 'U');
+                @endphp
                 <div class="dashboard-profile-dropdown">
                     <button type="button" class="dashboard-profile-btn" id="profileDropdownTrigger" aria-expanded="false" aria-haspopup="true" title="{{ session('user_email', '') }}">
-                        <div class="dashboard-user-avatar">{{ strtoupper(substr(session('user_email', 'U'), 0, 1)) }}</div>
+                        <div class="dashboard-user-avatar dashboard-avatar-{{ $avatarLetter }}">{{ $avatarInitial }}</div>
                     </button>
                     <div class="dashboard-profile-menu" id="profileDropdownMenu" hidden>
                         <div class="dashboard-profile-card">
-                            <div class="dashboard-profile-avatar-lg">{{ strtoupper(substr(session('user_email', 'U'), 0, 1)) }}</div>
+                            <div class="dashboard-profile-avatar-lg dashboard-avatar-{{ $avatarLetter }}">{{ $avatarInitial }}</div>
                             <div class="dashboard-profile-email">{{ session('user_email', '') }}</div>
                             @if(session('user_alias'))
                                 <div class="dashboard-profile-alias">{{ strtoupper(session('user_alias')) }}</div>

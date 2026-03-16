@@ -35,18 +35,18 @@
             <table class="dashboard-table dealers-table-with-filters" id="dealersTable">
                 <thead>
                     <tr class="inquiries-header-row">
-                        <th data-col="userid" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">User ID</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="userid"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="alias" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Alias</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="alias"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="company" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Company name</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="company"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="email" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Email</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="email"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="postcode" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Postcode</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="postcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="city" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">City</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="city"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="totallead" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Leads</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="totallead"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="totalongoing" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Ongoing</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="totalongoing"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="totalclosed" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Closed</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="totalclosed"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="totalfailed" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Failed</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="totalfailed"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="conversionrate" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Conversion</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="conversionrate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="active" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Active</span><span class="inquiries-filter-wrap"><input type="text" class="dealer-grid-filter" data-col="active"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="userid" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">User ID</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="userid"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="alias" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Alias</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="alias"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="company" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Company name</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="company"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="email" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Email</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="email"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="postcode" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Postcode</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="postcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="city" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">City</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="city"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="totallead" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Leads</span><span class="inquiries-filter-wrap dealer-operator-search-wrap"><span class="dealer-operator-search-box"><button type="button" class="dealer-operator-btn" data-col="totallead" data-op="=" aria-haspopup="true" aria-expanded="false" title="Filter operator">=</button><div class="dealer-operator-dropdown" hidden><button type="button" data-op="=">= Equals</button><button type="button" data-op="!=">≠ Does not equal</button><button type="button" data-op="<">&lt; Less than</button><button type="button" data-op="<=">≤ Less than or equal to</button><button type="button" data-op=">">&gt; Greater than</button><button type="button" data-op=">=">≥ Greater than or equal to</button></div><input type="text" class="dealer-grid-filter" data-col="totallead" placeholder="0"></span></span></th>
+                        <th data-col="totalongoing" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Ongoing</span><span class="inquiries-filter-wrap dealer-operator-search-wrap"><span class="dealer-operator-search-box"><button type="button" class="dealer-operator-btn" data-col="totalongoing" data-op="=" aria-haspopup="true" aria-expanded="false" title="Filter operator">=</button><div class="dealer-operator-dropdown" hidden><button type="button" data-op="=">= Equals</button><button type="button" data-op="!=">≠ Does not equal</button><button type="button" data-op="<">&lt; Less than</button><button type="button" data-op="<=">≤ Less than or equal to</button><button type="button" data-op=">">&gt; Greater than</button><button type="button" data-op=">=">≥ Greater than or equal to</button></div><input type="text" class="dealer-grid-filter" data-col="totalongoing" placeholder="0"></span></span></th>
+                        <th data-col="totalclosed" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Closed</span><span class="inquiries-filter-wrap dealer-operator-search-wrap"><span class="dealer-operator-search-box"><button type="button" class="dealer-operator-btn" data-col="totalclosed" data-op="=" aria-haspopup="true" aria-expanded="false" title="Filter operator">=</button><div class="dealer-operator-dropdown" hidden><button type="button" data-op="=">= Equals</button><button type="button" data-op="!=">≠ Does not equal</button><button type="button" data-op="<">&lt; Less than</button><button type="button" data-op="<=">≤ Less than or equal to</button><button type="button" data-op=">">&gt; Greater than</button><button type="button" data-op=">=">≥ Greater than or equal to</button></div><input type="text" class="dealer-grid-filter" data-col="totalclosed" placeholder="0"></span></span></th>
+                        <th data-col="totalfailed" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Failed</span><span class="inquiries-filter-wrap dealer-operator-search-wrap"><span class="dealer-operator-search-box"><button type="button" class="dealer-operator-btn" data-col="totalfailed" data-op="=" aria-haspopup="true" aria-expanded="false" title="Filter operator">=</button><div class="dealer-operator-dropdown" hidden><button type="button" data-op="=">= Equals</button><button type="button" data-op="!=">≠ Does not equal</button><button type="button" data-op="<">&lt; Less than</button><button type="button" data-op="<=">≤ Less than or equal to</button><button type="button" data-op=">">&gt; Greater than</button><button type="button" data-op=">=">≥ Greater than or equal to</button></div><input type="text" class="dealer-grid-filter" data-col="totalfailed" placeholder="0"></span></span></th>
+                        <th data-col="conversionrate" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Conversion</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="conversionrate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="active" class="dashboard-table-sortable inquiries-header-cell inquiries-sortable"><span class="inquiries-header-label">Active</span><span class="inquiries-filter-wrap dealer-filter-input-wrap"><input type="text" class="dealer-grid-filter" data-col="active"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -219,6 +219,16 @@ document.addEventListener('DOMContentLoaded', function() {
             theads.push({ th: th, col: col });
         });
         document.body.removeChild(measureEl);
+        var NUMERIC_COLS = ['totallead','totalongoing','totalclosed','totalfailed'];
+        var numericIdx = NUMERIC_COLS.map(function(c) {
+            var i = theads.findIndex(function(t) { return t.col === c; });
+            return i;
+        }).filter(function(i) { return i >= 0; });
+        if (numericIdx.length > 0) {
+            var numericWidth = Math.max.apply(null, numericIdx.map(function(i) { return widths[i]; }));
+            numericWidth = Math.max(numericWidth, 90);
+            numericIdx.forEach(function(i) { widths[i] = numericWidth; });
+        }
         theads.forEach(function(item, i) {
             var w = widths[i];
             var wpx = w + 'px';
@@ -235,20 +245,47 @@ document.addEventListener('DOMContentLoaded', function() {
     requestAnimationFrame(function() { measureAndSizeDealerColumns(); });
     window.addEventListener('resize', function() { measureAndSizeDealerColumns(); });
 
-    // ——— Grid filters ———
+    // ——— Grid filters (text: contains; Leads/Ongoing/Closed/Failed: = or > or <) ———
+    var DEALER_NUMERIC_COLS = ['totallead','totalongoing','totalclosed','totalfailed'];
+    function parseNum(s) {
+        var n = parseInt(String(s).replace(/\s|,/g, ''), 10);
+        return isNaN(n) ? 0 : n;
+    }
     function applyDealerGridFilters() {
         var filters = {};
         table.querySelectorAll('.dealer-grid-filter').forEach(function(inp) {
             var col = inp.getAttribute('data-col');
-            var val = (inp.value || '').toLowerCase().trim();
-            if (col && val) filters[col] = val;
+            var val = (inp.value || '').trim();
+            if (!col) return;
+            if (DEALER_NUMERIC_COLS.indexOf(col) !== -1) {
+                if (val === '') return;
+                var opBtn = table.querySelector('.dealer-operator-btn[data-col="' + col + '"]');
+                var op = (opBtn && opBtn.getAttribute('data-op')) ? opBtn.getAttribute('data-op') : '=';
+                filters[col] = { val: val, op: op, numeric: true };
+            } else {
+                if (val === '') return;
+                filters[col] = { val: val.toLowerCase(), numeric: false };
+            }
         });
         table.querySelectorAll('tbody tr.dealer-row').forEach(function(row) {
             var match = true;
             for (var col in filters) {
                 var cell = row.querySelector('td[data-col="' + col + '"]');
-                var cellText = (cell && cell.textContent) ? cell.textContent.toLowerCase().trim() : '';
-                if (cellText.indexOf(filters[col]) === -1) { match = false; break; }
+                var cellText = (cell && cell.textContent) ? cell.textContent.trim() : '';
+                var f = filters[col];
+                if (f.numeric) {
+                    var cellNum = parseNum(cellText);
+                    var filterNum = parseNum(f.val);
+                    if (f.op === '=') { if (cellNum !== filterNum) match = false; }
+                    else if (f.op === '!=') { if (cellNum === filterNum) match = false; }
+                    else if (f.op === '>') { if (cellNum <= filterNum) match = false; }
+                    else if (f.op === '>=') { if (cellNum < filterNum) match = false; }
+                    else if (f.op === '<') { if (cellNum >= filterNum) match = false; }
+                    else if (f.op === '<=') { if (cellNum > filterNum) match = false; }
+                } else {
+                    if (cellText.toLowerCase().indexOf(f.val) === -1) match = false;
+                }
+                if (!match) break;
             }
             row.style.display = match ? '' : 'none';
         });
@@ -258,11 +295,47 @@ document.addEventListener('DOMContentLoaded', function() {
         inp.addEventListener('input', applyDealerGridFilters);
         inp.addEventListener('keyup', applyDealerGridFilters);
     });
+    table.querySelectorAll('.dealer-operator-btn').forEach(function(btn) {
+        var col = btn.getAttribute('data-col');
+        var dropdown = btn.parentElement.querySelector('.dealer-operator-dropdown');
+        if (!dropdown) return;
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var open = !dropdown.hidden;
+            table.querySelectorAll('.dealer-operator-dropdown').forEach(function(d) { d.hidden = true; });
+            table.querySelectorAll('.dealer-operator-btn').forEach(function(b) { b.setAttribute('aria-expanded', 'false'); });
+            dropdown.hidden = open;
+            btn.setAttribute('aria-expanded', !open);
+        });
+        dropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+        dropdown.querySelectorAll('button[data-op]').forEach(function(opt) {
+            opt.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var op = opt.getAttribute('data-op');
+                var label = op === '=' ? '=' : op === '!=' ? '≠' : op === '<=' ? '≤' : op === '>=' ? '≥' : op;
+                btn.setAttribute('data-op', op);
+                btn.textContent = label;
+                dropdown.hidden = true;
+                btn.setAttribute('aria-expanded', 'false');
+                applyDealerGridFilters();
+            });
+        });
+    });
+    document.addEventListener('click', function() {
+        table.querySelectorAll('.dealer-operator-dropdown').forEach(function(d) { d.hidden = true; });
+        table.querySelectorAll('.dealer-operator-btn').forEach(function(b) { b.setAttribute('aria-expanded', 'false'); });
+    });
 
     var clearBtn = document.getElementById('dealerClearFilters');
     if (clearBtn) {
         clearBtn.addEventListener('click', function() {
             table.querySelectorAll('.dealer-grid-filter').forEach(function(inp) { inp.value = ''; });
+            table.querySelectorAll('.dealer-operator-btn').forEach(function(btn) {
+                btn.setAttribute('data-op', '=');
+                btn.textContent = '=';
+                btn.setAttribute('aria-expanded', 'false');
+            });
+            table.querySelectorAll('.dealer-operator-dropdown').forEach(function(d) { d.hidden = true; });
             applyDealerGridFilters();
             table.querySelectorAll('thead th[data-col]').forEach(function(h) {
                 h.classList.remove('inquiries-sort-asc', 'inquiries-sort-desc');
@@ -301,7 +374,7 @@ document.addEventListener('DOMContentLoaded', function() {
     table.querySelectorAll('thead th[data-col]').forEach(function(th) {
         th.style.cursor = 'pointer';
         th.addEventListener('click', function(e) {
-            if (e.target.closest('input, button, .inquiries-filter-wrap, .dealer-header-filter-row')) return;
+            if (e.target.closest('input, button, select, .inquiries-filter-wrap, .dealer-header-filter-row, .dealer-operator-btn, .dealer-operator-dropdown')) return;
             var col = th.getAttribute('data-col');
             if (!col) return;
             state.dir = (state.col === col) ? -state.dir : 1;
