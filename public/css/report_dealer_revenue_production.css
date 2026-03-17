@@ -1,8 +1,4 @@
-.rrp-page {
-  padding: 24px 26px;
-  background: #f6f8ff;
-  text-align: left;
-}
+
 
 /* Shared reports title dropdown */
 .reports-title-dropdown { position: relative; display: inline-flex; }
@@ -102,6 +98,13 @@
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+.rrp-tabs-row {
+  margin: -24px 0 18px;
+}
+
+.rrp-header {
+  margin-bottom: 18px;
 }
 .rrp-pill {
   display: inline-flex;
@@ -261,6 +264,11 @@
 .rrp-dealer-id {
   font-size: 10px;
   color: #94a3b8;
+}
+.rrp-page {
+  padding: 24px 24px;
+    background: #f6f8ff;
+    text-align: left;
 }
 
 @media (max-width: 1100px) {

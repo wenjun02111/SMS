@@ -1,8 +1,11 @@
 /* Copied from reports.css (dedicated report CSS) */
 /* Reports page ~25% zoom - everything bigger */
 .reports-page {
+  --color-fg-brand: #8b5cf6;
+}
+.reports-page {
   background: #f7f7ff;
-  font-size: 125%;
+  font-size: 115%;
   min-width: 0;
   overflow-x: hidden;
   text-align: left;
@@ -22,6 +25,38 @@
 .reports-page .dashboard-header .dashboard-title { font-size: 1.5rem; }
 .reports-page .dashboard-header .dashboard-subtitle { font-size: 1rem; text-align: left; }
 .reports-page .dashboard-header > div:first-child { text-align: left; }
+
+.reports-period-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 6px 0 12px;
+}
+.reports-period-form-compact {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.reports-period-select {
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2933;
+}
+.reports-period-apply {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #7f5af0;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reports-period-apply:hover { background: #6d4ad9; }
 
 /* Title dropdown (light purple) */
 .reports-title-dropdown { position: relative; display: inline-flex; }
@@ -91,12 +126,18 @@
 
 .dashboard-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(12px, 1.4vw, 20px);
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px; /* match dashboard .dashboard-metrics gap */
   align-items: stretch;
   width: 100%;
   box-sizing: border-box;
 }
+.dashboard-metrics-grid > * {
+  grid-column: span 3;
+}
+.dashboard-metrics-grid > *:nth-child(5) { grid-column: 2 / span 3; }
+.dashboard-metrics-grid > *:nth-child(6) { grid-column: 5 / span 3; }
+.dashboard-metrics-grid > *:nth-child(7) { grid-column: 8 / span 3; }
 
 .dashboard-metric-caption {
   margin-top: 4px;
@@ -105,10 +146,17 @@
 }
 
 .reports-page .dashboard-metric-card {
-  border-radius: 12px;
-  border-color: #e5e7eb;
-  border-width: 2px;
-  background: #fcfcff;
+  background: #ffffff;
+  border-radius: 10px; /* match dashboard metric cards */
+  padding: 16px 18px; /* match dashboard metric cards */
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
+  border: 1px solid #e5e7eb;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+.reports-page .dashboard-metric-card:hover {
+  transform: translateY(-1px);
+  border-color: #ddd6fe;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.10);
 }
 
 /* Metric cards */
@@ -117,34 +165,42 @@
   min-width: 0;
   max-width: none;
   height: auto;
-  min-height: 150px;
+  /* dashboard metric cards don't force min-height */
   display: flex;
   flex-direction: column;
-  padding: clamp(10px, 1.2vw, 16px) clamp(12px, 1.4vw, 20px);
+  /* padding is defined on .dashboard-metric-card to match dashboard */
 }
 
 /* Responsive columns */
 @media (max-width: 1200px) {
   .dashboard-metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dashboard-metrics-grid > * { grid-column: span 1; }
 }
 @media (max-width: 700px) {
   .dashboard-metrics-grid { grid-template-columns: minmax(0, 1fr); }
+  .dashboard-metrics-grid > * { grid-column: span 1; }
+  .reports-period-row { justify-content: flex-start; }
 }
 
 @media (min-width: 1600px) {
   /* keep same outer padding as other boxes */
-  .dashboard-metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .dashboard-metrics-grid { grid-template-columns: repeat(12, minmax(0, 1fr)); }
 }
 
-.reports-page .dashboard-metrics-grid .dashboard-metric-value { font-size: clamp(26px, 2.2vw, 36px); }
+/* Match dashboard metric typography exactly */
+.reports-page .dashboard-metrics-grid { font-size: 1rem; }
 .reports-page .dashboard-metrics-grid .dashboard-metric-label {
-  font-size: clamp(10px, 0.9vw, 12px);
-  text-transform: uppercase;
+  font-size: 13px;
+  color: #9ca3af;
+  margin-bottom: 4px;
+  text-transform: none;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: normal;
+}
+.reports-page .dashboard-metrics-grid .dashboard-metric-value {
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1.15;
-  white-space: normal;
-  word-break: break-word;
 }
 
 /* Metric card top row: label + dealer tag */
@@ -196,6 +252,41 @@
   align-items: flex-end;
   text-align: left;
 }
+
+/* Unassigned card: show chevron only on hover */
+.reports-page .report-metric-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  position: relative;
+}
+.reports-page .report-metric-chevron {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0 10px 10px 0; /* match card radius on right side */
+  background: #ede9fe;
+  color: #4c1d95;
+  font-weight: 800;
+  font-size: 18px;
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+.reports-page .report-metric-link:hover .report-metric-chevron,
+.reports-page .report-metric-link:focus-visible .report-metric-chevron {
+  opacity: 1;
+  transform: translateX(0);
+}
+.reports-page .report-metric-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.25);
+}
 .dashboard-metric-btn {
   display: inline-block;
   padding: 6px 14px;
@@ -219,6 +310,10 @@
 .dashboard-panels-two-column > *,
 .reports-product-section { min-width: 0; }
 
+@media (max-width: 980px) {
+  .dashboard-panels-two-column { grid-template-columns: minmax(0, 1fr); }
+}
+
 .report-status-body {
   display: flex;
   flex-direction: column;
@@ -237,7 +332,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+.reports-page .report-donut {
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+}
+.reports-page .report-donut,
+.reports-page .report-donut-center {
+  will-change: transform;
 }
 .report-donut-total { font-size: 20px; font-weight: 700; }
 .reports-page .report-donut-total { font-size: 22px; }
@@ -275,15 +378,66 @@
 .reports-page .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
 .inquiry-chart-filters { display: flex; gap: 6px; margin-bottom: 12px; align-items: center; flex-wrap: wrap; margin-left: 0; }
-.inquiry-filter-btn { padding: 5px 12px; font-size: 12px; border: 1px solid #d1d5db; border-radius: 5px; background: #fff; color: #64748b; cursor: pointer; }
-.inquiry-filter-btn:hover { background: #f8fafc; color: #1e293b; }
-.inquiry-filter-btn.active { background: #1447E6; border-color: #1447E6; color: #fff; }
+.inquiry-filter-btn { padding: 5px 12px; font-size: 12px; border: 1px solid #e9d5ff; border-radius: 8px; background: #ffffff; color: #6d28d9; cursor: pointer; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
+.inquiry-filter-btn:hover { background: #f3e8ff; color: #4c1d95; border-color: #d8b4fe; }
+.inquiry-filter-btn.active { background: #8b5cf6; border-color: #7c3aed; color: #fff; box-shadow: 0 6px 14px rgba(124, 58, 237, 0.25); }
 
-.inquiry-chart-box { width: 100%; }
-.inquiry-chart-box .dashboard-panel-body { min-height: 220px !important; }
-.reports-page .inquiry-chart-box { padding-left: 20px !important; padding-right: 20px !important; }
-#inquiryRangeText { margin: 0 0 4px 0; font-size: 12px; }
-#inquiryTotal { margin: 0; font-size: 1.25rem; }
+/* Chart containers: prevent layout jump and keep crisp */
+#area-chart { min-height: 220px; }
+.reports-product-chart-wrapper canvas { image-rendering: -webkit-optimize-contrast; }
+
+.inquiry-chart-panel { width: 100%; }
+.inquiry-chart-panel .dashboard-panel-body { min-height: 220px !important; }
+#inquiryRangeText { margin: 0; }
+
+/* Monthly performance graph polish */
+.reports-page .inquiry-chart-panel {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+.reports-page #area-chart {
+  min-height: 260px;
+  margin-top: 8px;
+}
+.reports-page #area-chart .apexcharts-canvas {
+  width: 100% !important;
+}
+.reports-page #area-chart .apexcharts-tooltip {
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+.reports-page #area-chart .apexcharts-tooltip-title {
+  background: #eef2ff;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 600;
+}
+.reports-page .inquiry-chart-panel .dashboard-panel-header {
+  align-items: center;
+}
+.reports-page .inquiry-trend-badge {
+  font-size: 12px;
+  font-weight: 600;
+  gap: 6px;
+}
+.reports-page .inquiry-percent-suffix {
+  font-size: 11px;
+  color: currentColor;
+  opacity: 0.75;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.reports-page .report-donut {
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+.reports-page .reports-product-chart-wrapper {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  padding: 10px;
+}
 
 /* Height set inline from dealer count so chart grows with more dealers; min for 1–2 bars */
 .reports-page .reports-product-chart-wrapper { min-height: 140px; }
@@ -313,9 +467,15 @@
 .reports-page .report-legend-label { flex: 1; }
 .reports-page .report-legend-value { font-weight: 600; }
 
+/* Panels: unify surface */
+.reports-page .dashboard-panel,
+.reports-page .inquiry-chart-panel,
+.reports-page .reports-product-section {
+  border-radius: 12px;
+}
+
 /* Monthly Product Conversion: bottom / empty message (slightly reduced, not too small) */
 .reports-page .reports-product-section .text-muted,
 .reports-page .reports-product-section .dashboard-panel-body p {
   font-size: 12px;
 }
-

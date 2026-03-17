@@ -1609,6 +1609,43 @@ class AdminController extends Controller
             // keep CURRENTSTATUS from LEAD if override fails
         }
 
+        // Fetch latest COMPLETED date from LEAD_ACT per LEADID for completion date column
+        $completedDateMap = [];
+        try {
+            $leadIdsForActs = array_values(array_unique(array_filter(array_map(
+                fn ($r) => (int) ($r->LEADID ?? 0),
+                $rows
+            ))));
+            if (!empty($leadIdsForActs)) {
+                $placeholders = implode(',', array_fill(0, count($leadIdsForActs), '?'));
+                $actRows = DB::select(
+                    'SELECT "LEADID", MAX("CREATIONDATE") AS COMPLETED_AT
+                     FROM "LEAD_ACT"
+                     WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\' AND "LEADID" IN (' . $placeholders . ')
+                     GROUP BY "LEADID"',
+                    $leadIdsForActs
+                );
+                foreach ($actRows as $ar) {
+                    $lid = (int) ($ar->LEADID ?? 0);
+                    if ($lid > 0) {
+                        $completedDateMap[$lid] = $ar->COMPLETED_AT ?? $ar->completed_at ?? null;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $completedDateMap = [];
+        }
+
+        // Attach completion date to all assigned rows where available
+        if (!empty($completedDateMap)) {
+            foreach ($assigned as $r) {
+                $lid = (int) ($r->LEADID ?? 0);
+                if ($lid > 0 && isset($completedDateMap[$lid])) {
+                    $r->COMPLETED_AT = $completedDateMap[$lid];
+                }
+            }
+        }
+
         // Split into Completed vs Rewarded/Paid by latest status
         $completed = [];
         $rewarded = [];
@@ -1689,6 +1726,21 @@ class AdminController extends Controller
         );
         $totalCompletedLeads = (int) ($closedRow->cnt ?? $closedRow->CNT ?? current((array) $closedRow) ?? 0);
 
+        $rewardedRow = DB::selectOne(
+            'SELECT COUNT(*) as cnt
+             FROM (
+                 SELECT a."LEADID", a."STATUS"
+                 FROM "LEAD_ACT" a
+                 JOIN (
+                     SELECT "LEADID", MAX("CREATIONDATE") AS max_created
+                     FROM "LEAD_ACT"
+                     GROUP BY "LEADID"
+                 ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
+             ) latest
+             WHERE UPPER(TRIM(latest."STATUS")) = \'REWARDED\''
+        );
+        $totalRewardedLeads = (int) ($rewardedRow->cnt ?? $rewardedRow->CNT ?? current((array) $rewardedRow) ?? 0);
+
         // Product labels for PRODUCTS column (if needed later)
         $productLabels = [
             1 => 'Account',
@@ -1708,6 +1760,7 @@ class AdminController extends Controller
             'completed' => $completed,
             'rewarded' => $rewarded,
             'totalCompletedLeads' => $totalCompletedLeads,
+            'totalRewardedLeads' => $totalRewardedLeads,
             'productLabels' => $productLabels,
             'currentPage' => 'rewards',
         ]);
@@ -1775,6 +1828,24 @@ class AdminController extends Controller
 
     public function reports(): View
     {
+        $now = now();
+        $year = (int) request()->query('year', (int) $now->format('Y'));
+        $month = (int) request()->query('month', (int) $now->format('n'));
+        if ($year < 2000 || $year > 2100) {
+            $year = (int) $now->format('Y');
+        }
+        if ($month < 1 || $month > 12) {
+            $month = (int) $now->format('n');
+        }
+        $selectedDate = Carbon::create($year, $month, 1, 0, 0, 0);
+        $prevDate = (clone $selectedDate)->subMonth();
+        $selectedMonth = (int) $selectedDate->format('n');
+        $selectedYear = (int) $selectedDate->format('Y');
+        $selectedMonthName = $selectedDate->format('F');
+        $selectedDaysInMonth = (int) $selectedDate->daysInMonth;
+        $prevMonth = (int) $prevDate->format('n');
+        $prevYear = (int) $prevDate->format('Y');
+
         $get = function ($row, string $name) {
             if (is_array($row)) {
                 foreach ([$name, strtoupper($name), strtolower($name)] as $key) {
@@ -1794,7 +1865,11 @@ class AdminController extends Controller
 
         // Lead status summary
         $leadStatusRows = DB::select(
-            'SELECT "CURRENTSTATUS" AS status, COUNT(*) AS c FROM "LEAD" GROUP BY "CURRENTSTATUS"'
+            'SELECT "CURRENTSTATUS" AS status, COUNT(*) AS c
+             FROM "LEAD"
+             WHERE EXTRACT(YEAR FROM "CREATEDAT") = ? AND EXTRACT(MONTH FROM "CREATEDAT") = ?
+             GROUP BY "CURRENTSTATUS"',
+            [$selectedYear, $selectedMonth]
         );
         $leadStatus = [
             'Open' => 0,
@@ -1819,9 +1894,11 @@ class AdminController extends Controller
              JOIN (
                  SELECT "LEADID", MAX("CREATIONDATE") AS max_created
                  FROM "LEAD_ACT"
+                 WHERE EXTRACT(YEAR FROM "CREATIONDATE") = ? AND EXTRACT(MONTH FROM "CREATIONDATE") = ?
                  GROUP BY "LEADID"
              ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
-             GROUP BY a."STATUS"'
+             GROUP BY a."STATUS"',
+            [$selectedYear, $selectedMonth]
         );
         $activityStatus = [
             'Created' => 0,
@@ -1850,11 +1927,11 @@ class AdminController extends Controller
              JOIN (
                  SELECT "LEADID", MAX("CREATIONDATE") AS max_created
                  FROM "LEAD_ACT"
-                 WHERE EXTRACT(YEAR FROM "CREATIONDATE") = EXTRACT(YEAR FROM DATEADD(MONTH, -1, CURRENT_DATE))
-                   AND EXTRACT(MONTH FROM "CREATIONDATE") = EXTRACT(MONTH FROM DATEADD(MONTH, -1, CURRENT_DATE))
+                 WHERE EXTRACT(YEAR FROM "CREATIONDATE") = ? AND EXTRACT(MONTH FROM "CREATIONDATE") = ?
                  GROUP BY "LEADID"
              ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
-             GROUP BY a."STATUS"'
+             GROUP BY a."STATUS"',
+            [$prevYear, $prevMonth]
         );
         $lastMonthActivity = [
             'Created' => 0,
@@ -1878,7 +1955,11 @@ class AdminController extends Controller
 
         // Payout summary
         $payoutRows = DB::select(
-            'SELECT "STATUS" AS status, COUNT(*) AS c FROM "REFERRER_PAYOUT" GROUP BY "STATUS"'
+            'SELECT "STATUS" AS status, COUNT(*) AS c
+             FROM "REFERRER_PAYOUT"
+             WHERE EXTRACT(YEAR FROM "DATEGENERATED") = ? AND EXTRACT(MONTH FROM "DATEGENERATED") = ?
+             GROUP BY "STATUS"',
+            [$selectedYear, $selectedMonth]
         );
         $payoutStatus = [
             'Awaiting Deal Completion' => 0,
@@ -1894,10 +1975,11 @@ class AdminController extends Controller
 
         // Last month payout by status
         $lastMonthPayoutRows = DB::select(
-            'SELECT "STATUS" AS status, COUNT(*) AS c FROM "REFERRER_PAYOUT"
-             WHERE EXTRACT(YEAR FROM "DATEGENERATED") = EXTRACT(YEAR FROM DATEADD(MONTH, -1, CURRENT_DATE))
-               AND EXTRACT(MONTH FROM "DATEGENERATED") = EXTRACT(MONTH FROM DATEADD(MONTH, -1, CURRENT_DATE))
-             GROUP BY "STATUS"'
+            'SELECT "STATUS" AS status, COUNT(*) AS c
+             FROM "REFERRER_PAYOUT"
+             WHERE EXTRACT(YEAR FROM "DATEGENERATED") = ? AND EXTRACT(MONTH FROM "DATEGENERATED") = ?
+             GROUP BY "STATUS"',
+            [$prevYear, $prevMonth]
         );
         $lastMonthPayout = [
             'Awaiting Deal Completion' => 0,
@@ -1915,10 +1997,10 @@ class AdminController extends Controller
         $trendRows = DB::select(
             'SELECT EXTRACT(DAY FROM "CREATEDAT") AS d, COUNT(*) AS c
              FROM "LEAD"
-             WHERE EXTRACT(MONTH FROM "CREATEDAT") = EXTRACT(MONTH FROM CURRENT_TIMESTAMP)
-               AND EXTRACT(YEAR FROM "CREATEDAT") = EXTRACT(YEAR FROM CURRENT_TIMESTAMP)
+             WHERE EXTRACT(MONTH FROM "CREATEDAT") = ? AND EXTRACT(YEAR FROM "CREATEDAT") = ?
              GROUP BY EXTRACT(DAY FROM "CREATEDAT")
-             ORDER BY d'
+             ORDER BY d',
+            [$selectedMonth, $selectedYear]
         );
         $inquiryTrend = [];
         $trendByDay = [];
@@ -1932,8 +2014,8 @@ class AdminController extends Controller
         $currentMonthTotal = array_sum($trendByDay);
         $lastMonthRows = DB::select(
             'SELECT COUNT(*) AS c FROM "LEAD"
-             WHERE EXTRACT(YEAR FROM "CREATEDAT") = EXTRACT(YEAR FROM DATEADD(MONTH, -1, CURRENT_DATE))
-               AND EXTRACT(MONTH FROM "CREATEDAT") = EXTRACT(MONTH FROM DATEADD(MONTH, -1, CURRENT_DATE))'
+             WHERE EXTRACT(YEAR FROM "CREATEDAT") = ? AND EXTRACT(MONTH FROM "CREATEDAT") = ?',
+            [$prevYear, $prevMonth]
         );
         $lastMonthTotal = (int) ($lastMonthRows[0]->c ?? 0);
         $inquiryTrendPercentChange = $lastMonthTotal > 0
@@ -1954,30 +2036,55 @@ class AdminController extends Controller
             'Demo' => $percentChange($activityStatus['Demo'] ?? 0, $lastMonthActivity['Demo'] ?? 0),
             'Confirmed' => $percentChange($activityStatus['Confirmed'] ?? 0, $lastMonthActivity['Confirmed'] ?? 0),
             'Completed' => $percentChange($activityStatus['Completed'] ?? 0, $lastMonthActivity['Completed'] ?? 0),
-            'Pending Reward' => $percentChange($payoutStatus['Pending'] ?? 0, $lastMonthPayout['Pending'] ?? 0),
-            'Rewarded' => $percentChange($payoutStatus['Paid'] ?? 0, $lastMonthPayout['Paid'] ?? 0),
+            'CompletedPendingReward' => $percentChange(
+                ($activityStatus['Completed'] ?? 0) + ($payoutStatus['Pending'] ?? 0),
+                ($lastMonthActivity['Completed'] ?? 0) + ($lastMonthPayout['Pending'] ?? 0)
+            ),
+            'Rewarded' => $percentChange($activityStatus['reward'] ?? 0, $lastMonthActivity['reward'] ?? 0),
         ];
 
-        // Top 10 closed case dealers (LEAD.CURRENTSTATUS = Closed) for current month — Monthly Performance Conversion chart
-        $closedDealerRows = DB::select(
-            'SELECT l."ASSIGNED_TO" AS dealer_id,
-                    COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL") AS name,
-                    COUNT(*) AS closed_c
-             FROM "LEAD" l
-             JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
-             WHERE l."ASSIGNED_TO" IS NOT NULL
-               AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
-               AND EXTRACT(MONTH FROM l."CREATEDAT") = EXTRACT(MONTH FROM CURRENT_TIMESTAMP)
-               AND EXTRACT(YEAR FROM l."CREATEDAT") = EXTRACT(YEAR FROM CURRENT_TIMESTAMP)
-             GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
-             ORDER BY closed_c DESC',
-            ['Closed']
+        // Product Conversion Rate (from LEAD_ACT.DEALTPRODUCT) for current month
+        $productIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+        $productNames = [
+            1 => 'SQL Account',
+            2 => 'SQL Payroll',
+            3 => 'SQL Production',
+            4 => 'Mobile Sales',
+            5 => 'SQL Ecommerce',
+            6 => 'SQL EBI Wellness POS',
+            7 => 'SQL X Suduai',
+            8 => 'SQL X-Store',
+            9 => 'SQL Vision',
+            10 => 'SQL HRMS',
+            11 => 'Others',
+        ];
+        $productCounts = array_fill_keys($productIds, 0);
+        $dealRows = DB::select(
+            'SELECT a."DEALTPRODUCT" AS dealt
+             FROM "LEAD_ACT" a
+             WHERE a."DEALTPRODUCT" IS NOT NULL
+               AND TRIM(a."DEALTPRODUCT") <> \'\'
+               AND EXTRACT(MONTH FROM a."CREATIONDATE") = ?
+               AND EXTRACT(YEAR FROM a."CREATIONDATE") = ?',
+            [$selectedMonth, $selectedYear]
         );
+        foreach ($dealRows as $row) {
+            $val = trim((string) ($get($row, 'dealt') ?? ''));
+            if ($val === '') {
+                continue;
+            }
+            $ids = array_map('intval', array_filter(preg_split('/[\s,\(\)]+/', $val)));
+            foreach ($ids as $pid) {
+                if (isset($productCounts[$pid])) {
+                    $productCounts[$pid]++;
+                }
+            }
+        }
         $productConversion = [];
-        foreach (array_slice($closedDealerRows, 0, 10) as $row) {
+        foreach ($productIds as $pid) {
             $productConversion[] = [
-                'label' => (string) ($get($row, 'name') ?: $get($row, 'dealer_id') ?: 'Unknown'),
-                'count' => (int) $get($row, 'closed_c'),
+                'label' => $productNames[$pid] ?? ('Product ' . $pid),
+                'count' => (int) ($productCounts[$pid] ?? 0),
             ];
         }
 
@@ -1991,6 +2098,12 @@ class AdminController extends Controller
             'inquiryTrend' => $inquiryTrend,
             'inquiryTrendPercentChange' => $inquiryTrendPercentChange,
             'productConversion' => $productConversion,
+            'selectedMonth' => $selectedMonth,
+            'selectedYear' => $selectedYear,
+            'selectedMonthName' => $selectedMonthName,
+            'selectedDaysInMonth' => $selectedDaysInMonth,
+            'monthOptions' => range(1, 12),
+            'yearOptions' => range(((int) $now->format('Y')) - 4, ((int) $now->format('Y'))),
         ]);
     }
 

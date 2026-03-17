@@ -535,26 +535,76 @@ document.addEventListener('DOMContentLoaded', function() {
     var selectedStatusIdx = 0;
     var viewMode = false;
     var cachedActivities = [];
+    var userPickedStep = false;
+    var latestMinDate = '';
+    var latestMinTime = '';
+
+    function setDateTimeMinConstraints() {
+        var dateEl = document.getElementById('inquiryFollowupDate');
+        var timeEl = document.getElementById('inquiryFollowupTime');
+        if (!dateEl || !timeEl) return;
+
+        // Only enforce min constraints while EDITING (not viewing).
+        if (viewMode) {
+            dateEl.min = '';
+            timeEl.min = '';
+            return;
+        }
+
+        if (!latestMinDate) {
+            dateEl.min = '';
+            timeEl.min = '';
+            return;
+        }
+
+        dateEl.min = latestMinDate;
+
+        // Time constraint only matters when the selected date equals the min date.
+        var curDate = (dateEl.value || '').trim();
+        if (curDate === latestMinDate && latestMinTime) {
+            timeEl.min = latestMinTime;
+        } else {
+            timeEl.min = '';
+        }
+    }
+
+    function hasActivityForStatus(statusOrderName) {
+        return !!findActivityForStatus(statusOrderName);
+    }
 
     function setProgression(currentStatus) {
-        var normalized = statusMap[currentStatus] || 'PENDING';
+        var key = (currentStatus || '').toString().toUpperCase().trim();
+        // Normalize common DB/API variants (e.g. "FollowUp" -> "FOLLOWUP")
+        key = key.replace(/\s+/g, ' ');
+        var normalized = statusMap[key] || 'PENDING';
         var idx = statusOrder.indexOf(normalized);
         if (idx < 0) idx = 0;
         currentStatusIdx = idx;
-        selectedStatusIdx = Math.min(idx + 1, statusOrder.length - 1);
+        // In view mode, keep selection on the latest saved status.
+        // In edit mode, select the next status to be updated.
+        selectedStatusIdx = viewMode ? idx : Math.min(idx + 1, statusOrder.length - 1);
         if (progressionSteps) {
             var steps = progressionSteps.querySelectorAll('.inquiry-step');
+            // Statuses up to the last submitted one are "done" (ticked).
+            // The next step (idx + 1) is the active one to be updated.
             var showDone = function(i) { return i <= idx; };
             steps.forEach(function(step, i) {
                 step.classList.remove('inquiry-step--done', 'inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click', 'inquiry-step--viewable');
-                step.innerHTML = '<span>' + step.dataset.step + '</span>';
+                var label = getStepDisplayLabel(i);
+                step.innerHTML = '<span>' + (label || step.dataset.step) + '</span>';
                 if (showDone(i)) {
                     step.classList.add('inquiry-step--done', 'inquiry-step--viewable');
-                    step.innerHTML = '<i class="bi bi-check"></i><span>' + step.dataset.step + '</span>';
+                    step.innerHTML = '<i class="bi bi-check"></i><span>' + (label || step.dataset.step) + '</span>';
                 } else if (i === selectedStatusIdx) {
                     step.classList.add('inquiry-step--active', 'inquiry-step--selected');
                 } else if (i === 0) {
-                    step.classList.add('inquiry-step--no-click');
+                    // Allow Pending to be clickable when it has not been submitted yet.
+                    // Otherwise keep the original "no-click" behavior.
+                    if (idx === 0 && !hasActivityForStatus('PENDING') && selectedStatusIdx === 0) {
+                        step.classList.add('inquiry-step--active', 'inquiry-step--selected');
+                    } else {
+                        step.classList.add('inquiry-step--no-click');
+                    }
                 } else {
                     step.classList.add('inquiry-step--clickable');
                 }
@@ -583,7 +633,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function toggleAddCalendarButton() {
         var btn = document.getElementById('inquiryModalAddCalendar');
-        if (btn) btn.style.display = statusOrder[selectedStatusIdx] === 'DEMO' ? '' : 'none';
+        if (!btn) return;
+        var isDemo = statusOrder[selectedStatusIdx] === 'DEMO';
+        btn.style.display = isDemo ? '' : 'none';
+        if (!isDemo) return;
+
+        var dateEl = document.getElementById('inquiryFollowupDate');
+        var timeEl = document.getElementById('inquiryFollowupTime');
+        var hasDate = !!(dateEl && dateEl.value && dateEl.value.trim());
+        var hasTime = !!(timeEl && timeEl.value && timeEl.value.trim());
+        var canUse = hasDate; // time is optional; defaults to 09:00 in click handler
+        btn.disabled = !canUse;
+        btn.classList.toggle('inquiry-btn-update--disabled', !canUse);
     }
 
     function toggleProductChecklist() {
@@ -600,7 +661,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function toggleUpdateButton() {
         var isRewarded = currentStatusIdx === statusOrder.length - 1;
-        var disable = isRewarded || viewMode;
+        // Disable when viewing, or when attempting to re-submit an older step.
+        // Allow editing/re-submitting the CURRENT status, and submitting the NEXT status.
+        var selectedName = statusOrder[selectedStatusIdx] || '';
+        var isOlderStep = selectedStatusIdx < currentStatusIdx;
+        var disable = isRewarded || viewMode || isOlderStep;
         updateBtn.disabled = disable;
         updateBtn.classList.toggle('inquiry-btn-update--disabled', disable);
     }
@@ -621,20 +686,48 @@ document.addEventListener('DOMContentLoaded', function() {
         return null;
     }
 
+    /** Display label for a step: DB status when activity exists, "Current" when it's the current step but no record yet, else canonical name. */
+    function getStepDisplayLabel(stepIdx) {
+        var stepName = statusOrder[stepIdx];
+        if (stepIdx > currentStatusIdx) return stepName;
+        var act = findActivityForStatus(stepName);
+        if (act && act.status) return (act.status || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') || stepName;
+        if (stepIdx === currentStatusIdx) return 'Current';
+        return stepName;
+    }
+
     function populateFormFromActivity(activity) {
         var dateEl = document.getElementById('inquiryFollowupDate');
         var timeEl = document.getElementById('inquiryFollowupTime');
         var remarkEl = document.getElementById('inquiryRemark');
+        var productBoxes = document.querySelectorAll('.inquiry-product-checkbox');
         if (!activity || !activity.created_at) {
             if (dateEl) dateEl.value = '';
             if (timeEl) timeEl.value = '';
             if (remarkEl) remarkEl.value = '';
+            if (productBoxes.length) {
+                productBoxes.forEach(function(cb) { cb.checked = false; });
+            }
             return;
         }
         var d = new Date(activity.created_at);
         if (dateEl) dateEl.value = isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
         if (timeEl) timeEl.value = isNaN(d.getTime()) ? '' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
         if (remarkEl) remarkEl.value = activity.description || '';
+
+        // Restore product selection (e.g. SQL Account) for completed/rewarded activities
+        if (productBoxes.length) {
+            productBoxes.forEach(function(cb) { cb.checked = false; });
+            if (activity && Array.isArray(activity.product_ids)) {
+                var ids = activity.product_ids.map(function(v) { return parseInt(v, 10); }).filter(function(v) { return !isNaN(v); });
+                productBoxes.forEach(function(cb) {
+                    var pid = parseInt(cb.value, 10);
+                    if (!isNaN(pid) && ids.indexOf(pid) !== -1) {
+                        cb.checked = true;
+                    }
+                });
+            }
+        }
     }
 
     function setFieldsReadOnly(readOnly) {
@@ -643,8 +736,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var remarkEl = document.getElementById('inquiryRemark');
         var fileEl = document.getElementById('inquiryAttachment');
         var productBoxes = document.querySelectorAll('.inquiry-product-checkbox');
-        if (dateEl) dateEl.readOnly = readOnly;
-        if (timeEl) timeEl.readOnly = readOnly;
+        // Using readOnly on <input type="date/time"> is buggy in some browsers
+        // (it can prevent typing/picker until refocus). Use disabled instead.
+        if (dateEl) dateEl.disabled = !!readOnly;
+        if (timeEl) timeEl.disabled = !!readOnly;
         if (remarkEl) remarkEl.readOnly = readOnly;
         if (fileEl) fileEl.disabled = readOnly;
         productBoxes.forEach(function(b) { b.disabled = readOnly; });
@@ -733,6 +828,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function refreshStepLabels() {
+        if (!progressionSteps) return;
+        progressionSteps.querySelectorAll('.inquiry-step').forEach(function(step, i) {
+            var label = getStepDisplayLabel(i);
+            var text = label || step.dataset.step;
+            if (step.classList.contains('inquiry-step--done')) {
+                step.innerHTML = '<i class="bi bi-check"></i><span>' + text + '</span>';
+            } else {
+                step.innerHTML = '<span>' + text + '</span>';
+            }
+        });
+    }
+
     function loadActivity(leadId) {
         var url = '{{ route("dealer.inquiries.activity", ["leadId" => "__ID__"]) }}'.replace('__ID__', leadId);
         fetch(url, { headers: { 'Accept': 'application/json' } })
@@ -740,6 +848,63 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(function(data) {
                 cachedActivities = data.activities || [];
                 renderActivity(cachedActivities);
+                refreshStepLabels();
+
+                // Re-compute the latest status from DB activities (by created_at) to keep UI in sync
+                // with whatever Firebird considers the latest row.
+                if (!userPickedStep) {
+                    // Prefer server-computed latest (based on CREATIONDATE + LEAD_ACTID).
+                    if (data && data.latest_status) {
+                        setProgression(data.latest_status);
+                    }
+
+                    // If opened from the edit icon, auto-select the NEXT status for editing.
+                    if (openStartNext) {
+                        // Switch to edit mode and re-run progression so the NEXT step becomes active.
+                        // (setProgression chooses next step when viewMode=false)
+                        viewMode = false;
+                        if (data && data.latest_status) {
+                            setProgression(data.latest_status);
+                        }
+                        setFieldsReadOnly(false);
+                        setRemarkPlaceholder(statusOrder[selectedStatusIdx]);
+                        setDateTimeLabels(statusOrder[selectedStatusIdx]);
+
+                        var remarkEl = document.getElementById('inquiryRemark');
+                        var dateEl = document.getElementById('inquiryFollowupDate');
+                        var timeEl = document.getElementById('inquiryFollowupTime');
+                        if (remarkEl) remarkEl.value = '';
+                        if (dateEl) dateEl.value = getDefaultDate();
+                        if (timeEl) timeEl.value = getDefaultTime();
+
+                        // One-shot behavior per open.
+                        openStartNext = false;
+                    }
+                }
+
+                // Min-date validation for the calendar picker (disable wrong dates).
+                // Use server-provided latest_created_at (based on LEAD_ACT.CREATIONDATE).
+                latestMinDate = '';
+                latestMinTime = '';
+                if (data && data.latest_created_at) {
+                    var dmin = new Date(data.latest_created_at);
+                    if (!isNaN(dmin.getTime())) {
+                        latestMinDate = dmin.toISOString().slice(0, 10);
+                        latestMinTime = String(dmin.getHours()).padStart(2, '0') + ':' + String(dmin.getMinutes()).padStart(2, '0');
+                    }
+                }
+                setDateTimeMinConstraints();
+
+                // In view mode, always populate the selected (submitted) status from DB.
+                // Submitted statuses are view-only (read-only fields).
+                if (modal && modal.classList.contains('inquiry-modal-open') && viewMode && selectedStatusIdx <= currentStatusIdx) {
+                    var cur = statusOrder[selectedStatusIdx] || 'PENDING';
+                    var act = findActivityForStatus(cur);
+                    populateFormFromActivity(act);
+                    setFieldsReadOnly(true);
+                    setDateTimeLabels(cur);
+                }
+
                 var details = data.last_reward_details;
                 if (details && currentStatusIdx === statusOrder.length - 1) {
                     var dateEl = document.getElementById('inquiryFollowupDate');
@@ -754,6 +919,77 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(function() {
                 renderActivity([]);
             });
+    }
+
+    function applyRowStatusUpdate(buttonEl, toStatus, meta) {
+        if (!buttonEl) return;
+        var row = buttonEl.closest('.inquiry-row');
+        if (!row) return;
+        var statusCell = row.querySelector('td[data-col="status"] .inquiries-status');
+        if (!statusCell) return;
+
+        // Normalized status names used in the UI
+        var label, rawUpper, cls;
+        var s = (toStatus || '').toUpperCase();
+        switch (s) {
+            case 'PENDING':
+                rawUpper = 'PENDING';
+                label = 'PENDING';
+                cls = 'inquiries-status-pending';
+                break;
+            case 'FOLLOW UP':
+                rawUpper = 'FOLLOWUP';
+                label = 'Follow Up';
+                cls = 'inquiries-status-followup';
+                break;
+            case 'DEMO':
+                rawUpper = 'DEMO';
+                label = 'DEMO';
+                cls = 'inquiries-status-demo';
+                break;
+            case 'CONFIRMED':
+                rawUpper = 'CONFIRMED';
+                label = 'CONFIRMED';
+                cls = 'inquiries-status-confirmed';
+                break;
+            case 'COMPLETED':
+                rawUpper = 'COMPLETED';
+                label = 'COMPLETED';
+                cls = 'inquiries-status-completed';
+                break;
+            case 'REWARDED':
+            case 'REWARD DISTRIBUTED':
+                rawUpper = 'REWARDED';
+                label = 'REWARDED';
+                cls = 'inquiries-status-rewarded';
+                break;
+            case 'FAILED':
+                rawUpper = 'FAILED';
+                label = 'FAILED';
+                cls = 'inquiries-status-failed';
+                break;
+            default:
+                rawUpper = s || 'PENDING';
+                label = rawUpper;
+                cls = 'inquiries-status-new';
+                break;
+        }
+
+        // Update the button's data-status so next modal open uses the new status
+        buttonEl.dataset.status = rawUpper;
+
+        // Update the badge text + class
+        statusCell.textContent = label;
+        statusCell.className = 'inquiries-status ' + cls;
+
+        // Optionally show saved data (date/time/remark) as a tooltip on the status badge
+        if (meta && (meta.date || meta.time || meta.remark)) {
+            var parts = [];
+            if (meta.date) parts.push('Date: ' + meta.date);
+            if (meta.time) parts.push('Time: ' + meta.time);
+            if (meta.remark) parts.push('Remark: ' + meta.remark);
+            statusCell.title = parts.join(' | ');
+        }
     }
 
     var attachmentFiles = [];
@@ -814,10 +1050,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function openModal(leadId, customer, status) {
+    function getDefaultDate() {
+        var d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function getDefaultTime() {
+        var d = new Date();
+        return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    }
+
+    var openStartNext = false;
+
+    function openModal(leadId, customer, status, startNext) {
         currentLeadId = leadId;
         currentCustomer = customer || '—';
-        viewMode = false;
+        userPickedStep = false;
+        openStartNext = !!startNext;
+        // Default: show the LAST submitted status details from DB (read-only).
+        // Dealer must click the next step to create a new update.
+        viewMode = true;
         subtitle.textContent = 'Inquiry ID: #SQL-' + leadId + ' • ' + currentCustomer;
         if (activityLink) activityLink.textContent = '#SQL-' + leadId;
         setProgression(status || 'PENDING');
@@ -830,7 +1081,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var productBoxes = document.querySelectorAll('.inquiry-product-checkbox');
         if (productBoxes.length) productBoxes.forEach(function(b) { b.checked = false; });
         clearAttachmentPreviews();
-        setFieldsReadOnly(false);
+        // Select current (last submitted) step for viewing
+        selectedStatusIdx = currentStatusIdx;
+        setFieldsReadOnly(true);
+        setDateTimeLabels(statusOrder[currentStatusIdx] || 'FOLLOW UP');
         loadActivity(leadId);
         modal.setAttribute('aria-hidden', 'false');
         modal.classList.add('inquiry-modal-open');
@@ -848,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', function() {
         progressionSteps.addEventListener('click', function(e) {
             var step = e.target.closest('.inquiry-step');
             if (!step) return;
+            userPickedStep = true;
             if (step.classList.contains('inquiry-step--no-click')) return;
             var stepIdx = statusOrder.indexOf(step.dataset.step);
             if (stepIdx < 0) return;
@@ -867,29 +1122,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 var dateEl = document.getElementById('inquiryFollowupDate');
                 var timeEl = document.getElementById('inquiryFollowupTime');
                 if (remarkEl) remarkEl.value = '';
-                if (dateEl) dateEl.value = '';
-                if (timeEl) timeEl.value = '';
+                if (dateEl) dateEl.value = getDefaultDate();
+                if (timeEl) timeEl.value = getDefaultTime();
                 setFieldsReadOnly(false);
+                setDateTimeMinConstraints();
                 setRemarkPlaceholder(statusOrder[stepIdx]);
                 setDateTimeLabels(statusOrder[stepIdx]);
             }
             progressionSteps.querySelectorAll('.inquiry-step').forEach(function(s, i) {
                 s.classList.remove('inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click', 'inquiry-step--viewable');
                 var stepName = s.dataset.step;
+                var label = getStepDisplayLabel(i);
+                var displayText = label || stepName;
+                // Keep ticks for all statuses up to the latest submitted one.
                 var sIsDone = i <= currentStatusIdx;
                 if (sIsDone) {
                     s.classList.add('inquiry-step--done', 'inquiry-step--viewable');
                     if (i === selectedStatusIdx && viewMode) s.classList.add('inquiry-step--selected');
-                    s.innerHTML = '<i class="bi bi-check"></i><span>' + stepName + '</span>';
+                    s.innerHTML = '<i class="bi bi-check"></i><span>' + displayText + '</span>';
                 } else if (i === selectedStatusIdx) {
                     s.classList.add('inquiry-step--active', 'inquiry-step--selected');
-                    s.innerHTML = '<span>' + stepName + '</span>';
+                    s.innerHTML = '<span>' + displayText + '</span>';
                 } else if (i === 0) {
                     s.classList.add('inquiry-step--no-click');
-                    s.innerHTML = '<span>' + stepName + '</span>';
+                    s.innerHTML = '<span>' + displayText + '</span>';
                 } else {
                     s.classList.add('inquiry-step--clickable');
-                    s.innerHTML = '<span>' + stepName + '</span>';
+                    s.innerHTML = '<span>' + displayText + '</span>';
                 }
             });
             toggleAddCalendarButton();
@@ -903,6 +1162,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var viewContent = document.getElementById('inquiryViewMessageContent');
     var viewCloseBtn = document.getElementById('inquiryViewModalClose');
     var viewCloseBtnFooter = document.getElementById('inquiryViewModalCloseBtn');
+    var currentUpdateButtonEl = null;
 
     // If URL has ?lead=ID, open that inquiry modal (e.g. from email link)
     (function() {
@@ -922,7 +1182,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var updateBtnEl = e.target.closest('.inquiries-update-btn');
         if (updateBtnEl) {
             e.preventDefault();
-            openModal(updateBtnEl.dataset.leadId, updateBtnEl.dataset.customer, updateBtnEl.dataset.status);
+            currentUpdateButtonEl = updateBtnEl;
+            // Clicking edit icon should jump to the next status to be updated.
+            openModal(updateBtnEl.dataset.leadId, updateBtnEl.dataset.customer, updateBtnEl.dataset.status, true);
             return;
         }
 
@@ -977,6 +1239,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var addCalendarBtn = document.getElementById('inquiryModalAddCalendar');
     if (addCalendarBtn) {
         addCalendarBtn.addEventListener('click', function() {
+            if (addCalendarBtn.disabled) return;
             var dateEl = document.getElementById('inquiryFollowupDate');
             var timeEl = document.getElementById('inquiryFollowupTime');
             var remarkEl = document.getElementById('inquiryRemark');
@@ -1005,8 +1268,21 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Keep Add Calendar enabled/disabled in sync with date/time inputs.
+    var followupDateEl = document.getElementById('inquiryFollowupDate');
+    var followupTimeEl = document.getElementById('inquiryFollowupTime');
+    if (followupDateEl) followupDateEl.addEventListener('input', toggleAddCalendarButton);
+    if (followupTimeEl) followupTimeEl.addEventListener('input', toggleAddCalendarButton);
+    if (followupDateEl) followupDateEl.addEventListener('input', setDateTimeMinConstraints);
+    if (followupTimeEl) followupTimeEl.addEventListener('input', setDateTimeMinConstraints);
+
     updateBtn.addEventListener('click', function() {
-        if (this.disabled || selectedStatusIdx <= currentStatusIdx) return;
+        // Allow submitting the selected step:
+        // - current status: allowed (acts like "edit" by inserting a new LEAD_ACT row with same status)
+        // - next/future status: allowed
+        var selectedName = statusOrder[selectedStatusIdx];
+        if (this.disabled) return;
+        if (selectedStatusIdx < currentStatusIdx) return;
         var toStatus = statusOrder[selectedStatusIdx];
         if (toStatus === 'DEMO' && currentStatusIdx < 1) {
             alert('You must complete the follow-up (status: FOLLOW UP) before updating to DEMO. Please update the status to FOLLOW UP first.');
@@ -1025,7 +1301,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var leadId = currentLeadId;
         var remarkEl = document.getElementById('inquiryRemark');
+        var dateEl = document.getElementById('inquiryFollowupDate');
+        var timeEl = document.getElementById('inquiryFollowupTime');
         var remark = remarkEl ? remarkEl.value.trim() : '';
+        var activityDate = dateEl ? dateEl.value.trim() : '';
+        var activityTime = timeEl ? timeEl.value.trim() : '';
         var products = [];
         if (toStatus === 'COMPLETED') {
             document.querySelectorAll('.inquiry-product-checkbox:checked').forEach(function(cb) {
@@ -1046,6 +1326,8 @@ document.addEventListener('DOMContentLoaded', function() {
             formData.append('lead_id', leadId);
             formData.append('status', toStatus);
             formData.append('remark', remark);
+            formData.append('activity_date', activityDate);
+            formData.append('activity_time', activityTime);
             formData.append('products', JSON.stringify(products));
             attachmentFiles.forEach(function(file) {
                 formData.append('attachments[]', file);
@@ -1053,7 +1335,7 @@ document.addEventListener('DOMContentLoaded', function() {
             body = formData;
         } else {
             headers['Content-Type'] = 'application/json';
-            body = JSON.stringify({ lead_id: leadId, status: toStatus, remark: remark, products: products });
+            body = JSON.stringify({ lead_id: leadId, status: toStatus, remark: remark, activity_date: activityDate, activity_time: activityTime, products: products });
         }
         fetch(updateUrl, {
             method: 'POST',
@@ -1064,8 +1346,43 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(function(res) {
             updateBtn.disabled = false;
             if (res.ok && res.data.success) {
-                closeModal();
-                window.location.reload();
+                // Refresh only the Update Inquiry Status form/modal state instead of reloading the whole page
+                var leadIdNow = currentLeadId;
+                var newStatus = toStatus;
+
+                // Move progression to the submitted status (tick it), and
+                // auto-advance selection to the NEXT status for the next update.
+                setProgression(newStatus);
+                // Show what was just submitted (saved DB data) in view-only mode.
+                viewMode = true;
+                selectedStatusIdx = currentStatusIdx;
+                setFieldsReadOnly(true);
+                setDateTimeLabels(statusOrder[currentStatusIdx] || 'FOLLOW UP');
+
+                // Clear attachments UI and files (they are already saved)
+                clearAttachmentPreviews();
+
+                // Reload activity/timeline and step labels from the database
+                if (leadIdNow) {
+                    loadActivity(leadIdNow);
+                }
+
+                // Update the row in the table (badge + button data-status) so it reflects the new status
+                if (currentUpdateButtonEl) {
+                    var meta = {
+                        date: activityDate,
+                        time: activityTime,
+                        remark: remark
+                    };
+                    applyRowStatusUpdate(currentUpdateButtonEl, newStatus, meta);
+                }
+
+                // Re‑evaluate controls for the new status
+                toggleAddCalendarButton();
+                toggleProductChecklist();
+                toggleUpdateButton();
+
+                alert(res.data.message || 'Status updated successfully');
             } else {
                 alert(res.data.message || 'Update failed');
             }

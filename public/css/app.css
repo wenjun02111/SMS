@@ -11,6 +11,45 @@
   --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.12);
 }
 
+/* Shared horizontal tabs for all report pages */
+.reports-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+}
+.reports-tabs-nav {
+    display: inline-flex;
+    gap: 8px;
+    padding: 4px;
+    border-radius: 999px;
+    background: #eef2ff;
+    width: 100%;
+    max-width: 720px;
+    margin-bottom: 18px;
+}
+.reports-tab-link {
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 120ms ease, color 120ms ease;
+  flex: 1 1 0;
+  text-align: center;
+}
+.reports-tab-link:hover {
+  background: rgba(79, 70, 229, 0.08);
+  color: #111827;
+}
+.reports-tab-link.is-active {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
 *,
 *::before,
 *::after {
@@ -4032,6 +4071,12 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
   letter-spacing: 0.06em;
 }
 
+/* Global: hide trend icon when status is "no change" */
+.dashboard-metric-trend-same .dashboard-metric-trend-icon,
+.dashboard-metric-trend-same .dashboard-metric-trend-icon-same {
+  display: none !important;
+}
+
 .dealer-logo-sq {
   width: 36px;
   height: 36px;
@@ -5478,6 +5523,7 @@ button.dealer-pagination-btn:disabled {
   font-size: 12px;
 }
 
+
 /* Maintain Users table: same font size, padding, and column sizing as Inquiries table */
 .maintain-users-table-wrap .dashboard-table-wrapper {
   background: #ffffff;
@@ -6130,6 +6176,14 @@ button.dealer-pagination-btn:disabled {
   white-space: nowrap;
 }
 
+/* Completed: keep compact ID/postcode/city similar to Incoming */
+#completedTable th[data-col="inquiryid"],
+#completedTable td[data-col="inquiryid"] {
+  width: 1%;
+  max-width: 110px;
+  white-space: nowrap;
+}
+
 #dealerInquiriesTable th[data-col="inquiryid"],
 #dealerInquiriesTable td[data-col="inquiryid"] {
   width: 1%;
@@ -6203,10 +6257,22 @@ button.dealer-pagination-btn:disabled {
   max-width: 85px;
   white-space: nowrap;
 }
+#completedTable th[data-col="postcode"],
+#completedTable td[data-col="postcode"] {
+  width: 1%;
+  max-width: 85px;
+  white-space: nowrap;
+}
 #unassignedTable th[data-col="city"],
 #unassignedTable td[data-col="city"] {
   width: 1%;
   max-width: 115px; /* +5px */
+  white-space: nowrap;
+}
+#completedTable th[data-col="city"],
+#completedTable td[data-col="city"] {
+  width: 1%;
+  max-width: 115px;
   white-space: nowrap;
 }
 
@@ -7223,4 +7289,3 @@ button.dealer-pagination-btn:disabled {
     flex-direction: column;
   }
 }
-
