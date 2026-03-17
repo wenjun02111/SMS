@@ -32,7 +32,7 @@
         <div class="rv2-filtered-layer-head">
             <form method="GET" class="rv2-filters rv2-filters-form">
                 @foreach(request()->query() as $key => $val)
-                    @if($key !== 'days' && $key !== 'compare_days' && $key !== 'page' && $key !== 'primary_from' && $key !== 'primary_to' && $key !== 'compare_from' && $key !== 'compare_to')
+                    @if($key !== 'days' && $key !== 'compare_days' && $key !== 'page' && $key !== 'primary_from' && $key !== 'primary_to' && $key !== 'compare_from' && $key !== 'compare_to' && $key !== 'include_dealer' && $key !== 'include_estream')
                         <input type="hidden" name="{{ $key }}" value="{{ $val }}">
                     @endif
                 @endforeach

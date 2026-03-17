@@ -11,6 +11,9 @@ Route::get('/', fn () => redirect()->route('login'));
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::post('/password/forgot', [AuthController::class, 'requestPasswordResetFromLogin'])->name('password.forgot');
+Route::get('/password/reset/{userid}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset.form');
+Route::post('/password/reset/{userid}', [AuthController::class, 'resetPassword'])->name('password.reset.submit');
 
 Route::get('/passkey/auth/options', [PasskeyController::class, 'authOptions'])->name('passkey.auth.options');
 Route::post('/passkey/auth/verify', [PasskeyController::class, 'authVerify'])->name('passkey.auth.verify');
