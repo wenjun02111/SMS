@@ -89,7 +89,7 @@
                             $idx = $idx !== false ? $idx : 0;
                             $filledCount = $idx + 1;
                             $displayStatus = $status;
-                            $rowPage = (int) floor($i / ($inquiriesPerPage ?? 6)) + 1;
+                            $rowPage = (int) floor($i / 8) + 1;
                         @endphp
                         <div class="dealer-table-row dealer-inquiry-row" data-page="{{ $rowPage }}">
                             <span class="dealer-inquiry-id">#SQL-{{ $r->LEADID }}</span>
@@ -115,8 +115,8 @@
                 <div class="dealer-table-footer">
                     @php
                         $leadsTotal = $leadsTotal ?? 0;
-                        $inquiriesTotalPages = max(1, $inquiriesTotalPages ?? 1);
-                        $inquiriesPerPage = $inquiriesPerPage ?? 6;
+                        $inquiriesPerPage = 8;
+                        $inquiriesTotalPages = max(1, (int) ceil($leadsTotal / $inquiriesPerPage));
                     @endphp
                     <span class="dealer-table-count" id="inquiriesCountText">Showing 0 of {{ $leadsTotal }} inquiries</span>
                     <div class="dealer-pagination" id="inquiriesPagination"
@@ -310,8 +310,8 @@
     if (!pagination || !countText) return;
 
     var total = parseInt(pagination.getAttribute('data-total') || '0', 10);
-    var perPage = parseInt(pagination.getAttribute('data-per-page') || '6', 10);
-    var totalPages = parseInt(pagination.getAttribute('data-total-pages') || '1', 10);
+    var perPage = parseInt(pagination.getAttribute('data-per-page') || '8', 10);
+    var totalPages = Math.max(1, Math.ceil(total / perPage));
     var currentPage = 1;
 
     function goToPage(page) {

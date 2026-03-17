@@ -802,11 +802,32 @@ document.addEventListener('DOMContentLoaded', function() {
     })();
     @endif
 
-    var STORAGE_KEY = 'inquiryVisibleColumns';
-    var DEFAULT_COLUMNS = ['inquiryid', 'date', 'customername', 'postcode', 'city', 'businessnature', 'products', 'message'];
-    var ASSIGNED_STORAGE_KEY = 'assignedVisibleColumns';
+    var STORAGE_KEY = 'inquiryVisibleColumns_v2';
+    var DEFAULT_COLUMNS = ['inquiryid', 'date', 'customername', 'postcode', 'city', 'businessnature', 'products', 'status'];
+    var ASSIGNED_STORAGE_KEY = 'assignedVisibleColumns_v2';
     // Default Assigned layout (can still toggle INQUIRY DATE from Columns menu)
     var ASSIGNED_DEFAULT_COLUMNS = ['inquiryid', 'customername', 'postcode', 'city', 'assignedto', 'assigndate', 'status'];
+
+    function updateTableScrollMode(table, visible, defaults) {
+        if (!table) return;
+        var scroller = table.closest('.inquiries-table-scroll');
+        if (!scroller) return;
+        var visibleCols = Array.isArray(visible) ? visible : [];
+        var hasExtras = visibleCols.some(function(c) { return defaults.indexOf(c) === -1; });
+        // If user selected "None", we keep current scrolling behavior (doesn't matter).
+        var enabled = visibleCols.length > 0;
+
+        // On smaller screens, always allow horizontal scroll so no columns feel "blocked".
+        // Fit-mode is desktop-only.
+        if (window.innerWidth && window.innerWidth < 1200) {
+            scroller.classList.remove('inquiries-table-scroll--no-x');
+            table.classList.remove('inquiries-table--fit');
+            return;
+        }
+
+        scroller.classList.toggle('inquiries-table-scroll--no-x', enabled && !hasExtras);
+        table.classList.toggle('inquiries-table--fit', enabled && !hasExtras);
+    }
 
     function getVisibleColumns() {
         try {
@@ -853,6 +874,8 @@ document.addEventListener('DOMContentLoaded', function() {
         table.querySelectorAll('th.inquiries-col-action, td.inquiries-col-action').forEach(function(el) {
             el.style.display = showAction ? '' : 'none';
         });
+
+        updateTableScrollMode(table, visible, DEFAULT_COLUMNS);
     }
 
     function applyAssignedColumns(visible) {
@@ -870,6 +893,8 @@ document.addEventListener('DOMContentLoaded', function() {
         table.querySelectorAll('th.inquiries-col-action, td.inquiries-col-action').forEach(function(el) {
             el.style.display = showAction ? '' : 'none';
         });
+
+        updateTableScrollMode(table, visible, ASSIGNED_DEFAULT_COLUMNS);
     }
 
     // Columns are not user-resizable (fixed by CSS)
