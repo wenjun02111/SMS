@@ -6812,6 +6812,10 @@ button.dealer-pagination-btn:disabled {
   background: #ffffff; /* solid white behind both Incoming & Assigned rows/buttons */
   scrollbar-width: none; /* Firefox: hide until hover */
 }
+.inquiries-table-scroll.inquiries-table-scroll--no-x {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 .inquiries-table-scroll:hover {
   scrollbar-width: thin;
 }
@@ -6950,6 +6954,37 @@ button.dealer-pagination-btn:disabled {
   border-collapse: collapse;
   font-size: 13px;
 }
+.inquiries-table.inquiries-table--fit {
+  width: 100%;
+  table-layout: fixed;
+}
+.inquiries-table.inquiries-table--fit th,
+.inquiries-table.inquiries-table--fit td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Fit-mode widths (default visible columns; keep table from forcing x-scroll) */
+.inquiries-table.inquiries-table--fit th[data-col="inquiryid"],
+.inquiries-table.inquiries-table--fit td[data-col="inquiryid"] { width: 110px; }
+.inquiries-table.inquiries-table--fit th[data-col="date"],
+.inquiries-table.inquiries-table--fit td[data-col="date"] { width: 105px; }
+.inquiries-table.inquiries-table--fit th[data-col="customer"],
+.inquiries-table.inquiries-table--fit td[data-col="customer"],
+.inquiries-table.inquiries-table--fit th[data-col="customername"],
+.inquiries-table.inquiries-table--fit td[data-col="customername"] { width: 260px; }
+.inquiries-table.inquiries-table--fit th[data-col="postcode"],
+.inquiries-table.inquiries-table--fit td[data-col="postcode"] { width: 95px; }
+.inquiries-table.inquiries-table--fit th[data-col="city"],
+.inquiries-table.inquiries-table--fit td[data-col="city"] { width: 110px; }
+.inquiries-table.inquiries-table--fit th[data-col="businessnature"],
+.inquiries-table.inquiries-table--fit td[data-col="businessnature"] { width: 140px; }
+.inquiries-table.inquiries-table--fit th[data-col="products"],
+.inquiries-table.inquiries-table--fit td[data-col="products"] { width: 220px; }
+.inquiries-table.inquiries-table--fit th[data-col="assignby"],
+.inquiries-table.inquiries-table--fit td[data-col="assignby"] { width: 160px; }
+.inquiries-table.inquiries-table--fit th[data-col="status"],
+.inquiries-table.inquiries-table--fit td[data-col="status"] { width: 90px; }
 .inquiries-table th {
   text-align: left;
   font-weight: 600;
@@ -8167,11 +8202,51 @@ button.dealer-pagination-btn:disabled {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   border: 1px solid #e2e8f0;
   border-bottom: none; /* Removes the bottom border so it connects to the footer */
   border-radius: 10px 10px 0 0; /* Rounds only the top corners */
   background: #fff;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: none; /* Firefox: hide until hover */
+}
+.dealer-table-wrapper:hover {
+  scrollbar-width: thin;
+}
+.dealer-table-wrapper::-webkit-scrollbar {
+  height: 0;
+}
+.dealer-table-wrapper:hover::-webkit-scrollbar {
+  height: 10px;
+}
+.dealer-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dealer-table-wrapper:hover::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 6px;
+}
+.dealer-table-wrapper::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 6px;
+}
+.dealer-table-wrapper:hover::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+.dealer-table-wrapper:hover::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Keep the table scroller pinned above the footer */
+.dealer-dashboard-content .dealer-inquiries-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.dealer-dashboard-content .dealer-inquiries-panel .dealer-table-wrapper {
+  flex: 1;
+  min-height: 0;
 }
 
 /* 2. GRID LAYOUT (Slightly larger fonts & taller rows) */
@@ -8216,6 +8291,33 @@ button.dealer-pagination-btn:disabled {
 
 .dealer-table-row:hover {
   background-color: #f8fafc;
+}
+
+/* Dealer dashboard "Active Inquiries" table: wrap text + stack progress UI */
+.dealer-dashboard-content .dealer-table-wrapper .dealer-table-row > span,
+.dealer-dashboard-content .dealer-table-wrapper .dealer-table-header > span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.dealer-dashboard-content .dealer-table-wrapper .dealer-progress-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0; /* allow the cell to shrink/wrap */
+}
+
+.dealer-dashboard-content .dealer-table-wrapper .dealer-progress-text {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.dealer-dashboard-content .dealer-table-wrapper .dealer-status-bar {
+  width: 100%;
+  min-width: 0;
 }
 
 .dealer-inquiry-id {

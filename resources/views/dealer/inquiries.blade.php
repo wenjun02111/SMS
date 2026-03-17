@@ -155,15 +155,16 @@ document.addEventListener('DOMContentLoaded', function() {
     var colsAll = document.getElementById('dealerInquiryColumnsAll');
     var colsNone = document.getElementById('dealerInquiryColumnsNone');
     var colsReset = document.getElementById('dealerInquiryColumnsReset');
-    var storageKey = 'dealer_inquiries_visible_cols_v2';
+    var storageKey = 'dealer_inquiries_visible_cols_v3';
     // Default columns follow admin incoming inquiries table, but message → assignby + status
     var defaultCols = ['inquiryid','date','customer','postcode','city','businessnature','products','assignby','status'];
     var allCols = ['inquiryid','date','customer','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','products','message','referralcode','assignby','status'];
 
     var statusCheckbox = colsMenu ? colsMenu.querySelector('input[type="checkbox"][data-col="status"]') : null;
     if (statusCheckbox) {
+        // Status is enabled by default, but dealer can toggle it.
         statusCheckbox.checked = true;
-        statusCheckbox.disabled = true; // status is a fixed/default column, cannot be turned off
+        statusCheckbox.disabled = false;
     }
 
     function setMenuOpen(open) {
@@ -184,31 +185,37 @@ document.addEventListener('DOMContentLoaded', function() {
         colsMenu.querySelectorAll('input[type="checkbox"][data-col]').forEach(function(cb) {
             if (cb.checked) cols.push(cb.getAttribute('data-col'));
         });
-        // Ensure status is always included as a fixed column
-        if (cols.indexOf('status') === -1) {
-            cols.push('status');
-        }
         return cols;
     }
 
     function applyVisibleCols(cols) {
-        // Always keep STATUS column visible, even if user unchecks it
-        if (cols.indexOf('status') === -1) {
-            cols = cols.concat(['status']);
-        }
         // hide/show based on cols; keep ACTION column always visible
         allCols.forEach(function(c) { setColVisible(c, cols.indexOf(c) !== -1); });
+        updateScrollMode(cols);
         // sync checkboxes
         if (colsMenu) {
             colsMenu.querySelectorAll('input[type="checkbox"][data-col]').forEach(function(cb) {
                 var c = cb.getAttribute('data-col');
-                if (c === 'status') {
-                    cb.checked = true;
-                    return;
-                }
                 cb.checked = cols.indexOf(c) !== -1;
             });
         }
+    }
+
+    function updateScrollMode(visibleCols) {
+        var scroller = table.closest('.inquiries-table-scroll');
+        if (!scroller) return;
+
+        // On smaller screens, always allow horizontal scroll so no columns feel "blocked".
+        // Fit-mode is desktop-only.
+        if (window.innerWidth && window.innerWidth < 1200) {
+            scroller.classList.remove('inquiries-table-scroll--no-x');
+            table.classList.remove('inquiries-table--fit');
+            return;
+        }
+
+        var hasExtras = (visibleCols || []).some(function(c) { return defaultCols.indexOf(c) === -1; });
+        scroller.classList.toggle('inquiries-table-scroll--no-x', !hasExtras);
+        table.classList.toggle('inquiries-table--fit', !hasExtras);
     }
 
     function saveCols(cols) {
@@ -226,6 +233,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    window.dealerPaginationState = window.dealerPaginationState || { currentPage: 1, perPage: 10 };
+
     function applyDealerGridFilters() {
         var filters = {};
         table.querySelectorAll('.inquiries-grid-filter').forEach(function(inp) {
@@ -241,8 +250,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 var cellText = (cell && cell.textContent) ? cell.textContent.toLowerCase().trim() : '';
                 if (cellText.indexOf(filters[col]) === -1) { colMatch = false; break; }
             }
-            row.style.display = colMatch ? '' : 'none';
+            row.dataset.filterMatch = colMatch ? '1' : '0';
         });
+
+        if (typeof window.dealerApplyPagination === 'function') {
+            window.dealerApplyPagination();
+        }
     }
 
     table.querySelectorAll('.inquiries-grid-filter').forEach(function(inp) {
@@ -274,11 +287,6 @@ document.addEventListener('DOMContentLoaded', function() {
         colsMenu.querySelectorAll('input[type="checkbox"][data-col]').forEach(function(cb) {
             cb.addEventListener('change', function() {
                 var col = cb.getAttribute('data-col');
-                // Ignore attempts to toggle STATUS; it is fixed on.
-                if (col === 'status') {
-                    cb.checked = true;
-                    return;
-                }
                 var cols = getSelectedColsFromMenu();
                 applyVisibleCols(cols);
                 saveCols(cols);
@@ -306,11 +314,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     applyDealerGridFilters();
 
-    // Simple client-side pagination: 10 inquiries per page
-    window.dealerGoToPage = (function() {
+    function initDealerPagination() {
         var pagination = document.getElementById('dealerInquiriesPagination');
-        var rows = table.querySelectorAll('.inquiry-row');
-        if (!pagination || !rows.length) return;
+        if (!pagination) return;
 
         var infoEl = pagination.querySelector('.inquiries-assigned-pagination-info');
         var pageNumbersEl = document.getElementById('dealerInquiriesPageNumbers');
@@ -318,23 +324,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var total = parseInt(pagination.getAttribute('data-total') || '0', 10);
         var perPage = parseInt(pagination.getAttribute('data-per-page') || '10', 10);
-        
-        // NEW: Dynamically assign page numbers to rows so we know where to jump
+        window.dealerPaginationState.perPage = perPage;
+
+        var rows = Array.prototype.slice.call(table.querySelectorAll('tbody .inquiry-row'));
+        var lastPage = parseInt(pagination.getAttribute('data-last-page') || '1', 10);
+
+        // Assign pages for all current rows (fresh after Sync)
         rows.forEach(function(row, index) {
-            if (!row.getAttribute('data-page')) {
-                row.setAttribute('data-page', Math.floor(index / perPage) + 1);
-            }
+            row.setAttribute('data-page', String(Math.floor(index / perPage) + 1));
+            if (!row.dataset.filterMatch) row.dataset.filterMatch = '1';
         });
 
-        var lastPage = parseInt(pagination.getAttribute('data-last-page') || '1', 10);
-        var currentPage = 1;
+        function buildPageNumbers() {
+            if (!pageNumbersEl) return;
+            pageNumbersEl.innerHTML = '';
+            for (var p = 1; p <= lastPage; p++) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'inquiries-pagination-num' + (p === window.dealerPaginationState.currentPage ? ' inquiries-pagination-num-active' : '');
+                btn.setAttribute('data-page', String(p));
+                btn.textContent = String(p);
+                btn.addEventListener('click', function() {
+                    var page = parseInt(this.getAttribute('data-page') || '1', 10);
+                    window.dealerGoToPage(page);
+                });
+                pageNumbersEl.appendChild(btn);
+            }
+        }
 
-        function goToPage(page) {
-            currentPage = Math.max(1, Math.min(page, lastPage));
+        window.dealerApplyPagination = function() {
+            var currentPage = window.dealerPaginationState.currentPage;
+            rows = Array.prototype.slice.call(table.querySelectorAll('tbody .inquiry-row'));
             rows.forEach(function(row) {
                 var p = parseInt(row.getAttribute('data-page') || '1', 10);
-                row.style.display = p === currentPage ? '' : 'none';
+                var filterOk = row.dataset.filterMatch !== '0';
+                row.style.display = (filterOk && p === currentPage) ? '' : 'none';
             });
+        };
+
+        window.dealerGoToPage = function(page) {
+            window.dealerPaginationState.currentPage = Math.max(1, Math.min(page, lastPage));
+            window.dealerApplyPagination();
+
+            var currentPage = window.dealerPaginationState.currentPage;
             var from = total > 0 ? ((currentPage - 1) * perPage) + 1 : 0;
             var to = Math.min(currentPage * perPage, total);
             if (infoEl) {
@@ -353,39 +385,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     n.classList.toggle('inquiries-pagination-num-active', parseInt(n.getAttribute('data-page') || '1', 10) === currentPage);
                 });
             }
-        }
+        };
 
-        function buildPageNumbers() {
-            if (!pageNumbersEl) return;
-            pageNumbersEl.innerHTML = '';
-            for (var p = 1; p <= lastPage; p++) {
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'inquiries-pagination-num' + (p === 1 ? ' inquiries-pagination-num-active' : '');
-                btn.setAttribute('data-page', String(p));
-                btn.textContent = String(p);
-                btn.addEventListener('click', function() {
-                    var page = parseInt(this.getAttribute('data-page') || '1', 10);
-                    goToPage(page);
-                });
-                pageNumbersEl.appendChild(btn);
-            }
-        }
-
+        // Bind controls once (safe because init runs after Sync too)
         controls.forEach(function(btn) {
-            btn.addEventListener('click', function() {
+            btn.onclick = function() {
                 var type = btn.getAttribute('data-page');
-                if (type === 'first') goToPage(1);
-                if (type === 'prev') goToPage(currentPage - 1);
-                if (type === 'next') goToPage(currentPage + 1);
-                if (type === 'last') goToPage(lastPage);
-            });
+                var currentPage = window.dealerPaginationState.currentPage;
+                if (type === 'first') window.dealerGoToPage(1);
+                if (type === 'prev') window.dealerGoToPage(currentPage - 1);
+                if (type === 'next') window.dealerGoToPage(currentPage + 1);
+                if (type === 'last') window.dealerGoToPage(lastPage);
+            };
         });
 
         buildPageNumbers();
-        goToPage(1);
-        return goToPage;
-    })();
+        // Keep existing page when possible; otherwise reset to 1
+        if (window.dealerPaginationState.currentPage > lastPage) window.dealerPaginationState.currentPage = 1;
+        window.dealerGoToPage(window.dealerPaginationState.currentPage || 1);
+    }
+
+    // Simple client-side pagination: 10 inquiries per page
+    initDealerPagination();
 
     // Sync button (same behaviour pattern as admin inquiries sync)
     document.querySelectorAll('.inquiries-sync-btn').forEach(function(btn) {
@@ -412,6 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 applyDealerGridFilters();
                 var currentCols = loadCols() || defaultCols.slice();
                 applyVisibleCols(currentCols);
+                initDealerPagination();
             }).catch(function() {
                 // swallow errors for now; button state will reset below
             }).finally(function() {
