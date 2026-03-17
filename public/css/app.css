@@ -2896,10 +2896,10 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
   color: #6b7280;
 }
 
-/* PENDING always light red; others grey until updated */
+/* PENDING always orange-red; others grey until updated */
 .inquiry-step[data-step="PENDING"] {
-  background: #fecaca;
-  color: #b91c1c;
+  background: #FF4500;
+  color: #ffffff;
 }
 
 .inquiry-connector {
@@ -2912,57 +2912,57 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
 
 /* Done/updated steps: color + tick (added by JS) */
 .inquiry-step--done.inquiry-step--red {
-  background: #fecaca;
-  color: #b91c1c;
+  background: #FF4500;
+  color: #ffffff;
 }
 .inquiry-step--done.inquiry-step--red[data-step="FOLLOW UP"] {
-  background: #dc2626;
+  background: #FF8C00;
   color: #ffffff;
 }
 
 .inquiry-step--done.inquiry-step--yellow {
-  background: #fef08a;
-  color: #854d0e;
+  background: #FFD700;
+  color: #ffffff;
 }
 .inquiry-step--done.inquiry-step--yellow[data-step="CONFIRMED"] {
-  background: #eab308;
+  background: #9ACD32;
   color: #ffffff;
 }
 
 .inquiry-step--done.inquiry-step--green {
-  background: #bbf7d0;
-  color: #15803d;
+  background: #32CD32;
+  color: #ffffff;
 }
 .inquiry-step--done.inquiry-step--green[data-step="REWARDED"] {
-  background: #22c55e;
+  background: #008000;
   color: #ffffff;
 }
 
 /* Active/selected step: color */
 .inquiry-step--active.inquiry-step--red {
-  background: #fecaca;
-  color: #b91c1c;
+  background: #FF4500;
+  color: #ffffff;
 }
 .inquiry-step--active.inquiry-step--red[data-step="FOLLOW UP"] {
-  background: #dc2626;
+  background: #FF8C00;
   color: #ffffff;
 }
 
 .inquiry-step--active.inquiry-step--yellow {
-  background: #fef08a;
-  color: #854d0e;
+  background: #FFD700;
+  color: #ffffff;
 }
 .inquiry-step--active.inquiry-step--yellow[data-step="CONFIRMED"] {
-  background: #eab308;
+  background: #9ACD32;
   color: #ffffff;
 }
 
 .inquiry-step--active.inquiry-step--green {
-  background: #bbf7d0;
-  color: #15803d;
+  background: #32CD32;
+  color: #ffffff;
 }
 .inquiry-step--active.inquiry-step--green[data-step="REWARDED"] {
-  background: #22c55e;
+  background: #008000;
   color: #ffffff;
 }
 
@@ -4233,12 +4233,12 @@ textarea.inquiry-form-input { resize: vertical; min-height: 140px; }
 }
 
 /* Match inquiries page status colors: PENDING, FOLLOW UP, DEMO, CONFIRMED, COMPLETED, REWARDED */
-.dealer-status-segment--filled.dealer-status-segment--0 { background: #fecaca; } /* Pending */
-.dealer-status-segment--filled.dealer-status-segment--1 { background: #dc2626; } /* Follow Up */
-.dealer-status-segment--filled.dealer-status-segment--2 { background: #fef08a; } /* Demo */
-.dealer-status-segment--filled.dealer-status-segment--3 { background: #eab308; } /* Confirmed */
-.dealer-status-segment--filled.dealer-status-segment--4 { background: #bbf7d0; } /* Completed */
-.dealer-status-segment--filled.dealer-status-segment--5 { background: #22c55e; } /* Rewarded */
+.dealer-status-segment--filled.dealer-status-segment--0 { background: #FF4500; } /* Pending */
+.dealer-status-segment--filled.dealer-status-segment--1 { background: #FF8C00; } /* Follow Up */
+.dealer-status-segment--filled.dealer-status-segment--2 { background: #FFD700; } /* Demo */
+.dealer-status-segment--filled.dealer-status-segment--3 { background: #9ACD32; } /* Confirmed */
+.dealer-status-segment--filled.dealer-status-segment--4 { background: #32CD32; } /* Completed */
+.dealer-status-segment--filled.dealer-status-segment--5 { background: #008000; } /* Rewarded */
 
 .dealer-progress-text {
   font-size: 11px;
@@ -5803,12 +5803,16 @@ button.dealer-pagination-btn:disabled {
 .inquiries-page-wrap .inquiries-tab-panel .inquiries-table-wrap {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: visible; /* scroller moved to .inquiries-table-scroll */
   position: relative;
 }
 .inquiries-page-wrap > .inquiries-mgmt-panel > .inquiries-table-wrap {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: visible; /* scroller moved to .inquiries-table-scroll */
   position: relative;
 }
@@ -6019,13 +6023,23 @@ button.dealer-pagination-btn:disabled {
   width: 10px;
   height: 10px;
 }
-/* Inquiries page: fixed table height for 10 rows on both Incoming and Assigned so layout doesn't shrink */
+/* Inquiries page: keep pagination pinned to the bottom */
 .inquiries-page-wrap .inquiries-table-scroll,
 #incomingPanel .inquiries-table-scroll,
 #assignedPanel .inquiries-table-scroll,
 #completedPanel .inquiries-table-scroll,
 #rewardedPanel .inquiries-table-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.inquiries-page-wrap .inquiries-tab-panel .inquiries-table-wrap,
+.inquiries-page-wrap > .inquiries-mgmt-panel > .inquiries-table-wrap {
   min-height: 460px;
+}
+
+.inquiries-page-wrap .inquiries-assigned-pagination {
+  margin-top: auto;
 }
 
 /* Dealer inquiries: scrollbar at the very bottom of the table area */
@@ -6762,33 +6776,38 @@ button.dealer-pagination-btn:disabled {
   color: #ffffff;
 }
 .inquiries-status-new {
-  background: #ff4d4f; /* Pending default */
+  background: #FF4500; /* Pending default */
+  color: #ffffff;
+}
+.inquiries-status-created {
+  background: #FF0000;
+  color: #ffffff;
 }
 .inquiries-status-active {
   background: #52c41a; /* generic active/green */
 }
 .inquiries-status-pending {
-  background: #fecaca;
-  color: #b91c1c;
+  background: #FF4500;
+  color: #ffffff;
 }
 .inquiries-status-followup {
-  background: #dc2626;
+  background: #FF8C00;
   color: #ffffff;
 }
 .inquiries-status-demo {
-  background: #fef08a;
-  color: #854d0e;
+  background: #FFD700;
+  color: #ffffff;
 }
 .inquiries-status-confirmed {
-  background: #eab308;
+  background: #9ACD32;
   color: #ffffff;
 }
 .inquiries-status-completed {
-  background: #bbf7d0;
-  color: #15803d;
+  background: #32CD32;
+  color: #ffffff;
 }
 .inquiries-status-rewarded {
-  background: #22c55e;
+  background: #008000;
   color: #ffffff;
 }
 .inquiries-status-failed {
@@ -7121,12 +7140,12 @@ button.dealer-pagination-btn:disabled {
   font-size: 18px;
 }
 
-.reports-metric-icon-pending { background: #fecaca; color: #b91c1c; }
-.reports-metric-icon-followup { background: #dc2626; color: #fff; }
-.reports-metric-icon-demo { background: #fef08a; color: #854d0e; }
-.reports-metric-icon-confirmed { background: #eab308; color: #fff; }
-.reports-metric-icon-completed { background: #bbf7d0; color: #15803d; }
-.reports-metric-icon-reward { background: #22c55e; color: #fff; }
+.reports-metric-icon-pending { background: #FF4500; color: #ffffff; }
+.reports-metric-icon-followup { background: #FF8C00; color: #ffffff; }
+.reports-metric-icon-demo { background: #FFD700; color: #1f2937; }
+.reports-metric-icon-confirmed { background: #9ACD32; color: #1f2937; }
+.reports-metric-icon-completed { background: #32CD32; color: #1f2937; }
+.reports-metric-icon-reward { background: #008000; color: #ffffff; }
 
 .reports-metric-value {
   font-size: 28px;

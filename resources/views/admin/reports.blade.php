@@ -57,14 +57,14 @@
     $totalPayouts = array_sum($payoutStatus);
     $totalStatus = max($totalActivities, 1);
     $statusColors = [
-        'Created' => '#ff4d4f',
-        'Pending' => '#fecaca',
-        'FollowUp' => '#dc2626',
-        'Demo' => '#fef08a',
-        'Confirmed' => '#eab308',
-        'Completed' => '#bbf7d0',
+        'Created' => '#FF0000',
+        'Pending' => '#FF4500',
+        'FollowUp' => '#FF8C00',
+        'Demo' => '#FFD700',
+        'Confirmed' => '#9ACD32',
+        'Completed' => '#32CD32',
         'Failed' => '#434343',
-        'reward' => '#22c55e',
+        'reward' => '#008000',
     ];
 @endphp
 
