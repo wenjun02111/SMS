@@ -932,6 +932,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var label, rawUpper, cls;
         var s = (toStatus || '').toUpperCase();
         switch (s) {
+            case 'CREATED':
+                rawUpper = 'CREATED';
+                label = 'CREATED';
+                cls = 'inquiries-status-created';
+                break;
             case 'PENDING':
                 rawUpper = 'PENDING';
                 label = 'PENDING';

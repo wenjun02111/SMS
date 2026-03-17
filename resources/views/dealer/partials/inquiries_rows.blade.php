@@ -12,6 +12,7 @@
         $rawStatus = strtoupper(trim($r->ACT_STATUS ?? ''));
         $statusClass = 'inquiries-status-new';
         switch ($rawStatus) {
+            case 'CREATED':             $statusClass = 'inquiries-status-created'; break;
             case 'PENDING':             $statusClass = 'inquiries-status-pending'; break;
             case 'FOLLOWUP':            $statusClass = 'inquiries-status-followup'; break;
             case 'FOLLOW UP':           $statusClass = 'inquiries-status-followup'; break;
@@ -80,4 +81,3 @@
         </td>
     </tr>
 @endforelse
-

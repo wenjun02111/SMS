@@ -124,12 +124,18 @@
                             $rawStatus = strtoupper(trim((string)($r->CURRENTSTATUS ?? '')));
                             $statusClass = 'inquiries-status-new';
                             switch ($rawStatus) {
+                                case 'CREATED':   $statusClass = 'inquiries-status-created'; break;
                                 case 'PENDING':   $statusClass = 'inquiries-status-pending'; break;
                                 case 'FOLLOWUP':  $statusClass = 'inquiries-status-followup'; break;
+                                case 'FOLLOW UP': $statusClass = 'inquiries-status-followup'; break;
                                 case 'DEMO':      $statusClass = 'inquiries-status-demo'; break;
                                 case 'CONFIRMED': $statusClass = 'inquiries-status-confirmed'; break;
+                                case 'CASE CONFIRMED': $statusClass = 'inquiries-status-confirmed'; break;
                                 case 'COMPLETED': $statusClass = 'inquiries-status-completed'; break;
+                                case 'CASE COMPLETED': $statusClass = 'inquiries-status-completed'; break;
                                 case 'REWARDED':  $statusClass = 'inquiries-status-rewarded'; break;
+                                case 'REWARD DISTRIBUTED': $statusClass = 'inquiries-status-rewarded'; break;
+                                case 'PAID':      $statusClass = 'inquiries-status-rewarded'; break;
                                 case 'FAILED':    $statusClass = 'inquiries-status-failed'; break;
                                 default:          $statusClass = 'inquiries-status-new'; break;
                             }
@@ -308,12 +314,17 @@
                             $rawStatus = strtoupper(trim((string)($r->CURRENTSTATUS ?? '')));
                             $statusClass = 'inquiries-status-new';
                             switch ($rawStatus) {
+                                case 'CREATED':   $statusClass = 'inquiries-status-created'; break;
                                 case 'PENDING':   $statusClass = 'inquiries-status-pending'; break;
                                 case 'FOLLOWUP':  $statusClass = 'inquiries-status-followup'; break;
+                                case 'FOLLOW UP': $statusClass = 'inquiries-status-followup'; break;
                                 case 'DEMO':      $statusClass = 'inquiries-status-demo'; break;
                                 case 'CONFIRMED': $statusClass = 'inquiries-status-confirmed'; break;
+                                case 'CASE CONFIRMED': $statusClass = 'inquiries-status-confirmed'; break;
                                 case 'COMPLETED': $statusClass = 'inquiries-status-completed'; break;
+                                case 'CASE COMPLETED': $statusClass = 'inquiries-status-completed'; break;
                                 case 'REWARDED':  $statusClass = 'inquiries-status-rewarded'; break;
+                                case 'REWARD DISTRIBUTED': $statusClass = 'inquiries-status-rewarded'; break;
                                 case 'PAID':      $statusClass = 'inquiries-status-rewarded'; break;
                                 case 'FAILED':    $statusClass = 'inquiries-status-failed'; break;
                                 default:          $statusClass = 'inquiries-status-new'; break;

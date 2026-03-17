@@ -117,7 +117,7 @@
             </div>
             @php
                 $donutOrder = ['PENDING', 'FOLLOW UP', 'DEMO', 'CONFIRMED', 'COMPLETED', 'REWARDED'];
-                $donutColors = ['#fecaca', '#dc2626', '#fef08a', '#eab308', '#bbf7d0', '#22c55e'];
+                $donutColors = ['#FF4500', '#FF8C00', '#FFD700', '#9ACD32', '#32CD32', '#008000'];
                 $donutTotal = array_sum(array_map(fn($s) => $statusCounts[$s] ?? 0, $donutOrder));
                 $donutSegments = [];
                 $deg = 0;
@@ -133,12 +133,12 @@
             <div class="reports-donut-placeholder">
                 <div class="reports-donut-ring" style="background: {{ $donutGradient }};"></div>
                 <div class="reports-donut-legend">
-                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#fecaca"></i> Pending</span>
-                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#dc2626"></i> Follow Up</span>
-                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#fef08a"></i> Demo</span>
-                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#eab308"></i> Confirmed</span>
-                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#bbf7d0"></i> Completed</span>
-                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#22c55e"></i> Rewarded</span>
+                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#FF4500"></i> Pending</span>
+                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#FF8C00"></i> Follow Up</span>
+                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#FFD700"></i> Demo</span>
+                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#9ACD32"></i> Confirmed</span>
+                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#32CD32"></i> Completed</span>
+                    <span class="reports-legend-item"><i class="bi bi-circle-fill" style="color:#008000"></i> Rewarded</span>
                 </div>
             </div>
         </div>

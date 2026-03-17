@@ -71,12 +71,18 @@
         $arawStatus = strtoupper(trim((string)($r->CURRENTSTATUS ?? '')));
         $astatusClass = 'inquiries-status-new';
         switch ($arawStatus) {
+            case 'CREATED':    $astatusClass = 'inquiries-status-created'; break;
             case 'PENDING':    $astatusClass = 'inquiries-status-pending'; break;
             case 'FOLLOWUP':   $astatusClass = 'inquiries-status-followup'; break;
+            case 'FOLLOW UP':  $astatusClass = 'inquiries-status-followup'; break;
             case 'DEMO':       $astatusClass = 'inquiries-status-demo'; break;
             case 'CONFIRMED':  $astatusClass = 'inquiries-status-confirmed'; break;
+            case 'CASE CONFIRMED': $astatusClass = 'inquiries-status-confirmed'; break;
             case 'COMPLETED':  $astatusClass = 'inquiries-status-completed'; break;
+            case 'CASE COMPLETED': $astatusClass = 'inquiries-status-completed'; break;
             case 'REWARDED':   $astatusClass = 'inquiries-status-rewarded'; break;
+            case 'REWARD DISTRIBUTED': $astatusClass = 'inquiries-status-rewarded'; break;
+            case 'PAID':       $astatusClass = 'inquiries-status-rewarded'; break;
             case 'FAILED':     $astatusClass = 'inquiries-status-failed'; break;
             default:           $astatusClass = 'inquiries-status-new'; break;
         }
@@ -91,4 +97,3 @@
 @empty
 <tr><td colspan="20" class="inquiries-empty">No assigned inquiries.</td></tr>
 @endforelse
-
