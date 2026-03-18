@@ -1,5 +1,50 @@
 ﻿@extends('layouts.app')
 @section('title', 'Rewards - Admin')
+@push('styles')
+<style>
+    /* Keep rewards columns content-sized so short values do not stretch too wide. */
+    #completedTable,
+    #rewardedTable {
+        width: max-content;
+        min-width: max-content;
+        table-layout: auto;
+    }
+    #completedTable.rewards-default-layout,
+    #rewardedTable.rewards-default-layout {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    #completedPanel .inquiries-table-scroll.rewards-default-layout,
+    #rewardedPanel .inquiries-table-scroll.rewards-default-layout {
+        overflow-x: hidden;
+    }
+
+    #completedTable th[data-col="inquiryid"],
+    #completedTable td[data-col="inquiryid"],
+    #rewardedTable th[data-col="inquiryid"],
+    #rewardedTable td[data-col="inquiryid"] {
+        width: 96px;
+        min-width: 96px;
+    }
+
+    #completedTable th.inquiries-col-action,
+    #completedTable td.inquiries-col-action,
+    #rewardedTable th.inquiries-col-action,
+    #rewardedTable td.inquiries-col-action {
+        position: sticky;
+        right: 0;
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+    }
+
+    #completedTable th.inquiries-col-action .inquiries-filter-clear,
+    #rewardedTable th.inquiries-col-action .inquiries-filter-clear {
+        white-space: nowrap;
+    }
+</style>
+@endpush
 @section('content')
 <div class="inquiries-page-wrap">
 <div class="inquiries-mgmt-top-row" style="margin-bottom: 16px;">
@@ -54,7 +99,7 @@
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="source"> SOURCE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="postcode"> POSTCODE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="city"> CITY</label>
-                    <label class="inquiries-columns-check"><input type="checkbox" data-col="completiondate"> PAYOUTS DATE</label>
+                                <label class="inquiries-columns-check"><input type="checkbox" data-col="completiondate"> COMPLETION DATE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="address"> ADDRESS</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="contactno"> CONTACT NO</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="businessnature"> BUSINESS NATURE</label>
@@ -86,7 +131,7 @@
                         <th data-col="customername" class="inquiries-header-cell"><span class="inquiries-header-label">CUSTOMER NAME</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="customername"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="assignedto" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGNED TO</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="assignedto"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="referralcode" class="inquiries-header-cell"><span class="inquiries-header-label">REFERRAL CODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="referralcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                        <th data-col="completiondate" class="inquiries-header-cell"><span class="inquiries-header-label">PAYOUTS DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="completiondate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                                <th data-col="completiondate" class="inquiries-header-cell"><span class="inquiries-header-label">COMPLETION DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="completiondate"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="status" class="inquiries-header-cell"><span class="inquiries-header-label">STATUS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="status"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
 
                         <th data-col="date" class="inquiries-header-cell"><span class="inquiries-header-label">INQUIRY DATE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter rewards-grid-filter" data-table="completed" data-col="date"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
@@ -342,7 +387,7 @@
                                 default:          $statusClass = 'inquiries-status-new'; break;
                             }
                             $statusDisp = $rawStatus !== '' ? $rawStatus : 'REWARDED';
-                            $completedAt = $r->COMPLETED_AT ?? null;
+                            $payoutAt = $r->REWARDED_AT ?? null;
                             $searchHaystack = strtolower(($r->COMPANYNAME ?? '').' '.($r->CONTACTNAME ?? '').' '.($r->LEADID ?? ''));
                             $assignDate = $r->LASTMODIFIED ? date('d/m/Y', strtotime($r->LASTMODIFIED)) : ($r->CREATEDAT ? date('d/m/Y', strtotime($r->CREATEDAT)) : '&mdash;');
                             $productIds = $r->PRODUCTID ? array_map('trim', explode(',', (string)$r->PRODUCTID)) : [];
@@ -362,7 +407,7 @@
                             <td data-col="source">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '&mdash;') }}</td>
                             <td data-col="postcode">{{ $r->POSTCODE ?? '&mdash;' }}</td>
                             <td data-col="city">{{ $r->CITY ?? '&mdash;' }}</td>
-                            <td data-col="completiondate">{{ $completedAt ? date('d/m/Y', strtotime($completedAt)) : '&mdash;' }}</td>
+                            <td data-col="completiondate">{{ $payoutAt ? date('d/m/Y', strtotime($payoutAt)) : '&mdash;' }}</td>
                             <td data-col="address">{{ $addr !== '' ? $addr : '&mdash;' }}</td>
                             <td data-col="contactno">{{ $r->CONTACTNO ?? '&mdash;' }}</td>
                             <td data-col="businessnature">{{ $r->BUSINESSNATURE ?? '&mdash;' }}</td>
@@ -470,6 +515,18 @@ document.addEventListener('DOMContentLoaded', function() {
     var REWARDED_STORAGE_KEY = 'payoutRewardedVisibleColumns';
     var REWARDED_DEFAULT_COLUMNS = ['inquiryid','customername','assignedto','referralcode','completiondate','attachment','status'];
     var REWARDED_ALL_COLUMNS = ['inquiryid','date','customername','source','postcode','city','completiondate','address','contactno','businessnature','users','existingsw','demomode','products','attachment','message','referralcode','assignedby','assignedto','assigndate','status'];
+    function columnsKey(cols) {
+        if (!Array.isArray(cols)) return '';
+        var uniq = [];
+        cols.forEach(function(c) {
+            c = String(c || '');
+            if (c && uniq.indexOf(c) === -1) uniq.push(c);
+        });
+        uniq.sort();
+        return uniq.join('|');
+    }
+    var COMPLETED_DEFAULT_KEY = columnsKey(COMPLETED_DEFAULT_COLUMNS);
+    var REWARDED_DEFAULT_KEY = columnsKey(REWARDED_DEFAULT_COLUMNS);
 
     function getCompletedVisibleColumns() {
         try {
@@ -487,6 +544,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyCompletedColumns(visible) {
         var table = document.getElementById('completedTable');
         if (!table) return;
+        var isDefault = columnsKey(visible) === COMPLETED_DEFAULT_KEY;
         COMPLETED_ALL_COLUMNS.forEach(function(col) {
             var show = visible.indexOf(col) !== -1;
             table.querySelectorAll('th[data-col="' + col + '"], td[data-col="' + col + '"]').forEach(function(el) {
@@ -497,6 +555,9 @@ document.addEventListener('DOMContentLoaded', function() {
         table.querySelectorAll('th.inquiries-col-action, td.inquiries-col-action').forEach(function(el) {
             el.style.display = showAction ? '' : 'none';
         });
+        table.classList.toggle('rewards-default-layout', isDefault);
+        var wrap = table.closest('.inquiries-table-scroll');
+        if (wrap) wrap.classList.toggle('rewards-default-layout', isDefault);
     }
     function syncCompletedCheckboxes(visible) {
         var menu = document.getElementById('completedColumnsMenu');
@@ -528,6 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyRewardedColumns(visible) {
         var table = document.getElementById('rewardedTable');
         if (!table) return;
+        var isDefault = columnsKey(visible) === REWARDED_DEFAULT_KEY;
         REWARDED_ALL_COLUMNS.forEach(function(col) {
             var show = visible.indexOf(col) !== -1;
             table.querySelectorAll('th[data-col="' + col + '"], td[data-col="' + col + '"]').forEach(function(el) {
@@ -538,6 +600,9 @@ document.addEventListener('DOMContentLoaded', function() {
         table.querySelectorAll('th.inquiries-col-action, td.inquiries-col-action').forEach(function(el) {
             el.style.display = showAction ? '' : 'none';
         });
+        table.classList.toggle('rewards-default-layout', isDefault);
+        var wrap = table.closest('.inquiries-table-scroll');
+        if (wrap) wrap.classList.toggle('rewards-default-layout', isDefault);
     }
     function syncRewardedCheckboxes(visible) {
         var menu = document.getElementById('rewardedColumnsMenu');

@@ -19,11 +19,23 @@
         </div>
         <div class="login-header-right">
             <button class="login-help-link" type="button">Help</button>
-            <button class="login-bell" type="button">🔔</button>
+            <button class="login-bell" type="button" aria-label="Notifications"><i class="bi bi-bell-fill" aria-hidden="true"></i></button>
         </div>
     </header>
 
     <main class="login-main">
+        <div class="login-main-layout">
+        <div class="login-book" id="loginBook">
+            <button type="button" class="login-book-cover" id="loginBookCover" aria-label="Open login book">
+                <div class="login-book-cover-inner">
+                    <img src="{{ asset('sql-logo.png') }}" alt="" class="login-book-cover-logo">
+                    <h1 class="login-book-cover-title">SQL Sales Management System</h1>
+                    <p class="login-book-cover-subtitle">Admin Console</p>
+                    <span class="login-book-cover-hint">Hover or click to open</span>
+                </div>
+            </button>
+
+            <div class="login-book-pages">
         <div class="login-card">
             <div class="login-logo">
                 <img src="{{ asset('sql-logo.png') }}" alt="SQL logo" class="login-logo-img">
@@ -35,7 +47,7 @@
                 {{-- After sign-in: stay on login page and show only register passkey; then redirect to dashboard --}}
                 <div class="login-form">
                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                    <p class="login-passkey-note" style="margin-bottom: 1rem;">You’re signed in. Register a passkey to use it next time, or skip to go to the dashboard.</p>
+                    <p class="login-passkey-note" style="margin-bottom: 1rem;">You're signed in. Register a passkey to use it next time, or skip to go to the dashboard.</p>
                     <button type="button" class="login-primary-btn" id="register-passkey-btn">
                         <i class="bi bi-shield-lock" aria-hidden="true"></i>
                         <span>Register passkey</span>
@@ -50,23 +62,42 @@
                 <label class="login-label">
                     Email
                     <div class="login-input-wrapper">
-                        <span class="login-input-icon">👤</span>
+                        <span class="login-input-icon"><i class="bi bi-person-fill" aria-hidden="true"></i></span>
                         <input type="text" name="email" placeholder="Enter your email" value="{{ old('email') }}" required autofocus>
                     </div>
                 </label>
                 <label class="login-label">
                     Password
                     <div class="login-input-wrapper">
-                        <span class="login-input-icon">🔒</span>
-                        <input type="password" name="password" placeholder="••••••••" required>
+                        <span class="login-input-icon"><i class="bi bi-lock-fill" aria-hidden="true"></i></span>
+                        <input type="password" id="loginPassword" name="password" placeholder="********" required>
+                        <button type="button" class="login-password-toggle" data-password-toggle data-target="loginPassword" aria-label="Show password" aria-pressed="false">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
+                        </button>
                     </div>
                 </label>
 
                 @if (session('error'))
                     <div class="login-message login-error">{{ session('error') }}</div>
+                @elseif (session('success'))
+                    <div class="login-message login-success">{{ session('success') }}</div>
                 @endif
 
-                <button type="submit" class="login-primary-btn">Sign In →</button>
+                @if (session('show_reset_password') && old('email') && !session('success'))
+                    <button
+                        type="submit"
+                        class="login-link-btn"
+                        formaction="{{ route('password.forgot') }}"
+                        formmethod="POST"
+                        formnovalidate
+                        style="text-align: left; padding-left: 0;"
+                    >
+                        Reset password
+                    </button>
+                @endif
+
+
+                <button type="submit" class="login-primary-btn">Sign In -&gt;</button>
 
                 <div class="login-divider"><span>OR</span></div>
 
@@ -82,11 +113,144 @@
             </form>
             @endif
         </div>
+        <aside class="login-design-card is-candle" aria-label="Book design page">
+            <div class="login-design-stage" aria-hidden="true">
+                <div class="login-design-anim login-design-anim-cat">
+                    <div class="login-cat-main">
+                        <span class="login-cat-stand"></span>
+                        <div class="login-cat">
+                            <div class="login-cat-body"></div>
+                            <div class="login-cat-head">
+                                <div class="login-cat-ear"></div>
+                                <div class="login-cat-ear"></div>
+                            </div>
+                            <div class="login-cat-face">
+                                <div class="login-cat-nose"></div>
+                                <div class="login-cat-whisker-container">
+                                    <div class="login-cat-whisker"></div>
+                                    <div class="login-cat-whisker"></div>
+                                </div>
+                                <div class="login-cat-whisker-container">
+                                    <div class="login-cat-whisker"></div>
+                                    <div class="login-cat-whisker"></div>
+                                </div>
+                            </div>
+                            <div class="login-cat-tail-container">
+                                <div class="login-cat-tail">
+                                    <div class="login-cat-tail">
+                                        <div class="login-cat-tail">
+                                            <div class="login-cat-tail">
+                                                <div class="login-cat-tail">
+                                                    <div class="login-cat-tail">
+                                                        <div class="login-cat-tail"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="login-design-anim login-design-anim-candle">
+                    <div class="login-candle-wrapper">
+                        <div class="login-candles">
+                            <div class="login-light-wave"></div>
+                            <div class="login-candle1">
+                                <div class="login-candle1-body">
+                                    <div class="login-candle1-eyes">
+                                        <span class="login-candle1-eyes-one"></span>
+                                        <span class="login-candle1-eyes-two"></span>
+                                    </div>
+                                    <div class="login-candle1-mouth"></div>
+                                </div>
+                                <div class="login-candle1-stick"></div>
+                            </div>
+
+                            <div class="login-candle2">
+                                <div class="login-candle2-body">
+                                    <div class="login-candle2-eyes">
+                                        <div class="login-candle2-eyes-one"></div>
+                                        <div class="login-candle2-eyes-two"></div>
+                                    </div>
+                                </div>
+                                <div class="login-candle2-stick"></div>
+                            </div>
+                            <div class="login-candle2-fire"></div>
+                            <div class="login-candle-smoke-one"></div>
+                            <div class="login-candle-smoke-two"></div>
+                        </div>
+                        <div class="login-candle-floor"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+            </div>
+        </div>
+        </div>
     </main>
 </div>
 
 <script>
 (function () {
+    function initPasswordToggles() {
+        document.querySelectorAll('[data-password-toggle]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var targetId = btn.getAttribute('data-target');
+                if (!targetId) return;
+                var input = document.getElementById(targetId);
+                if (!input) return;
+                var icon = btn.querySelector('i');
+                var show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                btn.setAttribute('aria-pressed', show ? 'true' : 'false');
+                btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                if (icon) {
+                    icon.classList.toggle('bi-eye', !show);
+                    icon.classList.toggle('bi-eye-slash', show);
+                }
+            });
+        });
+    }
+
+    initPasswordToggles();
+
+    var loginBook = document.getElementById('loginBook');
+    var loginBookCover = document.getElementById('loginBookCover');
+    var loginDesignCard = loginBook ? loginBook.querySelector('.login-design-card') : null;
+    var loginArtInterval = null;
+    if (loginBook && loginBookCover) {
+        function startRightArtLoop() {
+            if (!loginDesignCard || loginArtInterval) return;
+            loginArtInterval = window.setInterval(function () {
+                loginDesignCard.classList.toggle('is-candle');
+            }, 7000);
+        }
+
+        loginBookCover.addEventListener('click', function () {
+            loginBook.classList.add('is-open');
+            startRightArtLoop();
+        });
+
+        loginBook.addEventListener('mouseenter', startRightArtLoop);
+    }
+
+    var loginError = document.querySelector('.login-message.login-error');
+    if (loginError) {
+        var errorText = (loginError.textContent || '').toLowerCase();
+        if (errorText.indexOf('invalid email or password') !== -1) {
+            setTimeout(function () {
+                loginError.style.transition = 'opacity 180ms ease';
+                loginError.style.opacity = '0';
+                setTimeout(function () {
+                    loginError.style.display = 'none';
+                }, 180);
+            }, 3000);
+        }
+    }
+
     if (!window.PublicKeyCredential) {
         var lp = document.getElementById('login-passkey-btn');
         if (lp) { lp.disabled = true; lp.title = 'Passkeys not supported in this browser'; }

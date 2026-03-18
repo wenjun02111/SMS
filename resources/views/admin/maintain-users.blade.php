@@ -159,6 +159,25 @@
             padding: 6px 8px;
             font-size: 0.8rem;
         }
+        .maintain-users-reset-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #f8fafc;
+        }
+        .maintain-users-reset-option input {
+            width: 14px;
+            height: 14px;
+            margin: 0;
+        }
+        .maintain-users-reset-option-text {
+            font-size: 0.8rem;
+            color: #334155;
+            font-weight: 600;
+        }
         .maintain-users-modal-actions {
             display: flex;
             justify-content: flex-end;
@@ -473,7 +492,7 @@
 <div class="maintain-users-modal-backdrop" id="maintainUsersEditModal">
     <div class="maintain-users-modal">
         <h3 class="maintain-users-modal-title">Edit User</h3>
-        <div class="maintain-users-modal-sub">Update email, alias, company, active status, or password.</div>
+        <div class="maintain-users-modal-sub">Update email, alias, company, active status, or send a reset link.</div>
         <form method="POST" id="maintainUsersEditForm" action="">
             @csrf
             @method('PUT')
@@ -498,8 +517,11 @@
                     </select>
                 </div>
                 <div class="maintain-users-field full">
-                    <label for="edit_PASSWORD">New password (leave blank to keep current)</label>
-                    <input type="password" id="edit_PASSWORD" name="PASSWORD" placeholder="Optional">
+                    <label for="edit_SEND_RESET_LINK">Send password reset link</label>
+                    <label class="maintain-users-reset-option" for="edit_SEND_RESET_LINK">
+                        <input type="checkbox" id="edit_SEND_RESET_LINK" name="SEND_RESET_LINK" value="1">
+                        <span class="maintain-users-reset-option-text">Email a secure reset link after update</span>
+                    </label>
                 </div>
             </div>
             <div class="maintain-users-modal-actions">
@@ -558,7 +580,7 @@
                 document.getElementById('edit_ALIAS').value = alias;
                 document.getElementById('edit_COMPANY').value = company;
                 document.getElementById('edit_ISACTIVE').value = active;
-                document.getElementById('edit_PASSWORD').value = '';
+                document.getElementById('edit_SEND_RESET_LINK').checked = false;
                 editModal.classList.add('is-open');
             }
             function closeEditModal() {
@@ -617,4 +639,3 @@
         });
     </script>
 @endpush
-

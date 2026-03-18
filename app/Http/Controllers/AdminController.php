@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Mail\InquiryAssignedToDealer;
 use App\Mail\PayoutCompletedNotification;
+use App\Mail\UserPasswordResetLink;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Illuminate\View\View;
 use Carbon\Carbon;
 
@@ -1610,8 +1613,9 @@ class AdminController extends Controller
             // keep CURRENTSTATUS from LEAD if override fails
         }
 
-        // Fetch latest COMPLETED date from LEAD_ACT per LEADID for completion date column
+        // Fetch latest COMPLETED date and REWARDED date from LEAD_ACT per LEADID
         $completedDateMap = [];
+        $rewardedDateMap = [];
         $dealtProductMap = [];
         try {
             $leadIdsForActs = array_values(array_unique(array_filter(array_map(
@@ -1631,6 +1635,20 @@ class AdminController extends Controller
                     $lid = (int) ($ar->LEADID ?? 0);
                     if ($lid > 0) {
                         $completedDateMap[$lid] = $ar->COMPLETED_AT ?? $ar->completed_at ?? null;
+                    }
+                }
+
+                $rewardRows = DB::select(
+                    'SELECT "LEADID", MAX("CREATIONDATE") AS REWARDED_AT
+                     FROM "LEAD_ACT"
+                     WHERE UPPER(TRIM("STATUS")) = \'REWARDED\' AND "LEADID" IN (' . $placeholders . ')
+                     GROUP BY "LEADID"',
+                    $leadIdsForActs
+                );
+                foreach ($rewardRows as $rr) {
+                    $lid = (int) ($rr->LEADID ?? 0);
+                    if ($lid > 0) {
+                        $rewardedDateMap[$lid] = $rr->REWARDED_AT ?? $rr->rewarded_at ?? null;
                     }
                 }
 
@@ -1655,16 +1673,20 @@ class AdminController extends Controller
             }
         } catch (\Throwable $e) {
             $completedDateMap = [];
+            $rewardedDateMap = [];
             $dealtProductMap = [];
         }
 
-        // Attach completion date + dealt products to all assigned rows where available
-        if (!empty($completedDateMap) || !empty($dealtProductMap)) {
+        // Attach completion/rewarded dates + dealt products to assigned rows where available
+        if (!empty($completedDateMap) || !empty($rewardedDateMap) || !empty($dealtProductMap)) {
             foreach ($assigned as $r) {
                 $lid = (int) ($r->LEADID ?? 0);
                 if ($lid <= 0) continue;
                 if (isset($completedDateMap[$lid])) {
                     $r->COMPLETED_AT = $completedDateMap[$lid];
+                }
+                if (isset($rewardedDateMap[$lid])) {
+                    $r->REWARDED_AT = $rewardedDateMap[$lid];
                 }
                 if (isset($dealtProductMap[$lid])) {
                     $r->DEALTPRODUCT = $dealtProductMap[$lid];
@@ -2347,6 +2369,11 @@ class AdminController extends Controller
         $primaryTo = trim((string) $request->query('primary_to', ''));
         $compareFrom = trim((string) $request->query('compare_from', ''));
         $compareTo = trim((string) $request->query('compare_to', ''));
+        $estreamCompany = 'E STREAM SDN BHD';
+
+        // Dealer Sales Overtime should show dealer data only (exclude E Stream).
+        $dealerScopeSql = ' AND EXISTS (SELECT 1 FROM "USERS" ux WHERE ux."USERID" = l."ASSIGNED_TO" AND UPPER(TRIM(COALESCE(ux."COMPANY", \'\'))) <> ?)';
+        $dealerScopeBindings = [$estreamCompany];
 
         $useCustomPrimary = $primaryFrom !== '' && $primaryTo !== '';
         $useCustomCompare = $compareFrom !== '' && $compareTo !== '';
@@ -2410,8 +2437,9 @@ class AdminController extends Controller
                  JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= CAST(? AS TIMESTAMP) AND l."CREATEDAT" <= CAST(? AS TIMESTAMP)
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")',
-                ['Closed', $primaryStartStr, $primaryEndStr]
+                array_merge(['Closed', $primaryStartStr, $primaryEndStr], $dealerScopeBindings)
             );
         } else {
             $dealerTotals = DB::select(
@@ -2423,8 +2451,9 @@ class AdminController extends Controller
                  JOIN "USERS" u ON u."USERID" = l."ASSIGNED_TO"
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")',
-                ['Closed', -$days]
+                array_merge(['Closed', -$days], $dealerScopeBindings)
             );
         }
 
@@ -2454,8 +2483,9 @@ class AdminController extends Controller
                    AND l."CREATEDAT" >= CAST(? AS TIMESTAMP) AND l."CREATEDAT" <= CAST(? AS TIMESTAMP)
                    AND l."CURRENTSTATUS" = ?
                    AND NOT EXISTS (SELECT 1 FROM "LEAD_ACT" a WHERE a."LEADID" = l."LEADID" AND a."STATUS" = ?)
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO"',
-                [$primaryStartStr, $primaryEndStr, 'Closed', 'Completed']
+                array_merge([$primaryStartStr, $primaryEndStr, 'Closed', 'Completed'], $dealerScopeBindings)
             );
         } else {
             $rejectedRows = DB::select(
@@ -2465,8 +2495,9 @@ class AdminController extends Controller
                    AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
                    AND l."CURRENTSTATUS" = ?
                    AND NOT EXISTS (SELECT 1 FROM "LEAD_ACT" a WHERE a."LEADID" = l."LEADID" AND a."STATUS" = ?)
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO"',
-                [-$days, 'Closed', 'Completed']
+                array_merge([-$days, 'Closed', 'Completed'], $dealerScopeBindings)
             );
         }
         foreach ($rejectedRows as $r) {
@@ -2486,18 +2517,20 @@ class AdminController extends Controller
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= CAST(? AS TIMESTAMP) AND l."CREATEDAT" <= CAST(? AS TIMESTAMP)
                    AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO"',
-                [$primaryStartStr, $primaryEndStr, 'Failed']
+                array_merge([$primaryStartStr, $primaryEndStr, 'Failed'], $dealerScopeBindings)
             );
         } else {
             $failedCountRows = DB::select(
                 'SELECT l."ASSIGNED_TO" AS dealer_id, COUNT(*) AS failed_c
-                 FROM "LEAD" l
-                 WHERE l."ASSIGNED_TO" IS NOT NULL
+                FROM "LEAD" l
+                WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
                    AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
-                 GROUP BY l."ASSIGNED_TO"',
-                [-$days, 'Failed']
+                   ' . $dealerScopeSql . '
+                GROUP BY l."ASSIGNED_TO"',
+                array_merge([-$days, 'Failed'], $dealerScopeBindings)
             );
         }
         foreach ($failedCountRows as $r) {
@@ -2523,8 +2556,9 @@ class AdminController extends Controller
                  FROM "LEAD" l
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= CAST(? AS TIMESTAMP) AND l."CREATEDAT" <= CAST(? AS TIMESTAMP)
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO"',
-                ['Failed', $compareStartStr, $compareEndStr]
+                array_merge(['Failed', $compareStartStr, $compareEndStr], $dealerScopeBindings)
             );
         } else {
             $compareTotals = DB::select(
@@ -2535,8 +2569,9 @@ class AdminController extends Controller
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
                    AND l."CREATEDAT" <= CURRENT_DATE
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO"',
-                ['Failed', -$compareDays]
+                array_merge(['Failed', -$compareDays], $dealerScopeBindings)
             );
         }
         $compareByDealer = [];
@@ -2571,8 +2606,9 @@ class AdminController extends Controller
                         SUM(CASE WHEN l."CREATEDAT" >= CAST(? AS TIMESTAMP) AND l."CREATEDAT" <= CAST(? AS TIMESTAMP) THEN 1 ELSE 0 END) AS last_c
                  FROM "LEAD" l
                  WHERE l."ASSIGNED_TO" IS NOT NULL
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO"',
-                [$primaryStartStr, $primaryEndStr, $compareStartStr, $compareEndStr]
+                array_merge([$primaryStartStr, $primaryEndStr, $compareStartStr, $compareEndStr], $dealerScopeBindings)
             );
         } else {
             $varianceRows = DB::select(
@@ -2581,8 +2617,9 @@ class AdminController extends Controller
                         SUM(CASE WHEN l."CREATEDAT" >= DATEADD(DAY, ?, DATEADD(YEAR, -1, CURRENT_DATE)) AND l."CREATEDAT" <= DATEADD(YEAR, -1, CURRENT_DATE) THEN 1 ELSE 0 END) AS last_c
                  FROM "LEAD" l
                  WHERE l."ASSIGNED_TO" IS NOT NULL
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO"',
-                [-$days, -$days]
+                array_merge([-$days, -$days], $dealerScopeBindings)
             );
         }
         $variance = [];
@@ -2604,7 +2641,10 @@ class AdminController extends Controller
              FROM "LEAD_ACT" a
              JOIN "LEAD" l ON l."LEADID" = a."LEADID"
              WHERE l."ASSIGNED_TO" IS NOT NULL
+               ' . $dealerScopeSql . '
              GROUP BY l."ASSIGNED_TO"'
+            ,
+            $dealerScopeBindings
         );
         $lastActivityByDealer = [];
         foreach ($lastActivityRows as $r) {
@@ -2667,9 +2707,10 @@ class AdminController extends Controller
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= CAST(? AS TIMESTAMP) AND l."CREATEDAT" <= CAST(? AS TIMESTAMP)
                    AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
                  ORDER BY failed_c DESC',
-                [$primaryStartStr, $primaryEndStr, 'Failed']
+                array_merge([$primaryStartStr, $primaryEndStr, 'Failed'], $dealerScopeBindings)
             );
         } else {
             $failedRows = DB::select(
@@ -2681,9 +2722,10 @@ class AdminController extends Controller
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
                    AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
                  ORDER BY failed_c DESC',
-                [-$days, 'Failed']
+                array_merge([-$days, 'Failed'], $dealerScopeBindings)
             );
         }
         $top10Failed = [];
@@ -2711,9 +2753,10 @@ class AdminController extends Controller
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= CAST(? AS TIMESTAMP) AND l."CREATEDAT" <= CAST(? AS TIMESTAMP)
                    AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
                  ORDER BY closed_c DESC',
-                [$primaryStartStr, $primaryEndStr, 'Closed']
+                array_merge([$primaryStartStr, $primaryEndStr, 'Closed'], $dealerScopeBindings)
             );
         } else {
             $closedRows = DB::select(
@@ -2725,9 +2768,10 @@ class AdminController extends Controller
                  WHERE l."ASSIGNED_TO" IS NOT NULL
                    AND l."CREATEDAT" >= DATEADD(DAY, ?, CURRENT_DATE)
                    AND TRIM(COALESCE(l."CURRENTSTATUS", \'\')) = ?
+                   ' . $dealerScopeSql . '
                  GROUP BY l."ASSIGNED_TO", COALESCE(NULLIF(TRIM(u."COMPANY"), \'\'), u."EMAIL")
                  ORDER BY closed_c DESC',
-                [-$days, 'Closed']
+                array_merge([-$days, 'Closed'], $dealerScopeBindings)
             );
         }
         $top10Closed = [];
@@ -3158,16 +3202,14 @@ class AdminController extends Controller
             'ALIAS' => 'nullable|string|max:50',
             'COMPANY' => 'nullable|string|max:40',
             'ISACTIVE' => 'nullable|boolean',
-            'PASSWORD' => 'nullable|string|min:6|max:255',
+            'SEND_RESET_LINK' => 'nullable|boolean',
         ]);
 
         $email = trim((string) $validated['EMAIL']);
         $alias = trim((string) ($validated['ALIAS'] ?? ''));
         $company = trim((string) ($validated['COMPANY'] ?? ''));
         $isActive = (bool) ($validated['ISACTIVE'] ?? true);
-        $newPassword = isset($validated['PASSWORD']) && trim((string) $validated['PASSWORD']) !== ''
-            ? trim((string) $validated['PASSWORD'])
-            : null;
+        $sendResetLink = (bool) ($validated['SEND_RESET_LINK'] ?? false);
 
         $existing = DB::selectOne('SELECT "USERID" FROM "USERS" WHERE "USERID" = ?', [$userid]);
         if (!$existing) {
@@ -3201,7 +3243,6 @@ class AdminController extends Controller
         $aliasCol = $col('ALIAS');
         $companyCol = $col('COMPANY');
         $activeCol = $col('ISACTIVE');
-        $pwdCol = $col('PASSWORDHASH');
         $idCol = $col('USERID');
         if (!$emailCol || !$activeCol || !$idCol) {
             return back()->withInput()->with('error', 'USERS table structure could not be read. Required columns: EMAIL, ISACTIVE, USERID.');
@@ -3209,43 +3250,23 @@ class AdminController extends Controller
 
         $isActiveValue = $isActive ? 1 : 0;
         try {
-            if ($newPassword !== null && $pwdCol) {
-                $parts = [$q($emailCol) . ' = ?'];
-                $bind = [$email];
-                if ($aliasCol) {
-                    $parts[] = $q($aliasCol) . ' = ?';
-                    $bind[] = $alias !== '' ? $alias : null;
-                }
-                if ($companyCol) {
-                    $parts[] = $q($companyCol) . ' = ?';
-                    $bind[] = $company !== '' ? $company : null;
-                }
-                $parts[] = $q($activeCol) . ' = ?';
-                $parts[] = $q($pwdCol) . ' = ?';
-                $bind = array_merge($bind, [$isActiveValue, Hash::make($newPassword), $userid]);
-                DB::update(
-                    'UPDATE "USERS" SET ' . implode(', ', $parts) . ' WHERE ' . $q($idCol) . ' = ?',
-                    $bind
-                );
-            } else {
-                $parts = [$q($emailCol) . ' = ?'];
-                $bind = [$email];
-                if ($aliasCol) {
-                    $parts[] = $q($aliasCol) . ' = ?';
-                    $bind[] = $alias !== '' ? $alias : null;
-                }
-                if ($companyCol) {
-                    $parts[] = $q($companyCol) . ' = ?';
-                    $bind[] = $company !== '' ? $company : null;
-                }
-                $parts[] = $q($activeCol) . ' = ?';
-                $bind[] = $isActiveValue;
-                $bind[] = $userid;
-                DB::update(
-                    'UPDATE "USERS" SET ' . implode(', ', $parts) . ' WHERE ' . $q($idCol) . ' = ?',
-                    $bind
-                );
+            $parts = [$q($emailCol) . ' = ?'];
+            $bind = [$email];
+            if ($aliasCol) {
+                $parts[] = $q($aliasCol) . ' = ?';
+                $bind[] = $alias !== '' ? $alias : null;
             }
+            if ($companyCol) {
+                $parts[] = $q($companyCol) . ' = ?';
+                $bind[] = $company !== '' ? $company : null;
+            }
+            $parts[] = $q($activeCol) . ' = ?';
+            $bind[] = $isActiveValue;
+            $bind[] = $userid;
+            DB::update(
+                'UPDATE "USERS" SET ' . implode(', ', $parts) . ' WHERE ' . $q($idCol) . ' = ?',
+                $bind
+            );
         } catch (\Throwable $e) {
             $msg = $e->getMessage();
             if (str_contains($msg, '23000') || str_contains($msg, 'Integrity constraint') || str_contains($msg, 'INTEG_') || str_contains($msg, 'CHECK')) {
@@ -3254,7 +3275,76 @@ class AdminController extends Controller
             throw $e;
         }
 
-        return redirect()->route('admin.maintain-users')->with('success', 'User updated successfully.');
+        $resetLinkSent = false;
+        if ($sendResetLink) {
+            try {
+                $updatedUser = DB::selectOne(
+                    'SELECT "USERID","EMAIL","PASSWORDHASH","ALIAS","COMPANY" FROM "USERS" WHERE "USERID" = ?',
+                    [$userid]
+                );
+                if (!$updatedUser || trim((string) ($updatedUser->EMAIL ?? '')) === '' || trim((string) ($updatedUser->PASSWORDHASH ?? '')) === '') {
+                    return redirect()->route('admin.maintain-users')->with('error', 'User updated, but reset link could not be sent because the account is missing email or password data.');
+                }
+
+                $this->sendMaintainUserPasswordResetLink($updatedUser);
+                $resetLinkSent = true;
+            } catch (\Throwable $e) {
+                report($e);
+                return redirect()->route('admin.maintain-users')->with('error', 'User updated, but failed to send password reset link.');
+            }
+        }
+
+        $successMessage = $resetLinkSent
+            ? 'User updated and password reset link sent.'
+            : 'User updated successfully.';
+
+        return redirect()->route('admin.maintain-users')->with('success', $successMessage);
+    }
+
+    private function sendMaintainUserPasswordResetLink(object $user): void
+    {
+        $userId = trim((string) ($user->USERID ?? ''));
+        $email = trim((string) ($user->EMAIL ?? ''));
+        $passwordHash = trim((string) ($user->PASSWORDHASH ?? ''));
+        if ($userId === '' || $email === '' || $passwordHash === '') {
+            return;
+        }
+
+        $alias = trim((string) ($user->ALIAS ?? ''));
+        $company = trim((string) ($user->COMPANY ?? ''));
+        $companyUpper = strtoupper($company);
+        if ($companyUpper === 'E STREAM SDN BHD') {
+            $recipientName = $alias !== '' ? $alias : $email;
+        } else {
+            $recipientName = $company !== '' ? $company : ($alias !== '' ? $alias : $email);
+        }
+
+        // Keep only the latest reset link valid for each user.
+        $nonce = bin2hex(random_bytes(16));
+        $nonceCacheKey = 'user_password_reset_nonce:' . $userId;
+        Cache::put($nonceCacheKey, $nonce, now()->addMinutes(20));
+
+        $resetUrl = URL::temporarySignedRoute(
+            'password.reset.form',
+            now()->addMinutes(15),
+            [
+                'userid' => $userId,
+                'hash' => sha1($passwordHash),
+                'nonce' => $nonce,
+            ]
+        );
+
+        $systemName = trim((string) config('app.name', ''));
+        if ($systemName === '' || strtoupper($systemName) === 'LARAVEL') {
+            $systemName = 'SQL SMS';
+        }
+
+        Mail::to($email)->send(new UserPasswordResetLink(
+            toEmail: $email,
+            recipientName: $recipientName,
+            resetUrl: $resetUrl,
+            systemName: $systemName
+        ));
     }
 
     /**
