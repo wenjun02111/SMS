@@ -373,6 +373,49 @@ class DealerController extends Controller
             } catch (\Throwable $e) {
                 // leave ASSIGNED_BY_EMAIL / no CREATEDBY_NAME
             }
+
+            try {
+                $leadIds = array_values(array_unique(array_filter(array_map(
+                    fn ($r) => (int) ($r->LEADID ?? 0),
+                    $leads
+                ))));
+                if (!empty($leadIds)) {
+                    $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
+                    $attachRows = DB::select(
+                        'SELECT a."LEADID", a."LEAD_ACTID", a."ATTACHMENT"
+                         FROM "LEAD_ACT" a
+                         JOIN (
+                             SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
+                             FROM "LEAD_ACT"
+                             WHERE "LEADID" IN (' . $placeholders . ')
+                             GROUP BY "LEADID"
+                         ) m ON m."LEADID" = a."LEADID" AND m.MAXCD = a."CREATIONDATE"
+                         WHERE a."LEADID" IN (' . $placeholders . ')',
+                        array_merge($leadIds, $leadIds)
+                    );
+                    $attachmentMap = [];
+                    $attachmentActMap = [];
+                    foreach ($attachRows as $ar) {
+                        $lid = (int) ($ar->LEADID ?? 0);
+                        if ($lid > 0) {
+                            $attachmentMap[$lid] = $ar->ATTACHMENT ?? $ar->attachment ?? null;
+                            $attachmentActMap[$lid] = (int) ($ar->LEAD_ACTID ?? 0);
+                        }
+                    }
+                    foreach ($leads as $r) {
+                        $lid = (int) ($r->LEADID ?? 0);
+                        if ($lid > 0) {
+                            $r->ATTACHMENT_URLS = $this->buildLeadActivityAttachmentUrls(
+                                $attachmentMap[$lid] ?? null,
+                                $lid,
+                                $attachmentActMap[$lid] ?? 0
+                            );
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore attachment mapping failures
+            }
         }
         return view('dealer.inquiries', ['leads' => $leads, 'currentPage' => 'inquiries']);
     }
@@ -815,6 +858,36 @@ class DealerController extends Controller
         return null;
     }
 
+    private function buildLeadActivityAttachmentUrls(mixed $attachmentRaw, int $leadId, int $leadActId): array
+    {
+        $urls = [];
+        if ($attachmentRaw === null || trim((string) $attachmentRaw) === '') {
+            return $urls;
+        }
+
+        $attachmentStr = trim((string) $attachmentRaw);
+        $attachmentStr = str_replace('\\', '/', $attachmentStr);
+
+        if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
+            foreach (explode(',', $attachmentStr) as $path) {
+                $path = trim(str_replace('\\', '/', $path));
+                if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
+                    $urls[] = route('dealer.inquiries.serve-attachment', ['path' => $path]);
+                }
+            }
+
+            return $urls;
+        }
+
+        if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
+            $urls[] = route('dealer.inquiries.serve-attachment', ['path' => $attachmentStr]);
+        } elseif ($leadId > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
+            $urls[] = route('dealer.inquiries.activity-attachment', ['leadId' => $leadId, 'leadActId' => $leadActId]);
+        }
+
+        return $urls;
+    }
+
     public function updateInquiryStatus(Request $request): JsonResponse
     {
         $isMultipart = $request->hasFile('attachments');
@@ -1129,6 +1202,51 @@ class DealerController extends Controller
                 }
             }
 
+            // Attach latest COMPLETED attachment per lead for completed list
+            try {
+                $completedIds = array_values(array_unique(array_filter(array_map(
+                    fn ($r) => (int) ($r->LEADID ?? 0),
+                    $completed
+                ))));
+                if (!empty($completedIds)) {
+                    $placeholders = implode(',', array_fill(0, count($completedIds), '?'));
+                    $attachRows = DB::select(
+                        'SELECT a."LEADID", a."LEAD_ACTID", a."ATTACHMENT"
+                         FROM "LEAD_ACT" a
+                         JOIN (
+                             SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
+                             FROM "LEAD_ACT"
+                             WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\'
+                               AND "LEADID" IN (' . $placeholders . ')
+                             GROUP BY "LEADID"
+                         ) m ON m."LEADID" = a."LEADID" AND m.MAXCD = a."CREATIONDATE"
+                         WHERE UPPER(TRIM(a."STATUS")) = \'COMPLETED\'
+                           AND a."LEADID" IN (' . $placeholders . ')',
+                        array_merge($completedIds, $completedIds)
+                    );
+                    $attachmentMap = [];
+                    $attachmentActMap = [];
+                    foreach ($attachRows as $ar) {
+                        $lid = (int) ($ar->LEADID ?? 0);
+                        if ($lid > 0) {
+                            $attachmentMap[$lid] = $ar->ATTACHMENT ?? $ar->attachment ?? null;
+                            $attachmentActMap[$lid] = (int) ($ar->LEAD_ACTID ?? 0);
+                        }
+                    }
+                    if (!empty($attachmentMap)) {
+                        foreach ($completed as $r) {
+                            $lid = (int) ($r->LEADID ?? 0);
+                            if ($lid > 0 && array_key_exists($lid, $attachmentMap)) {
+                                $r->COMPLETED_ATTACHMENT = $attachmentMap[$lid];
+                                $r->COMPLETED_LEAD_ACT_ID = $attachmentActMap[$lid] ?? 0;
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // ignore attachment mapping failures
+            }
+
             // Attach latest REWARDED/PAID attachment per lead for rewarded list
             try {
                 $rewardedIds = array_values(array_unique(array_filter(array_map(
@@ -1177,31 +1295,22 @@ class DealerController extends Controller
                 // ignore attachment mapping failures
             }
 
+            // Build attachment URLs for Completed list (dealer)
+            foreach ($completed as $r) {
+                $r->COMPLETED_ATTACHMENT_URLS = $this->buildLeadActivityAttachmentUrls(
+                    $r->COMPLETED_ATTACHMENT ?? null,
+                    (int) ($r->LEADID ?? 0),
+                    (int) ($r->COMPLETED_LEAD_ACT_ID ?? 0)
+                );
+            }
+
             // Build attachment URLs for Rewarded list (dealer)
             foreach ($rewarded as $r) {
-                $urls = [];
-                $attachmentRaw = $r->REWARD_ATTACHMENT ?? null;
-                $leadId = (int) ($r->LEADID ?? 0);
-                $leadActId = (int) ($r->REWARD_LEAD_ACT_ID ?? 0);
-                if ($attachmentRaw !== null && trim((string) $attachmentRaw) !== '') {
-                    $attachmentStr = trim((string) $attachmentRaw);
-                    $attachmentStr = str_replace('\\', '/', $attachmentStr);
-                    if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
-                        foreach (explode(',', $attachmentStr) as $path) {
-                            $path = trim(str_replace('\\', '/', $path));
-                            if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
-                                $urls[] = route('dealer.inquiries.serve-attachment', ['path' => $path]);
-                            }
-                        }
-                    } else {
-                        if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
-                            $urls[] = route('dealer.inquiries.serve-attachment', ['path' => $attachmentStr]);
-                        } elseif ($leadId > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
-                            $urls[] = route('dealer.inquiries.activity-attachment', ['leadId' => $leadId, 'leadActId' => $leadActId]);
-                        }
-                    }
-                }
-                $r->REWARD_ATTACHMENT_URLS = $urls;
+                $r->REWARD_ATTACHMENT_URLS = $this->buildLeadActivityAttachmentUrls(
+                    $r->REWARD_ATTACHMENT ?? null,
+                    (int) ($r->LEADID ?? 0),
+                    (int) ($r->REWARD_LEAD_ACT_ID ?? 0)
+                );
             }
 
             // Resolve CREATEDBY_NAME and ASSIGNED_TO_NAME for display (same as admin rewards)
@@ -1318,6 +1427,7 @@ class DealerController extends Controller
             'completed' => $completed,
             'rewarded' => $rewarded,
             'totalCompletedLeads' => $totalCompletedLeads,
+            'totalRewardedLeads' => count($rewarded),
             'productLabels' => $productLabels,
             'currentPage' => 'payouts',
         ]);

@@ -1,8 +1,9 @@
 @forelse($leads as $r)
     @php
         $productIds = [];
+        $attachmentUrls = is_array($r->ATTACHMENT_URLS ?? null) ? $r->ATTACHMENT_URLS : [];
         if (isset($r->PRODUCTID) && $r->PRODUCTID !== '' && $r->PRODUCTID !== null) {
-            $ids = is_numeric($r->PRODUCTID) ? [(int)$r->PRODUCTID] : array_map('intval', array_filter(explode(',', (string)$r->PRODUCTID)));
+            $ids = is_numeric($r->PRODUCTID) ? [(int) $r->PRODUCTID] : array_map('intval', array_filter(explode(',', (string) $r->PRODUCTID)));
             foreach ($ids as $id) {
                 if ($id > 0) {
                     $productIds[] = (int) $id;
@@ -26,27 +27,19 @@
             default:                    $statusClass = 'inquiries-status-new'; break;
         }
         $statusDisplay = $rawStatus === '' ? '—' : (in_array($rawStatus, ['FOLLOWUP', 'FOLLOW UP'], true) ? 'Follow Up' : $rawStatus);
-        
-        // Full customer name
         $customerName = trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '')) ?: '—';
-        // Shortened version (max 33 chars)
         $customerShort = \Illuminate\Support\Str::limit($customerName, 33, '...');
-    @endphp
-    @php
-        $addr1 = trim((string)($r->ADDRESS1 ?? ''));
-        $addr2 = trim((string)($r->ADDRESS2 ?? ''));
+        $addr1 = trim((string) ($r->ADDRESS1 ?? ''));
+        $addr2 = trim((string) ($r->ADDRESS2 ?? ''));
         $addressDisplay = trim($addr1 . ' ' . $addr2) ?: '—';
+        $rowPage = (int) floor(($loop->index ?? 0) / 10) + 1;
     @endphp
-    @php $rowPage = (int) floor(($loop->index ?? 0) / 10) + 1; @endphp
-    <tr class="inquiry-row" data-lead-id="{{ $r->LEADID }}" data-search="{{ strtolower(trim(($r->COMPANYNAME ?? '').' '.($r->CONTACTNAME ?? '').' '.($r->LEADID ?? ''))) }}" data-page="{{ $rowPage }}">
+    <tr class="inquiry-row" data-lead-id="{{ $r->LEADID }}" data-search="{{ strtolower(trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '') . ' ' . ($r->LEADID ?? ''))) }}" data-page="{{ $rowPage }}">
         <td data-col="inquiryid">#SQL-{{ $r->LEADID }}</td>
         <td data-col="date">{{ $r->CREATEDAT ? date('d/m/Y', strtotime($r->CREATEDAT)) : '—' }}</td>
-        
-        {{-- Updated Customer Column --}}
         <td data-col="customer">
             <span title="{{ $customerName !== '—' ? $customerName : '' }}">{{ $customerShort }}</span>
         </td>
-        
         <td data-col="source">{{ $r->ASSIGNED_BY_EMAIL ?? '—' }}</td>
         <td data-col="postcode">{{ $r->POSTCODE ?? '—' }}</td>
         <td data-col="city">{{ $r->CITY ?? '—' }}</td>
@@ -69,6 +62,13 @@
         </td>
         <td data-col="message">{{ Str::limit($r->DESCRIPTION ?? '—', 20) }}</td>
         <td data-col="referralcode">{{ $r->REFERRALCODE ?? '—' }}</td>
+        <td data-col="attachment">
+            @if(!empty($attachmentUrls))
+                <a href="{{ $attachmentUrls[0] }}" target="_blank" rel="noopener" class="inquiries-btn inquiries-btn-secondary">Attachment</a>
+            @else
+                —
+            @endif
+        </td>
         <td data-col="assignby">{{ $r->CREATEDBY_NAME ?? $r->ASSIGNED_BY_EMAIL ?? '—' }}</td>
         <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $statusDisplay }}</span></td>
         <td class="inquiries-col-action inquiries-action-cell">
@@ -85,7 +85,7 @@
     </tr>
 @empty
     <tr class="inquiries-empty-row">
-        <td colspan="18" class="inquiries-empty-cell">
+        <td colspan="19" class="inquiries-empty-cell">
             <div class="dealer-table-empty">No inquiries assigned yet.</div>
         </td>
     </tr>

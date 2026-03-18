@@ -1,5 +1,114 @@
 @extends('layouts.app')
 @section('title', 'Payouts - SQL LMS Dealer Console')
+@push('styles')
+<style>
+    #completedTable.payouts-default-layout,
+    #rewardedTable.payouts-default-layout {
+        width: 100%;
+        min-width: 100%;
+        table-layout: fixed;
+    }
+
+    #completedPanel .inquiries-table-scroll.payouts-default-layout,
+    #rewardedPanel .inquiries-table-scroll.payouts-default-layout {
+        overflow-x: hidden;
+    }
+
+    #completedTable.payouts-default-layout th,
+    #completedTable.payouts-default-layout td,
+    #rewardedTable.payouts-default-layout th,
+    #rewardedTable.payouts-default-layout td {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="inquiryid"],
+    #completedTable.payouts-default-layout td[data-col="inquiryid"],
+    #rewardedTable.payouts-default-layout th[data-col="inquiryid"],
+    #rewardedTable.payouts-default-layout td[data-col="inquiryid"] {
+        width: 110px;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="completeddate"],
+    #completedTable.payouts-default-layout td[data-col="completeddate"],
+    #rewardedTable.payouts-default-layout th[data-col="payoutdate"],
+    #rewardedTable.payouts-default-layout td[data-col="payoutdate"] {
+        width: 120px;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="customer"],
+    #completedTable.payouts-default-layout td[data-col="customer"],
+    #rewardedTable.payouts-default-layout th[data-col="customer"],
+    #rewardedTable.payouts-default-layout td[data-col="customer"] {
+        width: 240px;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="dealtproducts"],
+    #completedTable.payouts-default-layout td[data-col="dealtproducts"],
+    #rewardedTable.payouts-default-layout th[data-col="dealtproducts"],
+    #rewardedTable.payouts-default-layout td[data-col="dealtproducts"] {
+        width: 220px;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="referralcode"],
+    #completedTable.payouts-default-layout td[data-col="referralcode"],
+    #rewardedTable.payouts-default-layout th[data-col="referralcode"],
+    #rewardedTable.payouts-default-layout td[data-col="referralcode"] {
+        width: 130px;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="attachment"],
+    #completedTable.payouts-default-layout td[data-col="attachment"],
+    #rewardedTable.payouts-default-layout th[data-col="attachment"],
+    #rewardedTable.payouts-default-layout td[data-col="attachment"] {
+        width: 120px;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="assignby"],
+    #completedTable.payouts-default-layout td[data-col="assignby"],
+    #rewardedTable.payouts-default-layout th[data-col="assignby"],
+    #rewardedTable.payouts-default-layout td[data-col="assignby"] {
+        width: 150px;
+    }
+
+    #completedTable.payouts-default-layout th[data-col="status"],
+    #completedTable.payouts-default-layout td[data-col="status"],
+    #rewardedTable.payouts-default-layout th[data-col="status"],
+    #rewardedTable.payouts-default-layout td[data-col="status"] {
+        width: 110px;
+    }
+
+    #completedTable td.inquiries-col-action,
+    #rewardedTable td.inquiries-col-action {
+        width: 88px;
+        min-width: 88px;
+        max-width: 88px;
+        padding: 0;
+    }
+
+    #completedTable th.inquiries-col-action,
+    #rewardedTable th.inquiries-col-action {
+        width: 88px;
+        min-width: 88px;
+        max-width: 88px;
+    }
+
+    #completedTable td.inquiries-col-action .inquiries-update-btn,
+    #rewardedTable td.inquiries-col-action .inquiries-update-btn {
+        display: flex;
+        width: 100%;
+        min-width: 0;
+        max-width: none;
+        height: 100%;
+        min-height: 44px;
+        padding: 0;
+        border-radius: 0;
+        justify-content: center;
+        align-items: center;
+    }
+
+</style>
+@endpush
 @section('content')
 @php
     $productNames = [
@@ -11,13 +120,15 @@
 <div class="inquiries-page-wrap">
 <div class="inquiries-mgmt-top-row" style="margin-bottom: 16px;">
     <section class="inquiries-mgmt-summary">
-        <div class="inquiries-summary-card">
-            <div class="inquiries-summary-icon"><i class="bi bi-check2-circle"></i></div>
-            <div class="inquiries-summary-label">PENDING PAYOUT</div>
+        <div class="inquiries-summary-card" id="payoutSummaryCard"
+             data-pending-count="{{ number_format($totalCompletedLeads ?? 0) }}"
+             data-rewarded-count="{{ number_format($totalRewardedLeads ?? 0) }}">
+            <div class="inquiries-summary-icon"><i class="bi bi-coin" id="payoutSummaryIcon"></i></div>
+            <div class="inquiries-summary-label" id="payoutSummaryLabel">PENDING REWARD</div>
             <div class="inquiries-summary-value-row">
-                <span class="inquiries-summary-value">{{ number_format($totalCompletedLeads ?? 0) }}</span>
+                <span class="inquiries-summary-value" id="payoutSummaryValue">{{ number_format($totalCompletedLeads ?? 0) }}</span>
             </div>
-            <div class="inquiries-summary-note">Pending Referral Payout</div>
+            <div class="inquiries-summary-note" id="payoutSummaryNote">Pending Referral Payout</div>
         </div>
     </section>
     <section class="inquiries-mgmt-search">
@@ -67,6 +178,7 @@
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="demomode"> DEMO MODE</label><label class="inquiries-columns-check"><input type="checkbox" data-col="dealtproducts"> DEALT PRODUCTS</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="message"> MESSAGE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="referralcode"> REFERRAL CODE</label>
+                    <label class="inquiries-columns-check"><input type="checkbox" data-col="attachment"> ATTACHMENT</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="assignby"> ASSIGN BY</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="status"> STATUS</label>
                     <div class="inquiries-columns-actions">
@@ -97,6 +209,7 @@
                         <th data-col="demomode" class="inquiries-header-cell"><span class="inquiries-header-label">DEMO MODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="completed" data-col="demomode"><i class="bi bi-search inquiries-filter-icon"></i></span></th><th data-col="dealtproducts" class="inquiries-header-cell"><span class="inquiries-header-label">DEALT PRODUCTS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="completed" data-col="dealtproducts"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="message" class="inquiries-header-cell"><span class="inquiries-header-label">MESSAGE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="completed" data-col="message"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="referralcode" class="inquiries-header-cell"><span class="inquiries-header-label">REFERRAL CODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="completed" data-col="referralcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="attachment" class="inquiries-header-cell"><span class="inquiries-header-label">ATTACHMENT</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="completed" data-col="attachment"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="assignby" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGN BY</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="completed" data-col="assignby"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="status" class="inquiries-header-cell"><span class="inquiries-header-label">STATUS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="completed" data-col="status"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th class="inquiries-col-action inquiries-header-cell"><span class="inquiries-header-label">ACTION</span><button type="button" class="inquiries-filter-clear" id="completedClearFilters">Clear filters</button></th>
@@ -152,6 +265,7 @@
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="dealtproducts"> DEALT PRODUCTS</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="message"> MESSAGE</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="referralcode"> REFERRAL CODE</label>
+                    <label class="inquiries-columns-check"><input type="checkbox" data-col="attachment"> ATTACHMENT</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="assignby"> ASSIGN BY</label>
                     <label class="inquiries-columns-check"><input type="checkbox" data-col="status"> STATUS</label>
                     <div class="inquiries-columns-actions">
@@ -183,6 +297,7 @@
                         <th data-col="dealtproducts" class="inquiries-header-cell"><span class="inquiries-header-label">DEALT PRODUCTS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="rewarded" data-col="dealtproducts"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="message" class="inquiries-header-cell"><span class="inquiries-header-label">MESSAGE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="rewarded" data-col="message"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="referralcode" class="inquiries-header-cell"><span class="inquiries-header-label">REFERRAL CODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="rewarded" data-col="referralcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="attachment" class="inquiries-header-cell"><span class="inquiries-header-label">ATTACHMENT</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="rewarded" data-col="attachment"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="assignby" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGN BY</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="rewarded" data-col="assignby"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="status" class="inquiries-header-cell"><span class="inquiries-header-label">STATUS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter payouts-grid-filter" data-table="rewarded" data-col="status"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th class="inquiries-col-action inquiries-header-cell"><span class="inquiries-header-label">ACTION</span><button type="button" class="inquiries-filter-clear" id="rewardedClearFilters">Clear filters</button></th>
@@ -305,12 +420,12 @@
 document.addEventListener('DOMContentLoaded', function() {
     var COMPLETED_STORAGE_KEY = 'dealerPayoutCompletedVisibleColumns_v2';
     // Default + all columns: match dealer inquiries table column IDs
-    var COMPLETED_DEFAULT_COLUMNS = ['inquiryid','completeddate','customer','dealtproducts','referralcode','assignby','status'];
-    var COMPLETED_ALL_COLUMNS = ['inquiryid','completeddate','customer','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','dealtproducts','message','referralcode','assignby','status'];
+    var COMPLETED_DEFAULT_COLUMNS = ['inquiryid','completeddate','customer','dealtproducts','referralcode','attachment','assignby','status'];
+    var COMPLETED_ALL_COLUMNS = ['inquiryid','completeddate','customer','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','dealtproducts','message','referralcode','attachment','assignby','status'];
 
     var REWARDED_STORAGE_KEY = 'dealerPayoutRewardedVisibleColumns_v2';
-    var REWARDED_DEFAULT_COLUMNS = ['inquiryid','payoutdate','customer','dealtproducts','referralcode','assignby','status'];
-    var REWARDED_ALL_COLUMNS = ['inquiryid','payoutdate','customer','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','dealtproducts','message','referralcode','assignby','status'];
+    var REWARDED_DEFAULT_COLUMNS = ['inquiryid','payoutdate','customer','dealtproducts','referralcode','attachment','assignby','status'];
+    var REWARDED_ALL_COLUMNS = ['inquiryid','payoutdate','customer','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','dealtproducts','message','referralcode','attachment','assignby','status'];
 
     function getCompletedVisibleColumns() {
         try {
@@ -325,6 +440,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function setCompletedVisibleColumns(cols) {
         try { localStorage.setItem(COMPLETED_STORAGE_KEY, JSON.stringify(cols)); } catch (e) {}
     }
+    function updateCompletedScrollMode(visible) {
+        var table = document.getElementById('completedTable');
+        var scroller = document.querySelector('#completedPanel .inquiries-table-scroll');
+        if (!table || !scroller) return;
+        var hasExtras = (visible || []).some(function(col) {
+            return COMPLETED_DEFAULT_COLUMNS.indexOf(col) === -1;
+        });
+        table.classList.toggle('payouts-default-layout', !hasExtras);
+        scroller.classList.toggle('payouts-default-layout', !hasExtras);
+    }
     function applyCompletedColumns(visible) {
         var table = document.getElementById('completedTable');
         if (!table) return;
@@ -334,6 +459,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.style.display = show ? '' : 'none';
             });
         });
+        updateCompletedScrollMode(visible);
     }
     function syncCompletedCheckboxes(visible) {
         var menu = document.getElementById('completedColumnsMenu');
@@ -419,6 +545,16 @@ document.addEventListener('DOMContentLoaded', function() {
     function setRewardedVisibleColumns(cols) {
         try { localStorage.setItem(REWARDED_STORAGE_KEY, JSON.stringify(cols)); } catch (e) {}
     }
+    function updateRewardedScrollMode(visible) {
+        var table = document.getElementById('rewardedTable');
+        var scroller = document.querySelector('#rewardedPanel .inquiries-table-scroll');
+        if (!table || !scroller) return;
+        var hasExtras = (visible || []).some(function(col) {
+            return REWARDED_DEFAULT_COLUMNS.indexOf(col) === -1;
+        });
+        table.classList.toggle('payouts-default-layout', !hasExtras);
+        scroller.classList.toggle('payouts-default-layout', !hasExtras);
+    }
     function applyRewardedColumns(visible) {
         var table = document.getElementById('rewardedTable');
         if (!table) return;
@@ -428,6 +564,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 el.style.display = show ? '' : 'none';
             });
         });
+        updateRewardedScrollMode(visible);
     }
     function syncRewardedCheckboxes(visible) {
         var menu = document.getElementById('rewardedColumnsMenu');
@@ -807,6 +944,33 @@ document.addEventListener('DOMContentLoaded', function() {
             var rewardedPanel = document.getElementById('rewardedPanel');
             if (completedPanel) { completedPanel.classList.toggle('active', t === 'completed'); completedPanel.hidden = t !== 'completed'; }
             if (rewardedPanel) { rewardedPanel.classList.toggle('active', t === 'rewarded'); rewardedPanel.hidden = t !== 'rewarded'; }
+
+            var card = document.getElementById('payoutSummaryCard');
+            var label = document.getElementById('payoutSummaryLabel');
+            var value = document.getElementById('payoutSummaryValue');
+            var note = document.getElementById('payoutSummaryNote');
+            var iconEl = document.getElementById('payoutSummaryIcon');
+            if (card && label && value && note) {
+                var pendingCount = card.getAttribute('data-pending-count') || '0';
+                var rewardedCount = card.getAttribute('data-rewarded-count') || '0';
+                if (t === 'rewarded') {
+                    label.textContent = 'TOTAL REWARD';
+                    value.textContent = rewardedCount;
+                    note.textContent = 'Completed Referral Payouts';
+                    if (iconEl) {
+                        iconEl.classList.remove('bi-coin');
+                        iconEl.classList.add('bi-piggy-bank');
+                    }
+                } else {
+                    label.textContent = 'PENDING REWARD';
+                    value.textContent = pendingCount;
+                    note.textContent = 'Pending Referral Payout';
+                    if (iconEl) {
+                        iconEl.classList.remove('bi-piggy-bank');
+                        iconEl.classList.add('bi-coin');
+                    }
+                }
+            }
         });
     });
 });
@@ -1343,5 +1507,3 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 @endpush
-
-

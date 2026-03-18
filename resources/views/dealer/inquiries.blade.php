@@ -3,26 +3,6 @@
 
 @push('styles')
 <style>
-    /* Fix for action column height not stretching */
-    .inquiries-table th.inquiries-col-action,
-    .inquiries-table td.inquiries-col-action {
-        display: table-cell !important;
-        height: 100% !important;
-        vertical-align: middle !important;
-        background-color: #ffffff !important;
-        background-clip: padding-box;
-    }
-    
-    /* Magic trick to force table cells to inherit full dynamic row height */
-    .inquiries-table tbody tr.inquiry-row {
-        height: 1px; 
-    }
-
-    /* Ensure hover state matches the row color so it doesn't stay stark white */
-    .inquiries-table tbody tr:hover td.inquiries-col-action {
-        background-color: #f9fafb !important;
-    }
-
     @keyframes shineEffect {
         0% { background-color: transparent; }
         50% { background-color: rgba(76, 29, 149, 0.4); box-shadow: inset 0 0 10px rgba(76, 29, 149, 0.6); }
@@ -75,6 +55,7 @@
                         <label class="inquiries-columns-check"><input type="checkbox" data-col="products"> PRODUCTS</label>
                         <label class="inquiries-columns-check"><input type="checkbox" data-col="message"> MESSAGE</label>
                         <label class="inquiries-columns-check"><input type="checkbox" data-col="referralcode"> REFERRAL CODE</label>
+                        <label class="inquiries-columns-check"><input type="checkbox" data-col="attachment"> ATTACHMENT</label>
                         <label class="inquiries-columns-check"><input type="checkbox" data-col="assignby"> ASSIGN BY</label>
                         <label class="inquiries-columns-check"><input type="checkbox" data-col="status"> STATUS</label>
                         <div class="inquiries-columns-actions">
@@ -106,6 +87,7 @@
                         <th data-col="products" class="inquiries-header-cell"><span class="inquiries-header-label">PRODUCTS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter" data-col="products"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="message" class="inquiries-header-cell"><span class="inquiries-header-label">MESSAGE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter" data-col="message"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="referralcode" class="inquiries-header-cell"><span class="inquiries-header-label">REFERRAL CODE</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter" data-col="referralcode"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                        <th data-col="attachment" class="inquiries-header-cell"><span class="inquiries-header-label">ATTACHMENT</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter" data-col="attachment"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="assignby" class="inquiries-header-cell"><span class="inquiries-header-label">ASSIGN BY</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter" data-col="assignby"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th data-col="status" class="inquiries-header-cell"><span class="inquiries-header-label">STATUS</span><span class="inquiries-filter-wrap"><input type="text" class="inquiries-grid-filter" data-col="status"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                         <th class="inquiries-col-action inquiries-header-cell"><span class="inquiries-header-label">ACTION</span><button type="button" class="inquiries-filter-clear" id="dealerInquiryClearFilters">Clear filters</button></th>
@@ -176,8 +158,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var colsReset = document.getElementById('dealerInquiryColumnsReset');
     var storageKey = 'dealer_inquiries_visible_cols_v3';
     // Default columns follow admin incoming inquiries table, but message → assignby + status
-    var defaultCols = ['inquiryid','date','customer','postcode','city','businessnature','products','assignby','status'];
-    var allCols = ['inquiryid','date','customer','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','products','message','referralcode','assignby','status'];
+    var defaultCols = ['inquiryid','date','customer','postcode','city','businessnature','products','attachment','assignby','status'];
+    var allCols = ['inquiryid','date','customer','source','postcode','city','address','contactno','businessnature','users','existingsw','demomode','products','message','referralcode','attachment','assignby','status'];
 
     var statusCheckbox = colsMenu ? colsMenu.querySelector('input[type="checkbox"][data-col="status"]') : null;
     if (statusCheckbox) {

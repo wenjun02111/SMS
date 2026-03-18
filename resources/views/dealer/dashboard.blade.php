@@ -5,25 +5,26 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <style>
-        /* Force progress cell to stay on one line and align all progress bars */
+        /* Keep the status text above the progress bar and align rows consistently */
         .dealer-progress-cell {
             display: flex !important;
-            flex-direction: row !important;
+            flex-direction: column !important;
             flex-wrap: nowrap !important;
-            align-items: center !important;
-            gap: 10px !important;
+            align-items: flex-start !important;
+            justify-content: center !important;
+            gap: 6px !important;
             width: 100%;
             min-width: 0 !important; /* Prevents column blowout */
         }
         
         .dealer-progress-text {
-            flex: 0 0 85px !important; /* Fixed width stops the progress bars from shifting left/right */
-            width: 85px !important;
+            flex: 0 0 auto !important;
+            width: 100% !important;
             white-space: nowrap !important;
             overflow: hidden !important;
             text-overflow: ellipsis !important;
             text-align: left !important;
-            line-height: 1 !important;
+            line-height: 1.2 !important;
             margin: 0 !important;
         }
 
@@ -33,7 +34,8 @@
             flex-wrap: nowrap !important;
             align-items: center !important;
             gap: 4px !important;
-            flex: 1 1 auto !important;
+            width: 100% !important;
+            flex: 0 0 auto !important;
             min-width: 0 !important;
         }
 
