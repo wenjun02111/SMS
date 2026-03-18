@@ -815,6 +815,38 @@ document.addEventListener('DOMContentLoaded', function() {
         card.setAttribute('data-rewarded-count', nextCard.getAttribute('data-rewarded-count') || '0');
     }
 
+    function showRewardsToast(message) {
+        var id = 'rewards-action-toast';
+        var el = document.getElementById(id);
+        if (!el) {
+            el = document.createElement('div');
+            el.id = id;
+            el.className = 'inquiries-mark-failed-blocked-toast inquiries-mark-failed-blocked-toast-hidden';
+            el.setAttribute('role', 'status');
+            document.body.appendChild(el);
+        }
+        el.textContent = message || 'Done.';
+        el.classList.remove('inquiries-mark-failed-blocked-toast-hidden');
+        clearTimeout(el._hideTimer);
+        el._hideTimer = setTimeout(function() {
+            el.classList.add('inquiries-mark-failed-blocked-toast-hidden');
+        }, 4000);
+    }
+
+    function shouldAutoSyncRewards(message) {
+        var msg = (message || '').toLowerCase();
+        return msg.indexOf('please sync and try again') !== -1 || msg.indexOf('already rewarded') !== -1 || msg.indexOf('already paid') !== -1 || msg.indexOf('already completed') !== -1;
+    }
+
+    function syncRewardsForButton(btn) {
+        var panel = btn && btn.closest ? btn.closest('.inquiries-tab-panel') : null;
+        var syncBtn = panel ? panel.querySelector('.inquiries-sync-btn') : null;
+        if (!syncBtn) {
+            syncBtn = document.querySelector('.inquiries-sync-btn[data-sync-type="completed"]') || document.querySelector('.inquiries-sync-btn');
+        }
+        triggerRewardsSync(syncBtn, true);
+    }
+
     var REWARDS_AUTO_SYNC_MS = 15 * 60 * 1000;
 
     function triggerRewardsSync(btn, silent) {
@@ -851,7 +883,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 activeTab.click();
             }
         }).catch(function() {
-            if (!silent) alert('Failed to sync data.');
+            if (!silent) showRewardsToast('Failed to sync data.');
         }).finally(function() {
             btn.classList.remove('is-syncing');
             if (icon) icon.classList.remove('spinning');
@@ -911,7 +943,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.addEventListener('click', function() {
                 if (!confirm('Remind the assigned dealer to pay out the referral fee?')) return;
                 var token = (document.querySelector('meta[name="csrf-token"]') || {}).content;
-                if (!token) { alert('Session expired. Please refresh the page.'); return; }
+                if (!token) { showRewardsToast('Session expired. Please refresh the page.'); return; }
                 btn.disabled = true;
                 fetch('{{ route('admin.rewards.send-email') }}', {
                     method: 'POST',
@@ -925,17 +957,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 }).then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
                 .then(function(result) {
                     if (result.ok && result.data.success) {
-                        alert(result.data.message || 'Email sent.');
+                        showRewardsToast(result.data.message || 'Email sent.');
                         var current = emailCounts[leadId] || 0;
                         var next = current + 1;
                         emailCounts[leadId] = next;
                         saveEmailCounts(emailCounts);
                         applyRewardEmailIcon(btn, leadId);
                     } else {
-                        alert(result.data.message || 'Failed to send email.');
+                        var message = result.data.message || 'Failed to send email.';
+                        showRewardsToast(message);
+                        if (shouldAutoSyncRewards(message)) {
+                            syncRewardsForButton(btn);
+                        }
                     }
                 }).catch(function() {
-                    alert('Failed to send email.');
+                    showRewardsToast('Failed to send email.');
                 }).finally(function() {
                     btn.disabled = false;
                 });

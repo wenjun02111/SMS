@@ -122,6 +122,55 @@ class AdminController extends Controller
         return ['assignedToMap' => $assignedToMap, 'actorMap' => $actorMap];
     }
 
+    private function getLeadCurrentActionState(int $leadId): ?array
+    {
+        $lead = DB::selectOne(
+            'SELECT "LEADID","ASSIGNED_TO" FROM "LEAD" WHERE "LEADID" = ?',
+            [$leadId]
+        );
+
+        if (!$lead) {
+            return null;
+        }
+
+        $latest = DB::selectOne(
+            'SELECT FIRST 1 "STATUS"
+             FROM "LEAD_ACT"
+             WHERE "LEADID" = ?
+             ORDER BY "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
+            [$leadId]
+        );
+
+        return [
+            'assigned_to' => trim((string) ($lead->ASSIGNED_TO ?? '')),
+            'status' => strtoupper(trim((string) ($latest->STATUS ?? ''))),
+        ];
+    }
+
+    private function incomingInquiryStaleMessage(int $leadId): ?string
+    {
+        $state = $this->getLeadCurrentActionState($leadId);
+        if ($state === null) {
+            return 'Lead not found.';
+        }
+
+        $assignedTo = trim((string) ($state['assigned_to'] ?? ''));
+        if ($assignedTo !== '') {
+            $maps = $this->userDisplayMaps([$assignedTo]);
+            $assignedToMap = $maps['assignedToMap'] ?? [];
+            $assignedLabel = $assignedToMap[$assignedTo] ?? $assignedTo;
+
+            return 'This inquiry is already assigned to ' . $assignedLabel . '. Please sync and try again.';
+        }
+
+        $status = strtoupper(trim((string) ($state['status'] ?? '')));
+        if ($status !== '' && !in_array($status, ['OPEN', 'CREATED'], true)) {
+            return 'This inquiry is already ' . $status . '. Please sync and try again.';
+        }
+
+        return null;
+    }
+
     private function dashboardData(): array
     {
         // Total leads: all rows in LEAD
@@ -1442,6 +1491,11 @@ class AdminController extends Controller
 
     public function editInquiry(int $leadId): View|RedirectResponse
     {
+        $staleMessage = $this->incomingInquiryStaleMessage($leadId);
+        if ($staleMessage !== null && $staleMessage !== 'Lead not found.') {
+            return redirect()->route('admin.inquiries')->with('error', $staleMessage);
+        }
+
         $row = DB::selectOne(
             'SELECT "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
                 "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
@@ -1666,6 +1720,11 @@ class AdminController extends Controller
             return redirect()->route('admin.inquiries')->with('error', 'Lead not found.');
         }
 
+        $staleMessage = $this->incomingInquiryStaleMessage($leadId);
+        if ($staleMessage !== null) {
+            return redirect()->route('admin.inquiries')->with('error', $staleMessage);
+        }
+
         // Same as create: if company name exists on another lead, show confirmation (exclude current lead)
         if (!$request->boolean('duplicate_ok')) {
             try {
@@ -1764,6 +1823,12 @@ class AdminController extends Controller
         );
         if (!$row) {
             return response()->json(['success' => false, 'message' => 'Lead not found.'], 404);
+        }
+
+        $staleMessage = $this->incomingInquiryStaleMessage($leadId);
+        if ($staleMessage !== null) {
+            $code = $staleMessage === 'Lead not found.' ? 404 : 409;
+            return response()->json(['success' => false, 'message' => $staleMessage], $code);
         }
 
         try {

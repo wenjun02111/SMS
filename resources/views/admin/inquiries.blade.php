@@ -1425,6 +1425,29 @@ document.addEventListener('DOMContentLoaded', function() {
         scrollWrap.scrollTop = 0;
     }
 
+    function showInquiriesActionToast(message) {
+        var id = 'inquiries-action-toast';
+        var el = document.getElementById(id);
+        if (!el) {
+            el = document.createElement('div');
+            el.id = id;
+            el.className = 'inquiries-mark-failed-blocked-toast inquiries-mark-failed-blocked-toast-hidden';
+            el.setAttribute('role', 'status');
+            document.body.appendChild(el);
+        }
+        el.textContent = message || 'Done.';
+        el.classList.remove('inquiries-mark-failed-blocked-toast-hidden');
+        clearTimeout(el._hideTimer);
+        el._hideTimer = setTimeout(function() {
+            el.classList.add('inquiries-mark-failed-blocked-toast-hidden');
+        }, 4000);
+    }
+
+    function shouldAutoSyncInquiries(message) {
+        var msg = (message || '').toLowerCase();
+        return msg.indexOf('please sync and try again') !== -1 || msg.indexOf('already assigned') !== -1 || msg.indexOf('already rewarded') !== -1 || msg.indexOf('already completed') !== -1 || msg.indexOf('already failed') !== -1;
+    }
+
     document.querySelectorAll('.inquiries-tab').forEach(function(tab) {
         tab.addEventListener('click', function() {
             var t = this.getAttribute('data-tab');
@@ -1566,9 +1589,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (row) row.remove();
                     showDeleteUndoToast(leadId);
                 } else {
-                    res.json().catch(function() { return {}; }).then(function(d) { alert(d.message || 'Could not delete inquiry.'); });
+                    res.json().catch(function() { return {}; }).then(function(d) {
+                        var message = d.message || 'Could not delete inquiry.';
+                        showInquiriesActionToast(message);
+                        if (shouldAutoSyncInquiries(message)) {
+                            var syncBtn = document.querySelector('.inquiries-sync-btn[data-sync-type="incoming"]') || document.querySelector('.inquiries-sync-btn');
+                            triggerInquiriesSync(syncBtn);
+                        }
+                    });
                 }
-            }).catch(function() { alert('Could not delete inquiry.'); });
+            }).catch(function() { showInquiriesActionToast('Could not delete inquiry.'); });
         });
     })();
 
