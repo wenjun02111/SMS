@@ -1,5 +1,5 @@
 @if (count($batchEligibleUsers) === 0)
-    <div class="maintain-users-batch-empty">No users are waiting for a first login email.</div>
+    <div class="maintain-users-batch-empty">No users are waiting for a set password link.</div>
 @else
     @foreach ($batchEligibleUsers as $u)
         @php

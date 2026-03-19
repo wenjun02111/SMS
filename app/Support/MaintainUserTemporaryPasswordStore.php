@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MaintainUserTemporaryPasswordStore
 {
@@ -32,6 +34,50 @@ class MaintainUserTemporaryPasswordStore
         }
 
         return $decrypted;
+    }
+
+    public function allSetupLinks(): array
+    {
+        $records = $this->read();
+        $links = [];
+        $dirty = false;
+
+        foreach ($records as $userId => $record) {
+            if (!is_array($record)) {
+                continue;
+            }
+
+            $expiresAt = trim((string) ($record['setup_token_expires_at'] ?? ''));
+            if ($expiresAt === '') {
+                continue;
+            }
+
+            if ($this->isExpired($expiresAt)) {
+                unset(
+                    $records[$userId]['setup_token_hash'],
+                    $records[$userId]['setup_token_created_at'],
+                    $records[$userId]['setup_token_emailed_at'],
+                    $records[$userId]['setup_token_expires_at']
+                );
+                if (empty($records[$userId])) {
+                    unset($records[$userId]);
+                }
+                $dirty = true;
+                continue;
+            }
+
+            $links[(string) $userId] = [
+                'created_at' => isset($record['setup_token_created_at']) ? (string) $record['setup_token_created_at'] : null,
+                'emailed_at' => isset($record['setup_token_emailed_at']) ? (string) $record['setup_token_emailed_at'] : null,
+                'expires_at' => $expiresAt,
+            ];
+        }
+
+        if ($dirty) {
+            $this->write($records);
+        }
+
+        return $links;
     }
 
     public function getPassword(string $userId): ?string
@@ -63,9 +109,36 @@ class MaintainUserTemporaryPasswordStore
             'password' => Crypt::encryptString($password),
             'created_at' => $existing['created_at'] ?? now()->toIso8601String(),
             'emailed_at' => $existing['emailed_at'] ?? null,
+            'setup_token_hash' => $existing['setup_token_hash'] ?? null,
+            'setup_token_created_at' => $existing['setup_token_created_at'] ?? null,
+            'setup_token_emailed_at' => $existing['setup_token_emailed_at'] ?? null,
+            'setup_token_expires_at' => $existing['setup_token_expires_at'] ?? null,
         ];
 
         $this->write($records);
+    }
+
+    public function issueSetupToken(string $userId, int $ttlMinutes = 1440): string
+    {
+        $userId = trim($userId);
+        if ($userId === '') {
+            return '';
+        }
+
+        $records = $this->read();
+        $existing = isset($records[$userId]) && is_array($records[$userId]) ? $records[$userId] : [];
+        $token = Str::random(64);
+
+        $records[$userId] = array_merge($existing, [
+            'setup_token_hash' => hash('sha256', $token),
+            'setup_token_created_at' => now()->toIso8601String(),
+            'setup_token_emailed_at' => null,
+            'setup_token_expires_at' => now()->addMinutes(max(5, $ttlMinutes))->toIso8601String(),
+        ]);
+
+        $this->write($records);
+
+        return $token;
     }
 
     public function markEmailed(string $userId): void
@@ -81,6 +154,122 @@ class MaintainUserTemporaryPasswordStore
         }
 
         $records[$userId]['emailed_at'] = now()->toIso8601String();
+        $this->write($records);
+    }
+
+    public function markSetupTokenEmailed(string $userId): void
+    {
+        $userId = trim($userId);
+        if ($userId === '') {
+            return;
+        }
+
+        $records = $this->read();
+        if (!isset($records[$userId]) || !is_array($records[$userId])) {
+            return;
+        }
+
+        $records[$userId]['setup_token_emailed_at'] = now()->toIso8601String();
+        $this->write($records);
+    }
+
+    public function resolveSetupToken(string $token): ?string
+    {
+        $token = trim($token);
+        if ($token === '') {
+            return null;
+        }
+
+        $records = $this->read();
+        $tokenHash = hash('sha256', $token);
+        $dirty = false;
+
+        foreach ($records as $userId => $record) {
+            if (!is_array($record)) {
+                continue;
+            }
+
+            $expiresAt = trim((string) ($record['setup_token_expires_at'] ?? ''));
+            if ($expiresAt === '' || $this->isExpired($expiresAt)) {
+                if ($expiresAt !== '') {
+                    unset(
+                        $records[$userId]['setup_token_hash'],
+                        $records[$userId]['setup_token_created_at'],
+                        $records[$userId]['setup_token_emailed_at'],
+                        $records[$userId]['setup_token_expires_at']
+                    );
+                    if (empty($records[$userId])) {
+                        unset($records[$userId]);
+                    }
+                    $dirty = true;
+                }
+                continue;
+            }
+
+            $storedHash = trim((string) ($record['setup_token_hash'] ?? ''));
+            if ($storedHash !== '' && hash_equals($storedHash, $tokenHash)) {
+                if ($dirty) {
+                    $this->write($records);
+                }
+                return (string) $userId;
+            }
+        }
+
+        if ($dirty) {
+            $this->write($records);
+        }
+
+        return null;
+    }
+
+    public function forgetPassword(string $userId): void
+    {
+        $userId = trim($userId);
+        if ($userId === '') {
+            return;
+        }
+
+        $records = $this->read();
+        if (!isset($records[$userId]) || !is_array($records[$userId])) {
+            return;
+        }
+
+        unset(
+            $records[$userId]['password'],
+            $records[$userId]['created_at'],
+            $records[$userId]['emailed_at']
+        );
+
+        if (empty($records[$userId])) {
+            unset($records[$userId]);
+        }
+
+        $this->write($records);
+    }
+
+    public function forgetSetupToken(string $userId): void
+    {
+        $userId = trim($userId);
+        if ($userId === '') {
+            return;
+        }
+
+        $records = $this->read();
+        if (!isset($records[$userId]) || !is_array($records[$userId])) {
+            return;
+        }
+
+        unset(
+            $records[$userId]['setup_token_hash'],
+            $records[$userId]['setup_token_created_at'],
+            $records[$userId]['setup_token_emailed_at'],
+            $records[$userId]['setup_token_expires_at']
+        );
+
+        if (empty($records[$userId])) {
+            unset($records[$userId]);
+        }
+
         $this->write($records);
     }
 
@@ -131,6 +320,19 @@ class MaintainUserTemporaryPasswordStore
             return Crypt::decryptString($value);
         } catch (\Throwable) {
             return null;
+        }
+    }
+
+    private function isExpired(string $value): bool
+    {
+        if (trim($value) === '') {
+            return true;
+        }
+
+        try {
+            return Carbon::parse($value)->isPast();
+        } catch (\Throwable) {
+            return true;
         }
     }
 }

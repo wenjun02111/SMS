@@ -109,14 +109,14 @@
                         Email
                         <div class="login-input-wrapper">
                             <span class="login-input-icon"><i class="bi bi-person-fill" aria-hidden="true"></i></span>
-                            <input type="email" id="loginEmail" name="email" placeholder="Enter your email" value="{{ old('email') }}" autocomplete="email" required autofocus>
+                            <input type="email" id="loginEmail" name="email" placeholder="Enter your email" value="{{ old('email') }}" autocomplete="email" required {{ session('focus_password') ? '' : 'autofocus' }}>
                         </div>
                     </label>
                     <label class="login-label">
                         Password
                         <div class="login-input-wrapper">
                             <span class="login-input-icon"><i class="bi bi-lock-fill" aria-hidden="true"></i></span>
-                            <input type="password" id="loginPassword" name="password" placeholder="********" required>
+                            <input type="password" id="loginPassword" name="password" placeholder="********" required {{ session('focus_password') ? 'autofocus' : '' }}>
                             <button type="button" class="login-password-toggle" data-password-toggle data-target="loginPassword" aria-label="Show password" aria-pressed="false">
                                 <i class="bi bi-eye" aria-hidden="true"></i>
                             </button>
@@ -230,6 +230,15 @@
     var loginResetPasswordForm = document.getElementById('loginResetPasswordForm');
     var loginResetPasswordEmail = document.getElementById('loginResetPasswordEmail');
     var loginEmail = document.getElementById('loginEmail');
+    var loginPassword = document.getElementById('loginPassword');
+
+    @if (session('focus_password'))
+    if (loginPassword) {
+        window.setTimeout(function () {
+            loginPassword.focus();
+        }, 0);
+    }
+    @endif
 
     if (resetPasswordRequestButton && loginResetPasswordForm && loginResetPasswordEmail) {
         resetPasswordRequestButton.addEventListener('click', function () {

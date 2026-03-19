@@ -89,7 +89,8 @@ class AuthController extends Controller
             $showResetPassword = $this->recordLoginFailure($request, $emailKey);
             return back()->withInput($request->only('email'))
                 ->with('error', 'Invalid email or password.')
-                ->with('show_reset_password', $showResetPassword);
+                ->with('show_reset_password', $showResetPassword)
+                ->with('focus_password', true);
         }
         $this->clearLoginFailure($request, $emailKey);
 
@@ -155,6 +156,75 @@ class AuthController extends Controller
         return back()
             ->withInput(['email' => $email])
             ->with('success', 'If your email is registered in our system, we will send you the link.');
+    }
+
+    public function showSetPasswordForm(Request $request): View|RedirectResponse
+    {
+        $token = trim((string) $request->query('token', ''));
+        $userId = $this->tempPasswordStore()->resolveSetupToken($token);
+        if ($token === '' || $userId === null) {
+            return $this->invalidSetPasswordLinkView('Invalid or expired set password link.');
+        }
+
+        $row = DB::selectOne(
+            'SELECT "USERID", "EMAIL", "LASTLOGIN" FROM "USERS" WHERE "USERID" = ?',
+            [$userId]
+        );
+        if (!$row || $row->LASTLOGIN !== null) {
+            $this->tempPasswordStore()->forgetSetupToken($userId);
+            return $this->invalidSetPasswordLinkView('This set password link has already been used or expired.');
+        }
+
+        return view('auth.reset-password', [
+            'email' => (string) ($row->EMAIL ?? ''),
+            'formAction' => $request->fullUrl(),
+            'pageTitle' => 'Create Password - SQL Sales Management System',
+            'subtitle' => 'Create Password',
+            'helperText' => 'Create a password for',
+            'submitLabel' => 'Create password',
+        ]);
+    }
+
+    public function setPassword(Request $request): View|RedirectResponse
+    {
+        $validated = $request->validate([
+            'password' => 'required|string|min:6|max:255|confirmed',
+        ]);
+
+        $token = trim((string) $request->query('token', ''));
+        $userId = $this->tempPasswordStore()->resolveSetupToken($token);
+        if ($token === '' || $userId === null) {
+            return $this->invalidSetPasswordLinkView('Invalid or expired set password link.');
+        }
+
+        $row = DB::selectOne(
+            'SELECT "USERID", "EMAIL", "LASTLOGIN" FROM "USERS" WHERE "USERID" = ?',
+            [$userId]
+        );
+        if (!$row || $row->LASTLOGIN !== null) {
+            $this->tempPasswordStore()->forgetSetupToken($userId);
+            return $this->invalidSetPasswordLinkView('This set password link has already been used or expired.');
+        }
+
+        $updated = DB::update(
+            'UPDATE "USERS" SET "PASSWORDHASH" = ?, "LASTLOGIN" = CURRENT_TIMESTAMP WHERE "USERID" = ? AND "LASTLOGIN" IS NULL',
+            [Hash::make((string) $validated['password']), $userId]
+        );
+        if ($updated !== 1) {
+            $this->tempPasswordStore()->forgetSetupToken($userId);
+            return $this->invalidSetPasswordLinkView('This set password link has already been used or expired.');
+        }
+
+        $this->tempPasswordStore()->forget($userId);
+
+        return view('auth.reset-password-success', [
+            'message' => 'Password created successfully. Please sign in with your new password.',
+            'pageTitle' => 'Password Created - SQL Sales Management System',
+            'subtitle' => 'Create Password',
+            'countdownEnabled' => false,
+            'primaryActionLabel' => 'Go to login',
+            'primaryActionUrl' => route('login'),
+        ]);
     }
 
     public function logout(Request $request): RedirectResponse
@@ -314,6 +384,16 @@ class AuthController extends Controller
         ]);
     }
 
+    private function invalidSetPasswordLinkView(string $message): View
+    {
+        return view('auth.reset-password-invalid', [
+            'message' => $message,
+            'pageTitle' => 'Set Password Link Invalid - SQL Sales Management System',
+            'subtitle' => 'Create Password',
+            'helperText' => 'Please request a new set password link.',
+        ]);
+    }
+
     private function invalidResetLinkView(string $message): View
     {
         return view('auth.reset-password-invalid', ['message' => $message]);
@@ -417,3 +497,5 @@ class AuthController extends Controller
         ]);
     }
 }
+
+

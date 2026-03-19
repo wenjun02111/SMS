@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Mail\InquiryAssignedToDealer;
 use App\Mail\PayoutCompletedNotification;
 use App\Mail\UserPasswordResetLink;
-use App\Mail\UserTemporaryPasswordMail;
 use App\Support\MaintainUserTemporaryPasswordStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -16,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Carbon\Carbon;
 
@@ -608,28 +608,9 @@ class AdminController extends Controller
             FROM "LEAD"
             ORDER BY "LEADID" DESC'
         );
-        $unassigned = [];
-        $assigned = [];
         foreach ($rows as $r) {
-            $assignedTo = trim((string) ($r->ASSIGNED_TO ?? ''));
-            if ($assignedTo === '') {
-                $unassigned[] = $r;
-            } else {
-                $assigned[] = $r;
-            }
+            $r->LEAD_CURRENTSTATUS = trim((string) ($r->CURRENTSTATUS ?? ''));
         }
-
-        // Default order: incoming = date oldest first; assigned = assign date latest first
-        usort($unassigned, function ($a, $b) {
-            $ta = strtotime($a->CREATEDAT ?? '0');
-            $tb = strtotime($b->CREATEDAT ?? '0');
-            return $ta <=> $tb;
-        });
-        usort($assigned, function ($a, $b) {
-            $ta = strtotime($a->LASTMODIFIED ?? $a->CREATEDAT ?? '0');
-            $tb = strtotime($b->LASTMODIFIED ?? $b->CREATEDAT ?? '0');
-            return $tb <=> $ta;
-        });
 
         // Override CURRENTSTATUS from latest LEAD_ACT status per LEADID
         try {
@@ -676,6 +657,31 @@ class AdminController extends Controller
         } catch (\Throwable $e) {
             // If LEAD_ACT lookup fails, keep CURRENTSTATUS from LEAD
         }
+
+        $unassigned = [];
+        $assigned = [];
+        foreach ($rows as $r) {
+            $assignedTo = trim((string) ($r->ASSIGNED_TO ?? ''));
+            $leadStatus = strtoupper(trim((string) ($r->LEAD_CURRENTSTATUS ?? $r->CURRENTSTATUS ?? '')));
+            if ($assignedTo === '' && $leadStatus === 'OPEN') {
+                $r->CURRENTSTATUS = $r->LEAD_CURRENTSTATUS ?? $r->CURRENTSTATUS;
+                $unassigned[] = $r;
+            } elseif ($assignedTo !== '') {
+                $assigned[] = $r;
+            }
+        }
+
+        // Default order: incoming = date oldest first; assigned = assign date latest first
+        usort($unassigned, function ($a, $b) {
+            $ta = strtotime($a->CREATEDAT ?? '0');
+            $tb = strtotime($b->CREATEDAT ?? '0');
+            return $ta <=> $tb;
+        });
+        usort($assigned, function ($a, $b) {
+            $ta = strtotime($a->LASTMODIFIED ?? $a->CREATEDAT ?? '0');
+            $tb = strtotime($b->LASTMODIFIED ?? $b->CREATEDAT ?? '0');
+            return $tb <=> $ta;
+        });
 
         // Attach latest completion date, payouts date, dealt products, and latest attachment for assigned inquiries.
         try {
@@ -3738,17 +3744,23 @@ class AdminController extends Controller
         $sql .= ' ORDER BY "USERID"';
 
         $rows = DB::select($sql, $params);
-        $tempPasswords = $this->tempPasswordStore()->allDecrypted();
+        $setupLinks = $this->tempPasswordStore()->allSetupLinks();
 
-        $users = array_map(function ($r) use ($tempPasswords) {
+        $users = array_map(function ($r) use ($setupLinks) {
             $userId = (string) ($r->USERID ?? '');
             $hasLoggedIn = $r->LASTLOGIN !== null;
-            $temporaryPassword = !$hasLoggedIn && isset($tempPasswords[$userId]['password'])
-                ? (string) $tempPasswords[$userId]['password']
-                : '';
-            $tempPasswordEmailedAt = !$hasLoggedIn && isset($tempPasswords[$userId]['emailed_at'])
-                ? (string) ($tempPasswords[$userId]['emailed_at'] ?? '')
-                : '';
+            $setupLink = !$hasLoggedIn && isset($setupLinks[$userId]) ? $setupLinks[$userId] : [];
+            $setupLinkEmailedAt = (string) ($setupLink['emailed_at'] ?? '');
+            $setupLinkExpiresAt = (string) ($setupLink['expires_at'] ?? '');
+            $setupLinkPending = $setupLinkExpiresAt !== '';
+            $setupLinkExpired = false;
+            if ($setupLinkPending) {
+                try {
+                    $setupLinkExpired = Carbon::parse($setupLinkExpiresAt)->isPast();
+                } catch (\Throwable) {
+                    $setupLinkExpired = true;
+                }
+            }
 
             return [
                 'USERID' => $userId,
@@ -3762,9 +3774,11 @@ class AdminController extends Controller
                 'LASTLOGIN' => $r->LASTLOGIN ?? null,
                 'HASPASSWORD' => trim((string) ($r->PASSWORDHASH ?? '')) !== '',
                 'HAS_LOGGED_IN' => $hasLoggedIn,
-                'TEMP_PASSWORD' => $temporaryPassword,
-                'TEMP_PASSWORD_EMAILED' => $tempPasswordEmailedAt !== '',
-                'TEMP_PASSWORD_EMAILED_AT' => $tempPasswordEmailedAt !== '' ? $tempPasswordEmailedAt : null,
+                'PASSWORD_SETUP_LINK_PENDING' => $setupLinkPending,
+                'PASSWORD_SETUP_LINK_SENT' => $setupLinkEmailedAt !== '',
+                'PASSWORD_SETUP_LINK_EXPIRED' => $setupLinkExpired,
+                'PASSWORD_SETUP_LINK_EMAILED_AT' => $setupLinkEmailedAt !== '' ? $setupLinkEmailedAt : null,
+                'PASSWORD_SETUP_LINK_EXPIRES_AT' => $setupLinkExpiresAt !== '' ? $setupLinkExpiresAt : null,
             ];
         }, $rows);
 
@@ -3788,7 +3802,6 @@ class AdminController extends Controller
 
         $validated = $request->validate([
             'EMAIL' => 'required|email|max:50',
-            'PASSWORD' => 'nullable|string|min:6|max:255',
             'SYSTEMROLE' => 'required|string|in:ADMIN,MANAGER,DEALER',
             'ALIAS' => 'nullable|string|max:50',
             'COMPANY' => 'nullable|string|max:40',
@@ -3801,13 +3814,8 @@ class AdminController extends Controller
         ]);
 
         $email = trim((string) $validated['EMAIL']);
-        $password = trim((string) ($validated['PASSWORD'] ?? ''));
-        if ($password === '') {
-            $password = $this->generateTemporaryPassword();
-        }
         $roleInput = strtoupper(trim((string) $validated['SYSTEMROLE']));
         $estreamCompany = 'E Stream Sdn Bhd';
-        // INTEG_10: SystemRole IN ('Dealer', 'Manager', 'Admin') — exact casing
         $systemRole = match ($roleInput) {
             'ADMIN' => 'Admin',
             'MANAGER' => 'Manager',
@@ -3833,7 +3841,6 @@ class AdminController extends Controller
             $city = '';
         }
 
-        // Prevent duplicate email
         $existing = DB::selectOne('SELECT "USERID" FROM "USERS" WHERE UPPER(TRIM("EMAIL")) = UPPER(TRIM(?))', [$email]);
         if ($existing) {
             return back()
@@ -3845,7 +3852,7 @@ class AdminController extends Controller
             'INSERT INTO "USERS" ("EMAIL","PASSWORDHASH","SYSTEMROLE","ISACTIVE","ALIAS","COMPANY","POSTCODE","CITY") VALUES (?,?,?,?,?,?,?,?)',
             [
                 $email,
-                Hash::make($password),
+                Hash::make(Str::random(64)),
                 $systemRole,
                 $isActive ? 1 : 0,
                 $alias !== '' ? $alias : null,
@@ -3859,9 +3866,6 @@ class AdminController extends Controller
             'SELECT "USERID" FROM "USERS" WHERE UPPER(TRIM("EMAIL")) = UPPER(TRIM(?))',
             [$email]
         );
-        if ($createdUser && trim((string) ($createdUser->USERID ?? '')) !== '') {
-            $this->tempPasswordStore()->put((string) $createdUser->USERID, $password);
-        }
 
         $createAction = trim((string) $request->input('CREATE_ACTION', 'create'));
         if ($createAction === 'create_email' && $createdUser && trim((string) ($createdUser->USERID ?? '')) !== '') {
@@ -3871,18 +3875,18 @@ class AdminController extends Controller
                     [(string) $createdUser->USERID]
                 );
 
-                if (!$newUser || !$this->sendMaintainUserTemporaryPassword($newUser)) {
-                    return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send temporary password email.');
+                if (!$newUser || !$this->sendMaintainUserSetPasswordLink($newUser)) {
+                    return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send set password link email.');
                 }
 
-                return redirect()->route('admin.maintain-users')->with('success', 'User created and temporary password emailed.');
+                return redirect()->route('admin.maintain-users')->with('success', 'User created and set password link emailed.');
             } catch (\Throwable $e) {
                 report($e);
-                return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send temporary password email.');
+                return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send set password link email.');
             }
         }
 
-        return redirect()->route('admin.maintain-users')->with('success', 'User created successfully. Temporary password generated.');
+        return redirect()->route('admin.maintain-users')->with('success', 'User created successfully. Send a set password link when ready.');
     }
 
     public function maintainUsersUpdate(Request $request, string $userid): RedirectResponse
@@ -4041,17 +4045,17 @@ class AdminController extends Controller
         }
 
         if ($user->LASTLOGIN !== null) {
-            return redirect()->route('admin.maintain-users')->with('error', 'Temporary password can only be sent to users who have never logged in.');
+            return redirect()->route('admin.maintain-users')->with('error', 'Set password links can only be sent to users who have never logged in.');
         }
 
         try {
-            $this->sendMaintainUserTemporaryPassword($user);
+            $this->sendMaintainUserSetPasswordLink($user);
         } catch (\Throwable $e) {
             report($e);
-            return redirect()->route('admin.maintain-users')->with('error', 'Failed to send temporary password email.');
+            return redirect()->route('admin.maintain-users')->with('error', 'Failed to send set password link email.');
         }
 
-        return redirect()->route('admin.maintain-users')->with('success', 'Temporary password email sent.');
+        return redirect()->route('admin.maintain-users')->with('success', 'Set password link emailed.');
     }
 
     public function maintainUsersSendTempPasswords(Request $request): RedirectResponse
@@ -4085,7 +4089,7 @@ class AdminController extends Controller
 
         foreach ($users as $user) {
             try {
-                if ($this->sendMaintainUserTemporaryPassword($user)) {
+                if ($this->sendMaintainUserSetPasswordLink($user)) {
                     $sent++;
                 }
             } catch (\Throwable $e) {
@@ -4094,10 +4098,10 @@ class AdminController extends Controller
         }
 
         if ($sent === 0) {
-            return redirect()->route('admin.maintain-users')->with('error', 'No eligible users found for temporary password email.');
+            return redirect()->route('admin.maintain-users')->with('error', 'No eligible users found for set password link email.');
         }
 
-        return redirect()->route('admin.maintain-users')->with('success', 'Temporary password email sent to ' . $sent . ' user(s).');
+        return redirect()->route('admin.maintain-users')->with('success', 'Set password link emailed to ' . $sent . ' user(s).');
     }
 
     private function sendMaintainUserPasswordResetLink(object $user): void
@@ -4146,7 +4150,7 @@ class AdminController extends Controller
         ));
     }
 
-    private function sendMaintainUserTemporaryPassword(object $user): bool
+    private function sendMaintainUserSetPasswordLink(object $user): bool
     {
         $userId = trim((string) ($user->USERID ?? ''));
         $email = trim((string) ($user->EMAIL ?? ''));
@@ -4155,8 +4159,14 @@ class AdminController extends Controller
             return false;
         }
 
-        $temporaryPassword = $this->ensureMaintainUserTemporaryPassword($user);
-        if ($temporaryPassword === '') {
+        DB::update(
+            'UPDATE "USERS" SET "PASSWORDHASH" = ? WHERE "USERID" = ? AND "LASTLOGIN" IS NULL',
+            [Hash::make(Str::random(64)), $userId]
+        );
+        $this->tempPasswordStore()->forgetPassword($userId);
+
+        $token = $this->tempPasswordStore()->issueSetupToken($userId, 1440);
+        if ($token === '') {
             return false;
         }
 
@@ -4167,14 +4177,20 @@ class AdminController extends Controller
             $systemName = 'SQL SMS';
         }
 
-        Mail::to($email)->send(new UserTemporaryPasswordMail(
+        Mail::to($email)->send(new UserPasswordResetLink(
             toEmail: $email,
             recipientName: $recipientName,
-            temporaryPassword: $temporaryPassword,
-            systemName: $systemName
+            resetUrl: route('password.set.form', ['token' => $token]),
+            systemName: $systemName,
+            subjectLine: 'Set up your SQL SMS password',
+            introLine: 'Your SQL SMS account is ready.',
+            instructionLine: 'Click the link below to create your password:',
+            buttonLabel: 'Set password',
+            expiryLine: 'This link will expire in 24 hours.',
+            ignoreLine: 'If you were not expecting this email, you can ignore it.'
         ));
 
-        $this->tempPasswordStore()->markEmailed($userId);
+        $this->tempPasswordStore()->markSetupTokenEmailed($userId);
 
         return true;
     }
@@ -4285,3 +4301,12 @@ class AdminController extends Controller
         }
     }
 }
+
+
+
+
+
+
+
+
+

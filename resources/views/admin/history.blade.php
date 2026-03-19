@@ -35,11 +35,44 @@
     #historyTable th[data-col="user"] .inquiries-filter-wrap {
         width: fit-content;
     }
+
+    .history-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .history-checkbox-filter {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid #d8d5ff;
+        border-radius: 12px;
+        background: #ffffff;
+        color: #5a5f7a;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
+    .history-checkbox-filter input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        accent-color: #6c5ce7;
+    }
 </style>
 @endpush
 @section('content')
 <section class="dashboard-panel dashboard-table-panel">
     <div class="dashboard-panel-body">
+        <div class="history-toolbar">
+            <label class="history-checkbox-filter" for="historySystemMarkedFailOnly">
+                <input type="checkbox" id="historySystemMarkedFailOnly">
+                <span>System Marked Fail</span>
+            </label>
+        </div>
         <div class="table-responsive">
             <table class="dashboard-table inquiries-table" id="historyTable">
                 <thead>
@@ -60,15 +93,21 @@
                             $inquiryId = isset($r->LEADID) ? ('#SQL-' . $r->LEADID) : '';
                             $fullDesc = (string) ($r->DESCRIPTION ?? '');
                             $fullDescTrim = trim($fullDesc);
+                            $subjectText = trim((string) ($r->SUBJECT ?? ''));
                             $descPreview = $fullDescTrim === '' ? '-' : (mb_strlen($fullDescTrim) > 50 ? (mb_substr($fullDescTrim, 0, 50) . '...') : $fullDescTrim);
                             $isLongDesc = $fullDescTrim !== '' && mb_strlen($fullDescTrim) > 50;
-                            $searchHaystack = strtolower(($r->LEAD_ACTID ?? '').' '.$inquiryId.' '.($r->USERID ?? '').' '.($r->SUBJECT ?? '').' '.$fullDescTrim.' '.($r->STATUS ?? '').' '.$dateStr);
+                            $isSystemMarkedFail = in_array(strtoupper($subjectText), ['STATUS CHANGED TO FAILED (AUTO AFTER 8 MONTHS)', 'LEAD FAILED'], true)
+                                || in_array(strtoupper($fullDescTrim), ['STATUS CHANGED TO FAILED (AUTO AFTER 8 MONTHS)', 'LEAD IS EXPIRED AFTER 8 MONTHS OF INQUIRY DATE'], true)
+                                || str_contains(strtolower($fullDescTrim), 'expired automatically because it has been open for more than 8 months');
+                            $searchHaystack = strtolower(($r->LEAD_ACTID ?? '').' '.$inquiryId.' '.($r->USERID ?? '').' '.$subjectText.' '.$fullDescTrim.' '.($r->STATUS ?? '').' '.$dateStr);
                         @endphp
-                        <tr class="history-row inquiry-row" data-search="{{ $searchHaystack }}">
+                        <tr class="history-row inquiry-row"
+                            data-search="{{ $searchHaystack }}"
+                            data-system-marked-fail="{{ $isSystemMarkedFail ? '1' : '0' }}">
                             <td data-col="id">{{ $r->LEAD_ACTID }}</td>
                             <td data-col="inquiryid">{{ $inquiryId }}</td>
                             <td data-col="user">{{ $r->USERID }}</td>
-                            <td data-col="subject">{{ $r->SUBJECT ?? '-' }}</td>
+                            <td data-col="subject">{{ $subjectText !== '' ? $subjectText : '-' }}</td>
                             <td data-col="description"
                                 class="inquiries-msg-cell {{ $isLongDesc ? 'inquiries-msg-clickable' : '' }}"
                                 @if($isLongDesc) data-full-message="{{ e($fullDescTrim) }}" @endif>
@@ -91,9 +130,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     var table = document.getElementById('historyTable');
     if (!table) return;
+    var systemMarkedFailOnly = document.getElementById('historySystemMarkedFailOnly');
     function applyTableFilter() {
         var searchInput = document.getElementById('historySearchInput');
         var q = (searchInput && searchInput.value) ? searchInput.value.toLowerCase().trim() : '';
+        var failOnly = !!(systemMarkedFailOnly && systemMarkedFailOnly.checked);
         var filters = {};
         table.querySelectorAll('thead .inquiries-grid-filter').forEach(function(inp) {
             var col = inp.getAttribute('data-col');
@@ -109,7 +150,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 var cellText = (cell && cell.textContent) ? cell.textContent.toLowerCase().trim() : '';
                 if (cellText.indexOf(filters[col]) === -1) { colMatch = false; break; }
             }
-            row.style.display = (searchMatch && colMatch) ? '' : 'none';
+            var systemFailMatch = !failOnly || (row.getAttribute('data-system-marked-fail') === '1');
+            row.style.display = (searchMatch && colMatch && systemFailMatch) ? '' : 'none';
         });
     }
     var searchInput = document.getElementById('historySearchInput');
@@ -117,6 +159,9 @@ document.addEventListener('DOMContentLoaded', function() {
     table.querySelectorAll('thead .inquiries-grid-filter').forEach(function(inp) {
         inp.addEventListener('input', applyTableFilter);
     });
+    if (systemMarkedFailOnly) {
+        systemMarkedFailOnly.addEventListener('change', applyTableFilter);
+    }
 
     (function initMessageModal() {
         if (document.getElementById('inquiryMessageModal')) return;

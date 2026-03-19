@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password - SQL Sales Management System</title>
+    <title>{{ $pageTitle ?? 'Reset Password - SQL Sales Management System' }}</title>
     <link rel="icon" type="image/png" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="shortcut icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="apple-touch-icon" href="{{ asset('sql-logo.png') }}?v=20260318">
@@ -21,19 +21,19 @@
                 <img src="{{ asset('sql-logo.png') }}" alt="SQL logo" class="login-logo-img">
                 <span class="login-logo-lms">SMS</span>
             </div>
-            <p class="login-subtitle">Reset Password</p>
+            <p class="login-subtitle">{{ $subtitle ?? 'Reset Password' }}</p>
 
             <form method="POST" action="{{ $formAction }}" class="login-form">
                 @csrf
                 <div class="login-passkey-note">
-                    Set a new password for <strong>{{ $email }}</strong>.
+                    {{ $helperText ?? 'Set a new password for' }} <strong>{{ $email }}</strong>.
                 </div>
 
                 <label class="login-label">
                     New password
                     <div class="login-input-wrapper">
                         <input type="password" id="resetPasswordInput" name="password" placeholder="Enter new password" required>
-                        <button type="button" class="login-password-toggle" data-password-toggle data-target="resetPasswordInput" aria-label="Show password" aria-pressed="false">
+                        <button type="button" class="login-password-toggle" data-password-toggle data-target="resetPasswordInput" aria-label="Show password" aria-pressed="false" tabindex="-1">
                             <i class="bi bi-eye" aria-hidden="true"></i>
                         </button>
                     </div>
@@ -43,7 +43,7 @@
                     Confirm password
                     <div class="login-input-wrapper">
                         <input type="password" id="resetPasswordConfirmInput" name="password_confirmation" placeholder="Confirm new password" required>
-                        <button type="button" class="login-password-toggle" data-password-toggle data-target="resetPasswordConfirmInput" aria-label="Show password" aria-pressed="false">
+                        <button type="button" class="login-password-toggle" data-password-toggle data-target="resetPasswordConfirmInput" aria-label="Show password" aria-pressed="false" tabindex="-1">
                             <i class="bi bi-eye" aria-hidden="true"></i>
                         </button>
                     </div>
@@ -55,7 +55,7 @@
                     <div class="login-message login-error">{{ session('error') }}</div>
                 @endif
 
-                <button type="submit" class="login-primary-btn">Update password</button>
+                <button type="submit" class="login-primary-btn">{{ $submitLabel ?? 'Update password' }}</button>
                 <a href="{{ route('login') }}" class="login-link-btn" style="text-align: center;">Back to login</a>
             </form>
         </div>

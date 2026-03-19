@@ -5,17 +5,25 @@
             ? 'maintain-users-pill-role-admin'
             : ($roleUpper === 'MANAGER' ? 'maintain-users-pill-role-manager' : 'maintain-users-pill-role-dealer');
         $lastLoginStr = $u['LASTLOGIN'] ? \Carbon\Carbon::parse($u['LASTLOGIN'])->format('Y-m-d H:i') : '';
+        $passwordStatus = ($u['HAS_LOGGED_IN'] ?? false)
+            ? 'protected'
+            : (($u['PASSWORD_SETUP_LINK_SENT'] ?? false)
+                ? (($u['PASSWORD_SETUP_LINK_EXPIRED'] ?? false) ? 'link expired' : 'link sent')
+                : 'ready to send');
         $searchHaystack = strtolower(
             ($u['USERID'] ?? '') . ' ' .
             ($u['EMAIL'] ?? '') . ' ' .
             ($u['ALIAS'] ?? '') . ' ' .
             ($u['COMPANY'] ?? '') . ' ' .
-            ($u['TEMP_PASSWORD'] ?? '') . ' ' .
+            $passwordStatus . ' ' .
             (($u['HAS_LOGGED_IN'] ?? false) ? 'logged in' : 'not logged in') . ' ' .
             $roleUpper . ' ' .
             ($u['ISACTIVE'] ? 'active' : 'inactive') . ' ' .
             $lastLoginStr
         );
+        $setupLinkTitle = ($u['PASSWORD_SETUP_LINK_SENT'] ?? false)
+            ? 'Set password link already emailed - send again'
+            : 'Send set password link';
     @endphp
     <tr class="maintain-users-row" data-search="{{ $searchHaystack }}"
         data-userid="{{ $u['USERID'] }}"
@@ -25,7 +33,7 @@
         data-company="{{ e($u['COMPANY'] ?? '') }}"
         data-postcode="{{ e($u['POSTCODE'] ?? '') }}"
         data-city="{{ e($u['CITY'] ?? '') }}"
-        data-password="{{ ($u['TEMP_PASSWORD'] ?? '') !== '' ? $u['TEMP_PASSWORD'] : (($u['HAS_LOGGED_IN'] ?? false) ? 'protected' : 'not generated') }}"
+        data-password="{{ $passwordStatus }}"
         data-active="{{ $u['ISACTIVE'] ? '1' : '0' }}">
         <td data-col="userid">{{ $u['USERID'] }}</td>
         <td data-col="email">{{ $u['EMAIL'] }}</td>
@@ -35,10 +43,12 @@
         <td data-col="alias">{{ $u['ALIAS'] ?: '-' }}</td>
         <td data-col="company">{{ $u['COMPANY'] ?: '-' }}</td>
         <td data-col="password">
-            @if (!($u['HAS_LOGGED_IN'] ?? false) && ($u['TEMP_PASSWORD'] ?? '') !== '')
-                <span class="maintain-users-temp-password">{{ $u['TEMP_PASSWORD'] }}</span>
+            @if (!($u['HAS_LOGGED_IN'] ?? false) && ($u['PASSWORD_SETUP_LINK_SENT'] ?? false) && !($u['PASSWORD_SETUP_LINK_EXPIRED'] ?? false))
+                <span class="maintain-users-pill-password sent">Link sent</span>
+            @elseif (!($u['HAS_LOGGED_IN'] ?? false) && ($u['PASSWORD_SETUP_LINK_EXPIRED'] ?? false))
+                <span class="maintain-users-pill-password expired">Link expired</span>
             @elseif (!($u['HAS_LOGGED_IN'] ?? false))
-                <span class="maintain-users-pill-password empty">Not generated</span>
+                <span class="maintain-users-pill-password empty">Ready to send</span>
             @else
                 <span class="maintain-users-pill-password set">Protected</span>
             @endif
@@ -63,8 +73,8 @@
                 @if (!($u['HAS_LOGGED_IN'] ?? false))
                     <form method="POST" action="{{ route('admin.maintain-users.send-temp-password', $u['USERID']) }}" class="maintain-users-inline-form">
                         @csrf
-                        <button type="submit" class="maintain-users-temp-send-btn" title="{{ ($u['TEMP_PASSWORD_EMAILED'] ?? false) ? 'Temporary password already emailed - send again' : 'Send temporary password' }}" aria-label="Send temporary password">
-                            <i class="bi {{ ($u['TEMP_PASSWORD_EMAILED'] ?? false) ? 'bi-envelope-fill' : 'bi-envelope' }}" aria-hidden="true"></i>
+                        <button type="submit" class="maintain-users-temp-send-btn" title="{{ $setupLinkTitle }}" aria-label="Send set password link">
+                            <i class="bi {{ ($u['PASSWORD_SETUP_LINK_SENT'] ?? false) ? 'bi-envelope-fill' : 'bi-envelope' }}" aria-hidden="true"></i>
                         </button>
                     </form>
                 @endif

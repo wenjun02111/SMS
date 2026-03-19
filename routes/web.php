@@ -12,6 +12,9 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::post('/password/forgot', [AuthController::class, 'requestPasswordResetFromLogin'])->name('password.forgot');
+
+Route::get('/password/set', [AuthController::class, 'showSetPasswordForm'])->name('password.set.form');
+Route::post('/password/set', [AuthController::class, 'setPassword'])->name('password.set.submit');
 Route::get('/password/force-change', [AuthController::class, 'showForceChangePasswordForm'])->name('password.force-change.form');
 Route::post('/password/force-change', [AuthController::class, 'forceChangePassword'])->name('password.force-change.submit');
 Route::get('/password/reset/{userid}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset.form');
@@ -80,3 +83,4 @@ Route::middleware(['auth.sms', 'dealer'])->prefix('dealer')->name('dealer.')->gr
     Route::get('/reports', [DealerController::class, 'reports'])->name('reports');
     Route::get('/history', [DealerController::class, 'history'])->name('history');
 });
+

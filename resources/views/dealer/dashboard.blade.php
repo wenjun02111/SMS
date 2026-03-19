@@ -153,7 +153,9 @@
                             <span>{{ $idx < 4 ? ($r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED . ' +3 days')) : 'N/A') : 'N/A' }}</span>
                         </div>
                     @empty
-                        <div class="dealer-table-empty">No inquiries assigned yet.</div>
+                        <div class="dealer-table-row dealer-table-row--empty">
+                            <div class="dealer-table-empty">No inquiries assigned yet.</div>
+                        </div>
                     @endforelse
                 </div>
                 <div class="dealer-table-footer">

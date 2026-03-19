@@ -16,13 +16,19 @@ class UserPasswordResetLink extends Mailable
         public string $toEmail,
         public string $recipientName,
         public string $resetUrl,
-        public string $systemName
+        public string $systemName,
+        public string $subjectLine = 'Reset your SQL SMS password',
+        public string $introLine = 'We received a request to reset your password.',
+        public string $instructionLine = 'Click the link below to set a new password:',
+        public string $buttonLabel = 'Reset password',
+        public string $expiryLine = 'This link will expire in 15 minutes.',
+        public string $ignoreLine = 'If you did not request this, please ignore this email.'
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Reset your SQL SMS password',
+            subject: $this->subjectLine,
             to: [$this->toEmail],
         );
     }

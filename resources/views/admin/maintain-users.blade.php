@@ -157,20 +157,15 @@
             color: #64748b;
             border-color: rgba(203, 213, 225, 0.72);
         }
-        .maintain-users-temp-password {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 108px;
-            padding: 4px 10px;
-            border-radius: 999px;
-            font-size: 0.74rem;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            font-family: Consolas, 'Courier New', monospace;
-            color: #4338ca;
-            background: rgba(79, 70, 229, 0.1);
-            border: 1px solid rgba(165, 180, 252, 0.65);
+        .maintain-users-pill-password.sent {
+            background: rgba(14, 165, 233, 0.1);
+            color: #0369a1;
+            border-color: rgba(125, 211, 252, 0.72);
+        }
+        .maintain-users-pill-password.expired {
+            background: rgba(249, 115, 22, 0.12);
+            color: #c2410c;
+            border-color: rgba(253, 186, 116, 0.72);
         }
         .maintain-users-empty {
             padding: 14px 16px;
@@ -575,7 +570,7 @@
                 <div class="maintain-users-batch-form">
                     <button type="button" class="maintain-users-batch-btn" id="maintainUsersBatchOpenBtn">
                         <i class="bi bi-envelope"></i>
-                        <span>Send Temp Passwords</span>
+                        <span>Send Set Password Links</span>
                     </button>
                 </div>
                 <button type="button" class="maintain-users-add-btn" id="maintainUsersAddBtn">
@@ -629,7 +624,7 @@
                         </span>
                     </th>
                     <th data-col="password" class="inquiries-header-cell">
-                        <span class="inquiries-header-label">PASSWORD</span>
+                        <span class="inquiries-header-label">SET PASSWORD</span>
                         <span class="inquiries-filter-wrap">
                             <input type="text" class="inquiries-grid-filter" data-col="password" placeholder="">
                             <i class="bi bi-search inquiries-filter-icon"></i>
@@ -667,7 +662,7 @@
 <div class="maintain-users-modal-backdrop" id="maintainUsersModal">
     <div class="maintain-users-modal">
         <h3 class="maintain-users-modal-title">Add User</h3>
-        <div class="maintain-users-modal-sub">Create a new admin, manager, or dealer account with a temporary password.</div>
+        <div class="maintain-users-modal-sub">Create a new admin, manager, or dealer account and optionally email a set password link.</div>
         <form method="POST" action="{{ route('admin.maintain-users.store') }}">
             @csrf
             <div class="maintain-users-form-grid">
@@ -720,15 +715,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="maintain-users-field full">
-                    <label for="PASSWORD">Temporary Password</label>
-                    <input type="text" id="PASSWORD" name="PASSWORD" maxlength="255" readonly>
-                </div>
+
             </div>
             <div class="maintain-users-modal-actions">
                 <button type="button" class="maintain-users-btn-secondary" id="maintainUsersCancelBtn">Cancel</button>
                 <button type="submit" name="CREATE_ACTION" value="create" class="maintain-users-btn-soft">Create user</button>
-                <button type="submit" name="CREATE_ACTION" value="create_email" class="maintain-users-btn-primary">Create &amp; Email</button>
+                <button type="submit" name="CREATE_ACTION" value="create_email" class="maintain-users-btn-primary">Create &amp; Email Link</button>
             </div>
         </form>
     </div>
@@ -795,7 +787,7 @@
 
 <div class="maintain-users-modal-backdrop" id="maintainUsersBatchModal">
     <div class="maintain-users-modal">
-        <h3 class="maintain-users-modal-title">Send Temporary Passwords</h3>
+        <h3 class="maintain-users-modal-title">Send Set Password Links</h3>
         <form method="POST" action="{{ route('admin.maintain-users.send-temp-passwords') }}" id="maintainUsersBatchForm">
             @csrf
             <div class="maintain-users-batch-summary">
@@ -822,7 +814,6 @@
             const syncBtn = document.getElementById('maintainUsersSyncBtn');
             const modal = document.getElementById('maintainUsersModal');
             const cancelBtn = document.getElementById('maintainUsersCancelBtn');
-            const tempPasswordInput = document.getElementById('PASSWORD');
             const addForm = modal ? modal.querySelector('form') : null;
             const roleSelect = document.getElementById('SYSTEMROLE');
             const aliasInput = document.getElementById('ALIAS');
@@ -833,14 +824,6 @@
             const locationPresetInputs = Array.from(document.querySelectorAll('[data-location-preset]'));
             const ESTREAM_COMPANY = 'E Stream Sdn Bhd';
 
-            function generateTemporaryPassword(length) {
-                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-                let password = '';
-                for (let i = 0; i < length; i += 1) {
-                    password += chars.charAt(Math.floor(Math.random() * chars.length));
-                }
-                return password;
-            }
 
             function setDealerSectionState(section, isDealer) {
                 if (!section) return;
@@ -922,9 +905,7 @@
                 if (addForm) {
                     addForm.reset();
                 }
-                if (tempPasswordInput) {
-                    tempPasswordInput.value = generateTemporaryPassword(10);
-                }
+
                 if (roleSelect) {
                     roleSelect.value = 'DEALER';
                 }
@@ -1217,5 +1198,7 @@
         });
     </script>
 @endpush
+
+
 
 
