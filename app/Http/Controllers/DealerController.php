@@ -17,11 +17,11 @@ class DealerController extends Controller
         $leads = [];
         $metrics = [
             'activeInquiries' => 0,
-            'activeInquiriesTrend' => '+12%',
+            'pctActive' => 0,
             'conversionRate' => '0%',
-            'conversionTrend' => '-2%',
+            'conversionRateChange' => 0,
             'closedCaseCount' => 0,
-            'demosTrend' => '+5',
+            'pctClosed' => 0,
             'pendingFollowups' => 0,
         ];
         $closedCaseChartData = [
@@ -36,7 +36,7 @@ class DealerController extends Controller
         $leadsTotal = 0;
         $inquiriesPage = 1;
         $inquiriesTotalPages = 1;
-        $inquiriesPerPage = 6;
+        $inquiriesPerPage = 8;
         $leadsPaginated = [];
 
         if ($dealerId) {
@@ -47,7 +47,7 @@ class DealerController extends Controller
             }
 
             $leadsRaw = DB::select(
-                'SELECT FIRST 50
+                'SELECT FIRST 200
                     l."LEADID", l."PRODUCTID", l."COMPANYNAME", l."CONTACTNAME", l."CONTACTNO", l."EMAIL",
                     l."CITY", l."POSTCODE", l."BUSINESSNATURE", l."USERCOUNT", l."EXISTINGSOFTWARE", l."DEMOMODE",
                     l."DESCRIPTION", l."REFERRALCODE", l."CREATEDAT", l."CREATEDBY",
@@ -71,10 +71,36 @@ class DealerController extends Controller
                 ORDER BY l."LEADID" DESC',
                 [$dealerId]
             );
-            $leads = array_values(array_filter($leadsRaw, function ($l) {
+            $allAssignedLeads = array_values(array_filter($leadsRaw, function ($l) {
                 $s = strtoupper(trim($l->ACT_STATUS ?? $l->CURRENTSTATUS ?? ''));
                 return $s !== 'FAILED';
             }));
+            $leads = DB::select(
+                'SELECT FIRST 200
+                    l."LEADID", l."PRODUCTID", l."COMPANYNAME", l."CONTACTNAME", l."CONTACTNO", l."EMAIL",
+                    l."CITY", l."POSTCODE", l."BUSINESSNATURE", l."USERCOUNT", l."EXISTINGSOFTWARE", l."DEMOMODE",
+                    l."DESCRIPTION", l."REFERRALCODE", l."CREATEDAT", l."CREATEDBY",
+                    l."ASSIGNED_TO", l."LASTMODIFIED",
+                    u."EMAIL" AS "ASSIGNED_BY_EMAIL",
+                    COALESCE(
+                        (SELECT FIRST 1 la."STATUS"
+                           FROM "LEAD_ACT" la
+                          WHERE la."LEADID" = l."LEADID"
+                          ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC),
+                        l."CURRENTSTATUS",
+                        \'Pending\'
+                    ) AS "ACT_STATUS",
+                    (SELECT FIRST 1 la."CREATIONDATE"
+                       FROM "LEAD_ACT" la
+                      WHERE la."LEADID" = l."LEADID"
+                      ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC) AS "ACT_LAST_UPDATE"
+                FROM "LEAD" l
+                LEFT JOIN "USERS" u ON u."USERID" = l."CREATEDBY"
+                WHERE l."ASSIGNED_TO" = ?
+                  AND UPPER(TRIM(COALESCE(l."CURRENTSTATUS", \'\'))) = ?
+                ORDER BY l."LEADID" DESC',
+                [$dealerId, 'ONGOING']
+            );
 
             $activeCountRow = DB::selectOne(
                 'SELECT COUNT(*) AS "CNT" FROM "LEAD"
@@ -82,7 +108,7 @@ class DealerController extends Controller
                 [$dealerId, 'ONGOING']
             );
             $activeInquiriesCount = (int) ($activeCountRow->CNT ?? 0);
-            $totalAssignedCount = count($leads);
+            $totalAssignedCount = count($allAssignedLeads);
 
             // Total closed should only count leads whose latest status for this dealer
             // is COMPLETED or REWARDED (and not later marked as FAILED).
@@ -105,6 +131,105 @@ class DealerController extends Controller
             );
             $closedCount = (int) ($closedCountRow->CNT ?? 0);
             $conversion = $totalAssignedCount > 0 ? round(($closedCount / $totalAssignedCount) * 100, 1) : 0;
+
+            $pctActive = 0;
+            $pctClosed = 0;
+            $conversionRateChange = 0;
+            try {
+                $startThisWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
+                $endLastWeek = $startThisWeek->copy()->subSecond();
+                $startLastWeek = $startThisWeek->copy()->subWeek();
+
+                $countActiveSnapshot = function (string $cutoff) use ($dealerId) {
+                    $row = DB::selectOne(
+                        'SELECT COUNT(*) AS c
+                         FROM "LEAD" l
+                         LEFT JOIN (
+                             SELECT a."LEADID", a."STATUS"
+                             FROM "LEAD_ACT" a
+                             JOIN (
+                                 SELECT "LEADID", MAX("CREATIONDATE") AS max_created
+                                 FROM "LEAD_ACT"
+                                 WHERE "CREATIONDATE" <= ?
+                                 GROUP BY "LEADID"
+                             ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
+                         ) la ON la."LEADID" = l."LEADID"
+                         WHERE l."ASSIGNED_TO" = ?
+                           AND l."CREATEDAT" <= ?
+                           AND (
+                               UPPER(TRIM(COALESCE(la."STATUS", \'\'))) IN (\'PENDING\', \'FOLLOWUP\', \'FOLLOW UP\', \'DEMO\', \'CONFIRMED\')
+                               OR (
+                                   TRIM(COALESCE(la."STATUS", \'\')) = \'\'
+                                   AND UPPER(TRIM(COALESCE(l."CURRENTSTATUS", \'\'))) = \'ONGOING\'
+                               )
+                           )',
+                        [$cutoff, $dealerId, $cutoff]
+                    );
+
+                    return (int) ($row->c ?? $row->C ?? 0);
+                };
+
+                $activeThisWeek = $activeInquiriesCount;
+                $activeLastWeek = $countActiveSnapshot($endLastWeek->format('Y-m-d H:i:s'));
+
+                $closedThisWeekRow = DB::selectOne(
+                    'SELECT COUNT(*) AS c
+                     FROM "LEAD_ACT"
+                     WHERE "USERID" = ?
+                       AND UPPER(TRIM(COALESCE("STATUS", \'\'))) IN (\'COMPLETED\', \'REWARDED\')
+                       AND "CREATIONDATE" >= ? AND "CREATIONDATE" <= ?',
+                    [$dealerId, $startThisWeek->format('Y-m-d H:i:s'), Carbon::now()->format('Y-m-d 23:59:59')]
+                );
+                $closedLastWeekRow = DB::selectOne(
+                    'SELECT COUNT(*) AS c
+                     FROM "LEAD_ACT"
+                     WHERE "USERID" = ?
+                       AND UPPER(TRIM(COALESCE("STATUS", \'\'))) IN (\'COMPLETED\', \'REWARDED\')
+                       AND "CREATIONDATE" >= ? AND "CREATIONDATE" <= ?',
+                    [$dealerId, $startLastWeek->format('Y-m-d H:i:s'), $endLastWeek->format('Y-m-d 23:59:59')]
+                );
+                $closedThisWeek = (int) ($closedThisWeekRow->c ?? $closedThisWeekRow->C ?? 0);
+                $closedLastWeek = (int) ($closedLastWeekRow->c ?? $closedLastWeekRow->C ?? 0);
+
+                $assignedUntilLastWeekRow = DB::selectOne(
+                    'SELECT COUNT(*) AS c FROM "LEAD" WHERE "ASSIGNED_TO" = ? AND "CREATEDAT" <= ?',
+                    [$dealerId, $endLastWeek->format('Y-m-d H:i:s')]
+                );
+                $assignedUntilLastWeek = (int) ($assignedUntilLastWeekRow->c ?? $assignedUntilLastWeekRow->C ?? 0);
+
+                $closedUntilLastWeekRow = DB::selectOne(
+                    'SELECT COUNT(*) AS c
+                     FROM (
+                         SELECT DISTINCT la."LEADID",
+                             (
+                                 SELECT FIRST 1 la2."STATUS"
+                                 FROM "LEAD_ACT" la2
+                                 WHERE la2."LEADID" = la."LEADID"
+                                   AND la2."USERID" = la."USERID"
+                                   AND la2."CREATIONDATE" <= ?
+                                 ORDER BY la2."CREATIONDATE" DESC, la2."LEAD_ACTID" DESC
+                             ) AS "LATEST_STATUS"
+                         FROM "LEAD_ACT" la
+                         JOIN "LEAD" l ON l."LEADID" = la."LEADID"
+                         WHERE la."USERID" = ?
+                           AND l."ASSIGNED_TO" = ?
+                           AND l."CREATEDAT" <= ?
+                     ) x
+                     WHERE UPPER(TRIM(COALESCE(x."LATEST_STATUS", \'\'))) IN (\'COMPLETED\', \'REWARDED\')',
+                    [$endLastWeek->format('Y-m-d H:i:s'), $dealerId, $dealerId, $endLastWeek->format('Y-m-d H:i:s')]
+                );
+                $closedUntilLastWeek = (int) ($closedUntilLastWeekRow->c ?? $closedUntilLastWeekRow->C ?? 0);
+
+                $pctActive = $activeLastWeek > 0 ? round((($activeThisWeek - $activeLastWeek) / $activeLastWeek) * 100, 1) : ($activeThisWeek > 0 ? 100 : 0);
+                $pctClosed = $closedLastWeek > 0 ? round((($closedThisWeek - $closedLastWeek) / $closedLastWeek) * 100, 1) : ($closedThisWeek > 0 ? 100 : 0);
+
+                $conversionRateLastWeek = $assignedUntilLastWeek > 0 ? ($closedUntilLastWeek / $assignedUntilLastWeek) * 100 : 0;
+                $conversionRateChange = round($conversion - $conversionRateLastWeek, 1);
+            } catch (\Throwable $e) {
+                $pctActive = 0;
+                $pctClosed = 0;
+                $conversionRateChange = 0;
+            }
 
             $pendingFollowupsSql = $dealerEmail
                 ? 'SELECT COUNT(*) AS "CNT" FROM "LEAD"
@@ -194,11 +319,11 @@ class DealerController extends Controller
 
             $metrics = [
                 'activeInquiries' => $activeInquiriesCount,
-                'activeInquiriesTrend' => '+12%',
+                'pctActive' => $pctActive,
                 'conversionRate' => $conversion,
-                'conversionTrend' => '-2%',
+                'conversionRateChange' => $conversionRateChange,
                 'closedCaseCount' => $closedCount,
-                'demosTrend' => '+5',
+                'pctClosed' => $pctClosed,
                 'pendingFollowups' => $pendingFollowupsCount,
             ];
 
@@ -230,11 +355,11 @@ class DealerController extends Controller
                         $hours = (int) floor($diffSec / 3600);
                         $days = (int) floor($diffSec / 86400);
                         if ($mins < 60) {
-                            $time = max(1, $mins) . 'm late';
+                            $time = max(1, $mins) . 'm';
                         } elseif ($hours < 24) {
-                            $time = $hours . 'h late';
+                            $time = $hours . 'h';
                         } else {
-                            $time = $days . ' day' . ($days !== 1 ? 's' : '') . ' overdue';
+                            $time = $days . 'd';
                         }
                     } else {
                         $status = 'DUE SOON';
@@ -243,13 +368,13 @@ class DealerController extends Controller
                         $hours = max(0, (int) floor($untilSec / 3600));
                         $days = max(0, (int) floor($untilSec / 86400));
                         if ($mins < 60) {
-                            $time = 'In ' . max(1, $mins) . 'm';
+                            $time = max(1, $mins) . 'm';
                         } elseif ($hours < 24) {
-                            $time = 'In ' . $hours . 'h';
+                            $time = $hours . 'h';
                         } elseif ($days < 2) {
-                            $time = 'In 1 day';
+                            $time = '1d';
                         } else {
-                            $time = 'In ' . $days . ' days';
+                            $time = $days . 'd';
                         }
                     }
 
@@ -283,7 +408,7 @@ class DealerController extends Controller
                 ->all();
         }
 
-        $inquiriesPerPage = 6;
+        $inquiriesPerPage = 8;
         $leadsTotal = count($leads);
         $inquiriesTotalPages = max(1, (int) ceil($leadsTotal / $inquiriesPerPage));
 
