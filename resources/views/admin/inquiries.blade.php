@@ -1,5 +1,8 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title', 'Inquiries Management – Admin')
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260324-9">
+@endpush
 @section('content')
 @php
     $assignUndo = session('assign_undo');
@@ -1592,6 +1595,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function normalizeInquiryTbody(tbody) {
         if (!tbody) return;
         Array.from(tbody.querySelectorAll('tr')).forEach(function(row) {
+            if (row.classList.contains('inquiries-placeholder-row')) return;
             if (row.classList.contains('inquiry-row')) {
                 var rowText = (row.textContent || '').replace(/\s+/g, '');
                 var hasVisualContent = !!row.querySelector('button, a, img, .inquiries-status, .inquiries-pill, .payouts-attachment-list');
@@ -1607,6 +1611,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 row.remove();
             }
         });
+    }
+
+    function clearInquiryPlaceholderRows(tbody) {
+        if (!tbody) return;
+        Array.from(tbody.querySelectorAll('tr.inquiries-placeholder-row')).forEach(function(row) {
+            row.remove();
+        });
+    }
+
+    function updateInquiryTableHeightMode(scrollWrap, tbody, visibleDataCount, perPage) {
+        clearInquiryPlaceholderRows(tbody);
+        if (!scrollWrap) return;
+        scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0);
+        scrollWrap.classList.toggle('inquiries-table-scroll-short', visibleDataCount > 0 && visibleDataCount < perPage);
     }
 
     function resetInquiryTableScroll(panelId) {
@@ -1919,6 +1937,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageNumbersEl = document.getElementById('incomingPageNumbers');
         var table = document.getElementById('unassignedTable');
         var tbody = table ? table.querySelector('tbody') : null;
+        var scrollWrap = table ? table.closest('.inquiries-table-scroll') : null;
         if (!tbody) return;
 
         function getPerPage() { return parseInt(paginationEl.getAttribute('data-incoming-per-page') || '10', 10); }
@@ -1937,9 +1956,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        var ROW_HEIGHT_PX = 44;
         function ensureFixedHeight(visibleDataCount) {
             tbody.style.minHeight = '';
+            updateInquiryTableHeightMode(scrollWrap, tbody, visibleDataCount, getPerPage());
         }
 
         function applyPage(current) {
@@ -2026,6 +2045,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageNumbersEl = document.getElementById('assignedPageNumbers');
         var assignedTable = document.getElementById('assignedTable');
         var tbody = assignedTable ? assignedTable.querySelector('tbody') : null;
+        var scrollWrap = assignedTable ? assignedTable.closest('.inquiries-table-scroll') : null;
         if (!tbody) return;
 
         function getPerPage() { return parseInt(paginationEl.getAttribute('data-assigned-per-page') || '10', 10); }
@@ -2087,6 +2107,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function ensureFixedHeight(visibleDataCount) {
             tbody.style.minHeight = '';
+            updateInquiryTableHeightMode(scrollWrap, tbody, visibleDataCount, getPerPage());
         }
 
         function applyAssignedPage(current) {
@@ -2147,5 +2168,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
-
-

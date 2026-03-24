@@ -1,7 +1,7 @@
 /* Copied from reports_v2.css (dedicated report CSS) */
 /* Reports v2 - matches provided reference layout */
 .rv2-page {
-  padding: 0px 28px 24px 24px;
+  padding: 0px 25px 22px 22px;
   background: #f7f7ff;
   font-size: 115%;
   color: #1e293b;
@@ -78,7 +78,7 @@
 .reports-dropdown-item:hover { background: #ede9fe; color: #312e81; }
 
 .rv2-header {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .rv2-title-row { display: flex; align-items: center; gap: 10px; }
@@ -121,28 +121,28 @@
 .rv2-panel {
   background: #fff;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  border-radius: 11px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   overflow: hidden;
 }
-.rv2-panel + .rv2-panel { margin-top: 18px; }
-.rv2-panel-top { padding: 14px 16px; border-bottom: 1px solid #eef2ff; }
+.rv2-panel + .rv2-panel { margin-top: 16px; }
+.rv2-panel-top { padding: 13px 14px; border-bottom: 1px solid #eef2ff; }
 
 /* Filtered layer: one block for chart + table so filter clearly applies to both */
 .rv2-filtered-layer {
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f9faff 100%);
   border: 1px solid #dfe3f2;
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
   overflow: hidden;
 }
 .rv2-filtered-layer-head {
-  padding: 14px 18px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
   border-bottom: 1px solid #e5e7eb;
   background: rgba(255, 255, 255, 0.88);
@@ -170,7 +170,7 @@
 
 .rv2-filters {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   align-items: stretch;
 }
@@ -180,10 +180,10 @@
   margin-left: auto;
 }
 .rv2-filter {
-  min-width: 220px;
-  padding: 10px 12px;
+  min-width: 198px;
+  padding: 9px 11px;
   border: 1px solid #d6d9e8;
-  border-radius: 12px;
+  border-radius: 11px;
   background: #ffffff;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
@@ -199,11 +199,11 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 36px;
-  padding: 0 16px;
+  height: 34px;
+  padding: 0 14px;
   border: 1px solid #6d4ad9;
   background: linear-gradient(135deg, #7c5bff 0%, #6d4ad9 100%);
-  border-radius: 10px;
+  border-radius: 9px;
   font-size: 12px;
   font-weight: 700;
   color: #ffffff;
@@ -228,9 +228,9 @@
 
 .rv2-filter-select {
   width: 100%;
-  height: 36px;
+  height: 34px;
   padding: 8px 28px 8px 10px;
-  border-radius: 10px;
+  border-radius: 9px;
   border: 1px solid #d6d9e8;
   font-size: 13px;
   font-weight: 600;
@@ -253,7 +253,7 @@
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
 }
 .rv2-date-range {
-  margin-top: 8px;
+  margin-top: 7px;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -261,9 +261,9 @@
 .rv2-date-range input[type="date"] {
   flex: 1 1 120px;
   min-width: 0;
-  height: 34px;
+  height: 32px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 7px;
   border: 1px solid #d6d9e8;
   font-size: 12px;
   color: #1f2937;
@@ -286,13 +286,13 @@
   padding: 0;
 }
 
-.rv2-panel-body { padding: 16px; }
+.rv2-panel-body { padding: 14px; }
 .rv2-panel-head {
-  padding: 16px;
+  padding: 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   border-bottom: 1px solid #e5e7eb;
 }
 .rv2-section-title { font-size: 14px; font-weight: 800; color: #1e293b; }
@@ -308,15 +308,15 @@
 .rv2-variance-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .rv2-variance-grid {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 220px;
-  gap: 14px;
+  grid-template-columns: 198px minmax(0, 1fr) 198px;
+  gap: 12px;
   align-items: stretch;
 }
 .rv2-side-card {
   border: 1px solid #e5e7eb;
   background: #fcfcff;
-  border-radius: 14px;
-  padding: 14px 14px;
+  border-radius: 13px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -343,18 +343,18 @@
 }
 .rv2-chart-wrap {
   border: 1px solid #e5e7eb;
-  border-radius: 14px;
+  border-radius: 13px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  padding: 10px 12px;
-  min-height: 240px;
+  padding: 9px 10px;
+  min-height: 216px;
 }
-.rv2-chart-wrap canvas { width: 100% !important; height: 220px !important; }
+.rv2-chart-wrap canvas { width: 100% !important; height: 198px !important; }
 
 .rv2-bar-charts-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  padding: 16px;
+  gap: 18px;
+  padding: 14px;
 }
 .rv2-bar-chart-half {
   display: flex;
@@ -370,10 +370,10 @@
 .rv2-bar-chart-title-failed { color: #dc2626; }
 .rv2-bar-chart-title-closed { color: #16a34a; }
 .rv2-bar-chart-wrap {
-  min-height: 280px;
+  min-height: 252px;
   position: relative;
 }
-.rv2-bar-chart-wrap canvas { height: 280px !important; }
+.rv2-bar-chart-wrap canvas { height: 252px !important; }
 
 .rv2-bar-chart-title-row {
   display: flex;
@@ -384,7 +384,7 @@
 }
 
 .rv2-bar-chart-wrap-full {
-  min-height: 260px;
+  min-height: 234px;
   width: 100%;
   max-width: 100%;
 }
@@ -393,8 +393,8 @@
 
 .rv2-dual-label-chart {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 220px;
-  gap: 12px;
+  grid-template-columns: 198px minmax(0, 1fr) 198px;
+  gap: 10px;
   align-items: stretch;
 }
 .rv2-dual-label-col {
@@ -436,11 +436,11 @@
   color: #4c1d95;
   background: #ede9fe;
   text-align: left;
-  padding: 12px 16px;
+  padding: 11px 14px;
   border-bottom: 1px solid #ddd6fe;
 }
 .rv2-table tbody td {
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-bottom: 1px solid #eef2f7;
   vertical-align: middle;
   font-size: 13px;
@@ -480,17 +480,17 @@
   justify-content: flex-start;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px 12px;
+  padding: 12px 14px 11px;
   border-top: 1px solid #eef2ff;
   background: linear-gradient(180deg, #ffffff 0%, #f8faff 100%);
 }
 .rv2-pagination {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
-  padding: 6px;
-  border-radius: 12px;
+  padding: 5px;
+  border-radius: 11px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
 }
@@ -498,7 +498,7 @@
 .rv2-page-btn {
   border: 1px solid #d6d9e8;
   background: #fff;
-  border-radius: 10px;
+  border-radius: 9px;
   font-size: 12px;
   font-weight: 700;
   color: #475569;
@@ -507,9 +507,9 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 34px;
-  min-width: 34px;
-  padding: 0 11px;
+  height: 31px;
+  min-width: 31px;
+  padding: 0 10px;
   line-height: 1;
   transition: transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
@@ -550,23 +550,23 @@ a.rv2-page-btn:focus-visible {
 }
 
 .rv2-cards {
-  margin-top: 18px;
+  margin-top: 16px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 .rv2-mini-card {
   background: #fff;
   border: 1px solid #eef2ff;
-  border-radius: 14px;
+  border-radius: 13px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
-  padding: 14px 16px;
+  padding: 12px 14px;
 }
 .rv2-mini-top { display: flex; align-items: center; gap: 10px; }
 .rv2-mini-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 12px;
+  width: 25px;
+  height: 25px;
+  border-radius: 11px;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1429,28 +1429,6 @@ class DealerController extends Controller
         return $map[$upper] ?? $status;
     }
 
-    public function demo(Request $request): View
-    {
-        $dealerId = $request->session()->get('user_id');
-        $leads = [];
-        if ($dealerId) {
-            $leads = DB::select(
-                'SELECT FIRST 100
-                    "LEADID","COMPANYNAME","CONTACTNAME","EMAIL","CURRENTSTATUS","DEMOMODE","CREATEDAT","LASTMODIFIED"
-                FROM "LEAD"
-                WHERE "ASSIGNED_TO" = ?
-                ORDER BY "LEADID" DESC',
-                [$dealerId]
-            );
-        }
-        return view('dealer.demo', ['leads' => $leads, 'currentPage' => 'demo']);
-    }
-
-    public function rewards(Request $request): View
-    {
-        return view('dealer.rewards', ['currentPage' => 'rewards']);
-    }
-
     public function payouts(Request $request): View
     {
         $dealerId = $request->session()->get('user_id');

@@ -1313,7 +1313,7 @@ class AdminController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->with('error', 'Could not assign lead: ' . $e->getMessage());
+            return back()->with('error', 'Could not assign lead. Please try again.');
         }
 
         $undoPayload = [
@@ -1419,7 +1419,7 @@ class AdminController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            return redirect()->route('admin.inquiries')->with('error', 'Could not undo assignment: ' . $e->getMessage());
+            return redirect()->route('admin.inquiries')->with('error', 'Could not undo assignment. Please try again.');
         }
 
         return redirect()->route('admin.inquiries')->with('success', 'Assignment undone.');
@@ -1459,7 +1459,7 @@ class AdminController extends Controller
             DB::commit();
         } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->with('error', 'Could not mark as failed: ' . $e->getMessage());
+            return back()->with('error', 'Could not mark the inquiry as failed. Please try again.');
         }
 
         return redirect()->route('admin.inquiries')->with('success', 'Lead marked as Failed.');
@@ -1813,7 +1813,7 @@ class AdminController extends Controller
                 ]
             );
         } catch (\Throwable $e) {
-            return back()->withInput($request->only(array_keys($validated)))->with('error', 'Could not save inquiry: ' . $e->getMessage());
+            return back()->withInput($request->only(array_keys($validated)))->with('error', 'Could not save the inquiry. Please try again.');
         }
 
         $assignedTo = trim((string) ($validated['ASSIGNED_TO'] ?? ''));
@@ -1957,7 +1957,7 @@ class AdminController extends Controller
                 ]
             );
         } catch (\Throwable $e) {
-            return back()->withInput($request->only(array_keys($validated)))->with('error', 'Could not update inquiry: ' . $e->getMessage());
+            return back()->withInput($request->only(array_keys($validated)))->with('error', 'Could not update the inquiry. Please try again.');
         }
 
         return redirect()->route('admin.inquiries')->with('success', 'Inquiry updated.');
@@ -2042,7 +2042,7 @@ class AdminController extends Controller
                 ]
             );
         } catch (\Throwable $e) {
-            return redirect()->route('admin.inquiries')->with('error', 'Could not undo delete: ' . $e->getMessage());
+            return redirect()->route('admin.inquiries')->with('error', 'Could not undo the delete. Please try again.');
         }
 
         $request->session()->forget('delete_undo');
@@ -3975,7 +3975,7 @@ class AdminController extends Controller
         $activeCol = $col('ISACTIVE');
         $idCol = $col('USERID');
         if (!$emailCol || !$activeCol || !$idCol) {
-            return back()->withInput()->with('error', 'USERS table structure could not be read. Required columns: EMAIL, ISACTIVE, USERID.');
+            return back()->withInput()->with('error', 'User settings could not be loaded. Please contact support if this continues.');
         }
 
         $isActiveValue = $isActive ? 1 : 0;

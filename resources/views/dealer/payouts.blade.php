@@ -1,145 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Payouts - SQL LMS Dealer Console')
 @push('styles')
-<style>
-    #completedTable.payouts-default-layout,
-    #rewardedTable.payouts-default-layout {
-        width: 100%;
-        min-width: 100%;
-        table-layout: fixed;
-    }
-
-    #completedPanel .inquiries-table-scroll.payouts-default-layout,
-    #rewardedPanel .inquiries-table-scroll.payouts-default-layout {
-        overflow-x: hidden;
-    }
-
-    #completedTable.payouts-default-layout th,
-    #completedTable.payouts-default-layout td,
-    #rewardedTable.payouts-default-layout th,
-    #rewardedTable.payouts-default-layout td {
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="inquiryid"],
-    #completedTable.payouts-default-layout td[data-col="inquiryid"],
-    #rewardedTable.payouts-default-layout th[data-col="inquiryid"],
-    #rewardedTable.payouts-default-layout td[data-col="inquiryid"] {
-        width: 110px;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="date"],
-    #completedTable.payouts-default-layout td[data-col="date"],
-    #completedTable.payouts-default-layout th[data-col="assigndate"],
-    #completedTable.payouts-default-layout td[data-col="assigndate"],
-    #completedTable.payouts-default-layout th[data-col="completeddate"],
-    #completedTable.payouts-default-layout td[data-col="completeddate"],
-    #rewardedTable.payouts-default-layout th[data-col="date"],
-    #rewardedTable.payouts-default-layout td[data-col="date"],
-    #rewardedTable.payouts-default-layout th[data-col="assigndate"],
-    #rewardedTable.payouts-default-layout td[data-col="assigndate"],
-    #rewardedTable.payouts-default-layout th[data-col="completiondate"],
-    #rewardedTable.payouts-default-layout td[data-col="completiondate"],
-    #rewardedTable.payouts-default-layout th[data-col="payoutdate"],
-    #rewardedTable.payouts-default-layout td[data-col="payoutdate"] {
-        width: 120px;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="customer"],
-    #completedTable.payouts-default-layout td[data-col="customer"],
-    #rewardedTable.payouts-default-layout th[data-col="customer"],
-    #rewardedTable.payouts-default-layout td[data-col="customer"] {
-        width: 300px;
-    }
-
-    #completedTable.payouts-default-layout td[data-col="customer"],
-    #rewardedTable.payouts-default-layout td[data-col="customer"] {
-        overflow: visible;
-        text-overflow: clip;
-        white-space: nowrap;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="assignedto"],
-    #completedTable.payouts-default-layout td[data-col="assignedto"] {
-        width: 160px;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="dealtproducts"],
-    #completedTable.payouts-default-layout td[data-col="dealtproducts"],
-    #rewardedTable.payouts-default-layout th[data-col="dealtproducts"],
-    #rewardedTable.payouts-default-layout td[data-col="dealtproducts"] {
-        width: 220px;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="referralcode"],
-    #completedTable.payouts-default-layout td[data-col="referralcode"],
-    #rewardedTable.payouts-default-layout th[data-col="referralcode"],
-    #rewardedTable.payouts-default-layout td[data-col="referralcode"] {
-        width: 130px;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="attachment"],
-    #completedTable.payouts-default-layout td[data-col="attachment"],
-    #rewardedTable.payouts-default-layout th[data-col="attachment"],
-    #rewardedTable.payouts-default-layout td[data-col="attachment"] {
-        width: 120px;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="assignby"],
-    #completedTable.payouts-default-layout td[data-col="assignby"],
-    #rewardedTable.payouts-default-layout th[data-col="assignby"],
-    #rewardedTable.payouts-default-layout td[data-col="assignby"] {
-        width: 150px;
-    }
-
-    #completedTable.payouts-default-layout th[data-col="status"],
-    #completedTable.payouts-default-layout td[data-col="status"],
-    #rewardedTable.payouts-default-layout th[data-col="status"],
-    #rewardedTable.payouts-default-layout td[data-col="status"] {
-        width: 110px;
-    }
-
-    #completedTable td.inquiries-col-action,
-    #rewardedTable td.inquiries-col-action {
-        width: 112px;
-        min-width: 112px;
-        max-width: 112px;
-        padding: 0;
-    }
-
-    #completedTable th.inquiries-col-action,
-    #rewardedTable th.inquiries-col-action {
-        width: 112px;
-        min-width: 112px;
-        max-width: 112px;
-        box-sizing: border-box;
-    }
-
-    #completedTable td.inquiries-col-action .inquiries-update-btn,
-    #rewardedTable td.inquiries-col-action .inquiries-update-btn {
-        display: flex;
-        width: 100%;
-        min-width: 0;
-        max-width: none;
-        height: 100%;
-        min-height: 44px;
-        padding: 0;
-        border-radius: 0;
-        justify-content: center;
-        align-items: center;
-    }
-
-    #completedTable th.inquiries-col-action .inquiries-filter-clear,
-    #rewardedTable th.inquiries-col-action .inquiries-filter-clear {
-        width: 100%;
-        min-width: 0;
-        padding: 6px 8px;
-        white-space: nowrap;
-        box-sizing: border-box;
-    }
-
-</style>
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-payouts.css') }}?v=20260324-9">
 @endpush
 @section('content')
 @php
@@ -668,6 +530,16 @@ document.addEventListener('DOMContentLoaded', function() {
         return out;
     }
 
+    function syncPayoutTableHeight(table, visibleDataCount, perPage) {
+        if (!table) return;
+        var tbody = table.querySelector('tbody');
+        var scrollWrap = table.closest('.inquiries-table-scroll');
+        if (tbody) tbody.style.minHeight = '';
+        if (!scrollWrap) return;
+        scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0);
+        scrollWrap.classList.toggle('inquiries-table-scroll-short', visibleDataCount > 0 && visibleDataCount < perPage);
+    }
+
     function applyCompletedPagination() {
         var table = document.getElementById('completedTable');
         var pagEl = document.getElementById('completedPagination');
@@ -695,6 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (var j = 0; j < pageRows.length; j++) {
             pageRows[j].style.display = '';
         }
+        syncPayoutTableHeight(table, pageRows.length, perPage);
         var from = total === 0 ? 0 : start + 1;
         var to = end;
         if (infoEl) infoEl.textContent = 'Showing ' + from + ' to ' + to + ' of ' + total + ' entries (Page ' + current + ')';
@@ -746,6 +619,7 @@ document.addEventListener('DOMContentLoaded', function() {
         for (var j = 0; j < pageRows.length; j++) {
             pageRows[j].style.display = '';
         }
+        syncPayoutTableHeight(table, pageRows.length, perPage);
         var from = total === 0 ? 0 : start + 1;
         var to = end;
         if (infoEl) infoEl.textContent = 'Showing ' + from + ' to ' + to + ' of ' + total + ' entries (Page ' + current + ')';

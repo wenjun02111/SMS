@@ -1,0 +1,60 @@
+@keyframes dealerInquiryHighlight {
+  0% {
+    background-color: rgba(124, 58, 237, 0);
+  }
+
+  45% {
+    background-color: rgba(124, 58, 237, 0.14);
+  }
+
+  100% {
+    background-color: rgba(124, 58, 237, 0.06);
+  }
+}
+
+.inquiry-row--notif-highlight {
+  position: relative;
+  outline: none;
+  box-shadow: none;
+}
+
+.inquiry-row--notif-highlight td {
+  animation: dealerInquiryHighlight 1.2s ease-out 2;
+  background-color: rgba(124, 58, 237, 0.06);
+  transition: background-color 0.35s ease;
+}
+
+.inquiry-row--notif-highlight td.inquiries-col-action {
+  z-index: 7;
+  background-color: rgba(124, 58, 237, 0.1);
+}
+
+.inquiry-row--notif-highlight td:first-child {
+  box-shadow: inset 4px 0 0 #7c3aed;
+}
+
+.inquiry-row--notif-highlight::after {
+  display: none;
+}
+
+.dealer-inquiries-panel .inquiries-assigned-pagination {
+  margin-top: 0;
+}
+
+.dealer-inquiries-panel .inquiries-panel-header {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+
+.dealer-inquiries-panel .inquiries-table tbody td {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.dealer-inquiries-panel .inquiries-table-scroll.inquiries-table-scroll-empty {
+  min-height: clamp(320px, calc(100vh - 330px), 420px) !important;
+}
+
+.dealer-inquiries-panel .inquiries-table-scroll.inquiries-table-scroll-short {
+  min-height: clamp(160px, calc(100vh - 520px), 240px) !important;
+}

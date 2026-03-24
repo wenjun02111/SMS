@@ -1,11 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Report - Dealer Sales Overtime')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}">
-    <style>
-        .rv2-intervention-view-only { font-size: 12px; color: #64748b; margin-bottom: 10px; }
-        .rv2-intervention-modal .inquiries-assign-window { max-width: 720px; max-height: 85vh; overflow: auto; }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260324-9">
+    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}?v=20260324-1">
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-reports-v2.css') }}?v=20260324-9">
 @endpush
 @section('content')
 <div class="rv2-page">

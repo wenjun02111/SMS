@@ -12,19 +12,19 @@
         $ccontact = trim((string) ($r->CONTACTNAME ?? ''));
         $custDisp = $ccompany !== '' && $ccontact !== ''
             ? ($ccompany . ' - ' . $ccontact)
-            : ($ccompany !== '' ? $ccompany : ($ccontact !== '' ? $ccontact : '—'));
+            : ($ccompany !== '' ? $ccompany : ($ccontact !== '' ? $ccontact : '-'));
         $addr1 = trim((string) ($r->ADDRESS1 ?? ''));
         $addr2 = trim((string) ($r->ADDRESS2 ?? ''));
         $addr = trim($addr1 . ' ' . $addr2);
         $afullMsg = (string) ($r->DESCRIPTION ?? '');
         $afullMsgTrim = trim($afullMsg);
-        $amsgPreview = $afullMsgTrim === '' ? '—' : (mb_strlen($afullMsgTrim) > 30 ? (mb_substr($afullMsgTrim, 0, 30) . '…') : $afullMsgTrim);
+        $amsgPreview = $afullMsgTrim === '' ? '-' : (mb_strlen($afullMsgTrim) > 30 ? (mb_substr($afullMsgTrim, 0, 30) . '...') : $afullMsgTrim);
         $rawStatus = strtoupper(trim((string) ($r->CURRENTSTATUS ?? '')));
         $statusClass = 'inquiries-status-rewarded';
         $statusDisp = $rawStatus !== '' ? $rawStatus : 'REWARDED';
-        $inquiryDate = !empty($r->CREATEDAT) ? date('d/m/Y', strtotime((string) $r->CREATEDAT)) : 'â€”';
-        $completionDate = !empty($r->COMPLETED_AT) ? date('d/m/Y', strtotime((string) $r->COMPLETED_AT)) : 'â€”';
-        $payoutDate = '—';
+        $inquiryDate = !empty($r->CREATEDAT) ? date('d/m/Y', strtotime((string) $r->CREATEDAT)) : '-';
+        $completionDate = !empty($r->COMPLETED_AT) ? date('d/m/Y', strtotime((string) $r->COMPLETED_AT)) : '-';
+        $payoutDate = '-';
         if (!empty($r->REWARD_DATE)) {
             $payoutDate = date('d/m/Y', strtotime((string) $r->REWARD_DATE));
         } elseif (!empty($r->LASTMODIFIED)) {
@@ -57,17 +57,17 @@
         <td data-col="date">{{ $inquiryDate }}</td>
         <td data-col="payoutdate">{{ $payoutDate }}</td>
         <td data-col="completiondate">{{ $completionDate }}</td>
-        <td data-col="assigndate">{{ !empty($r->ASSIGNDATE) ? date('d/m/Y', strtotime((string) $r->ASSIGNDATE)) : (!empty($r->CREATEDAT) ? date('d/m/Y', strtotime((string) $r->CREATEDAT)) : 'â€”') }}</td>
+        <td data-col="assigndate">{{ !empty($r->ASSIGNDATE) ? date('d/m/Y', strtotime((string) $r->ASSIGNDATE)) : (!empty($r->CREATEDAT) ? date('d/m/Y', strtotime((string) $r->CREATEDAT)) : '-') }}</td>
         <td data-col="customer">{{ $custDisp }}</td>
-        <td data-col="source">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '—') }}</td>
-        <td data-col="postcode">{{ $r->POSTCODE ?? '—' }}</td>
-        <td data-col="city">{{ $r->CITY ?? '—' }}</td>
-        <td data-col="address">{{ $addr !== '' ? $addr : '—' }}</td>
-        <td data-col="contactno">{{ $r->CONTACTNO ?? '—' }}</td>
-        <td data-col="businessnature">{{ $r->BUSINESSNATURE ?? '—' }}</td>
-        <td data-col="users">{{ $r->USERCOUNT ?? '—' }}</td>
-        <td data-col="existingsw">{{ $r->EXISTINGSOFTWARE ?? '—' }}</td>
-        <td data-col="demomode">{{ $r->DEMOMODE ?? '—' }}</td>
+        <td data-col="source">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '-') }}</td>
+        <td data-col="postcode">{{ $r->POSTCODE ?? '-' }}</td>
+        <td data-col="city">{{ $r->CITY ?? '-' }}</td>
+        <td data-col="address">{{ $addr !== '' ? $addr : '-' }}</td>
+        <td data-col="contactno">{{ $r->CONTACTNO ?? '-' }}</td>
+        <td data-col="businessnature">{{ $r->BUSINESSNATURE ?? '-' }}</td>
+        <td data-col="users">{{ $r->USERCOUNT ?? '-' }}</td>
+        <td data-col="existingsw">{{ $r->EXISTINGSOFTWARE ?? '-' }}</td>
+        <td data-col="demomode">{{ $r->DEMOMODE ?? '-' }}</td>
         <td data-col="dealtproducts">
             @if(!empty($dealtProductIds))
                 <div class="inquiries-pill-group">
@@ -78,19 +78,19 @@
                     @endforeach
                 </div>
             @else
-                —
+                -
             @endif
         </td>
         <td data-col="message">{{ $amsgPreview }}</td>
-        <td data-col="referralcode">{{ $r->REFERRALCODE ?? '—' }}</td>
+        <td data-col="referralcode">{{ $r->REFERRALCODE ?? '-' }}</td>
         <td data-col="attachment">
             @if(!empty($attachmentUrls))
                 <a href="{{ $attachmentUrls[0] }}" target="_blank" rel="noopener" class="inquiries-btn inquiries-btn-secondary">Attachment</a>
             @else
-                —
+                -
             @endif
         </td>
-        <td data-col="assignby">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '—') }}</td>
+        <td data-col="assignby">{{ $r->CREATEDBY_NAME ?? ($r->CREATEDBY ?? '-') }}</td>
         <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $statusDisp }}</span></td>
         <td class="inquiries-col-action inquiries-action-cell inquiries-action-cell-single">
             <button type="button"

@@ -2,33 +2,7 @@
 @section('title', 'My Inquiries – SQL LMS Dealer Console')
 
 @push('styles')
-<style>
-    @keyframes shineEffect {
-        0% { background-color: rgba(124, 58, 237, 0); }
-        45% { background-color: rgba(124, 58, 237, 0.14); }
-        100% { background-color: rgba(124, 58, 237, 0.06); }
-    }
-    .inquiry-row--notif-highlight {
-        position: relative;
-        outline: none;
-        box-shadow: none;
-    }
-    .inquiry-row--notif-highlight td {
-        animation: shineEffect 1.2s ease-out 2;
-        background-color: rgba(124, 58, 237, 0.06);
-        transition: background-color 0.35s ease;
-    }
-    .inquiry-row--notif-highlight td.inquiries-col-action {
-        background-color: rgba(124, 58, 237, 0.10);
-        z-index: 7;
-    }
-    .inquiry-row--notif-highlight td:first-child {
-        box-shadow: inset 4px 0 0 #7c3aed;
-    }
-    .inquiry-row--notif-highlight::after {
-        display: none;
-    }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-inquiries.css') }}?v=20260324-14">
 @endpush
 
 @section('content')
@@ -551,6 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageNumbersEl = document.getElementById('dealerInquiriesPageNumbers');
         var controls = pagination.querySelectorAll('.inquiries-pagination-btn');
         var perPage = parseInt(pagination.getAttribute('data-per-page') || '10', 10);
+        var scrollWrap = table ? table.closest('.inquiries-table-scroll') : null;
         window.dealerPaginationState.perPage = perPage;
 
         function getAllRows() {
@@ -562,6 +537,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!row.dataset.filterMatch) row.dataset.filterMatch = '1';
                 return row.dataset.filterMatch !== '0';
             });
+        }
+
+        function clearPlaceholderRows() {
+            Array.prototype.slice.call(table.querySelectorAll('tbody tr.inquiries-placeholder-row')).forEach(function(row) {
+                row.remove();
+            });
+        }
+
+        function ensureFixedHeight(visibleDataCount) {
+            var tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            clearPlaceholderRows();
+            if (scrollWrap) {
+                scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0);
+                scrollWrap.classList.remove('inquiries-table-scroll-short');
+            }
+
+            if (visibleDataCount > 0 && visibleDataCount < perPage) {
+                var sampleRow = tbody.querySelector('tr.inquiry-row');
+                var rowHeight = sampleRow ? Math.ceil(sampleRow.getBoundingClientRect().height) - 1 : 55;
+                if (!rowHeight || rowHeight < 40) rowHeight = 55;
+
+                var headerCount = table.querySelectorAll('thead tr:first-child th').length || 1;
+                for (var i = visibleDataCount; i < perPage; i++) {
+                    var row = document.createElement('tr');
+                    row.className = 'inquiries-placeholder-row';
+                    row.setAttribute('aria-hidden', 'true');
+
+                    var cell = document.createElement('td');
+                    cell.className = 'inquiries-placeholder-cell';
+                    cell.colSpan = headerCount;
+                    cell.style.height = rowHeight + 'px';
+
+                    row.appendChild(cell);
+                    tbody.appendChild(row);
+                }
+            }
         }
 
         function buildPageNumbers(currentPage, lastPage) {
@@ -598,6 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rows.forEach(function(row) {
                 row.style.display = pageRows.indexOf(row) !== -1 ? '' : 'none';
             });
+            ensureFixedHeight(pageRows.length);
 
             pagination.setAttribute('data-total', String(total));
             pagination.setAttribute('data-last-page', String(lastPage));
@@ -1514,6 +1527,7 @@ document.addEventListener('DOMContentLoaded', function() {
             url.searchParams.delete('lead');
             url.searchParams.delete('fromNotif');
             url.searchParams.delete('notif');
+            url.searchParams.delete('action');
             window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
         }
     }
@@ -1563,12 +1577,76 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 180);
     }
 
+    function openLeadActionFromQuery(lead, action, attempt) {
+        attempt = attempt || 0;
+        if (!lead || !action || !table) {
+            clearNotificationFocusParams();
+            return;
+        }
+
+        var row = table.querySelector('tr.inquiry-row[data-lead-id="' + lead + '"]');
+        if (!row) {
+            if (attempt >= 4) {
+                clearNotificationFocusParams();
+                return;
+            }
+            setTimeout(function() { openLeadActionFromQuery(lead, action, attempt + 1); }, 180);
+            return;
+        }
+
+        var page = parseInt(row.getAttribute('data-page') || '1', 10);
+        if (typeof window.dealerGoToPage === 'function') {
+            window.dealerGoToPage(page);
+        }
+
+        setTimeout(function() {
+            var activeRow = table.querySelector('tr.inquiry-row[data-lead-id="' + lead + '"]');
+            if (!activeRow) {
+                if (attempt >= 4) {
+                    clearNotificationFocusParams();
+                    return;
+                }
+                openLeadActionFromQuery(lead, action, attempt + 1);
+                return;
+            }
+
+            activeRow.classList.add('inquiry-row--notif-highlight');
+            notificationFocusLeadId = lead;
+            try { activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {}
+            setTimeout(function() {
+                activeRow.classList.remove('inquiry-row--notif-highlight');
+                if (notificationFocusLeadId === lead) notificationFocusLeadId = null;
+            }, 8000);
+
+            var actionBtn = null;
+            if (action === 'update') {
+                actionBtn = activeRow.querySelector('.inquiries-update-btn');
+            }
+
+            if (!actionBtn) {
+                clearNotificationFocusParams();
+                return;
+            }
+
+            setTimeout(function() {
+                currentUpdateButtonEl = actionBtn;
+                actionBtn.click();
+                clearNotificationFocusParams();
+            }, 200);
+        }, 180);
+    }
+
     // If URL has ?lead=ID, jump to that row and highlight it.
     (function() {
         var params = new URLSearchParams(window.location.search);
         var lead = params.get('lead');
+        var action = String(params.get('action') || '').toLowerCase().trim();
         if (lead && table) {
-            setTimeout(function() { focusLeadFromNotification(lead, 0); }, 120);
+            if (action === 'update') {
+                setTimeout(function() { openLeadActionFromQuery(lead, action, 0); }, 120);
+            } else {
+                setTimeout(function() { focusLeadFromNotification(lead, 0); }, 120);
+            }
         }
     })();
 

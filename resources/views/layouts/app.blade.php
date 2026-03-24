@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -9,7 +9,7 @@
     <link rel="shortcut icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="apple-touch-icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260324-33">
     <script>
         // Apply sidebar state ASAP (prevents flicker on page navigation)
         (function () {
@@ -24,46 +24,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
-    
-    <style>
-        /* Unread notification visual styling */
-        .dashboard-notification-item--new {
-            background-color: #f4f8ff; /* Soft blue background for unread */
-            position: relative;
-        }
-        .dashboard-notification-item--new::after {
-            content: '';
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 8px;
-            height: 8px;
-            background-color: #0d6efd; /* Blue dot indicator */
-            border-radius: 50%;
-        }
-        
-        /* Header layout for the Mark as Read button */
-        .dashboard-notifications-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid #e5e7eb;
-            font-weight: 600;
-        }
-        .dashboard-notifications-mark-read {
-            font-size: 0.8rem;
-            color: #0d6efd;
-            cursor: pointer;
-            background: none;
-            border: none;
-            padding: 0;
-            font-weight: 400;
-        }
-        .dashboard-notifications-mark-read:hover {
-            text-decoration: underline;
-        }
-    </style>
     @stack('styles')
 </head>
 <body>
@@ -73,7 +33,7 @@
     @elseif (session('user_role') === 'dealer')
         @include('partials.sidebar-dealer')
     @endif
-    <div class="dashboard-sidebar-backdrop" id="sidebarBackdrop"></div>
+  
 
     <main class="dashboard-main">
         <header class="dashboard-topbar" data-scroll-anchor>
@@ -94,7 +54,7 @@
                                 <button type="button" class="dashboard-notifications-mark-read" id="dealerMarkAllReadBtn">Mark all as read</button>
                             </div>
                             <div class="dashboard-notifications-list" id="dealerNotificationsList">
-                                <div class="dashboard-notifications-empty">Loadingâ€¦</div>
+                                <div class="dashboard-notifications-empty">Loading...</div>
                             </div>
                         </div>
                     </div>

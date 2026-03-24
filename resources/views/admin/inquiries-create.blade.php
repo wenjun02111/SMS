@@ -1,6 +1,9 @@
 @extends('layouts.app')
 @php $isEdit = isset($inquiry); $inquiry = $inquiry ?? null; @endphp
 @section('title', $isEdit ? 'Edit inquiry – Admin' : 'Add new inquiry – Admin')
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260324-9">
+@endpush
 @section('content')
 <header class="dashboard-header">
     <div>

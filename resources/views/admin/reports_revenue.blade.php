@@ -1,7 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Report - Dealer Revenue Production')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/report_dealer_revenue_production.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260324-9">
+    <link rel="stylesheet" href="{{ asset('css/report_dealer_revenue_production.css') }}?v=20260324-1">
 @endpush
 @section('content')
 <div class="rrp-page">

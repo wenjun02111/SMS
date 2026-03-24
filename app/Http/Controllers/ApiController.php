@@ -35,8 +35,12 @@ class ApiController extends Controller
         }
 
         $stored = (string) ($row->PASSWORDHASH ?? '');
-        $looksHashed = str_starts_with($stored, '$2y$') || str_starts_with($stored, '$2a$') || str_starts_with($stored, '$argon2');
-        $ok = $looksHashed ? Hash::check($validated['password'], $stored) : hash_equals($stored, $validated['password']);
+        $looksHashed = str_starts_with($stored, '$2y$')
+            || str_starts_with($stored, '$2a$')
+            || str_starts_with($stored, '$argon2');
+        $ok = $looksHashed
+            ? Hash::check($validated['password'], $stored)
+            : hash_equals($stored, $validated['password']);
 
         if (!$ok) {
             return response()->json(['error' => 'Invalid email or password'], 401);
@@ -61,48 +65,6 @@ class ApiController extends Controller
         ]);
     }
 
-    public function debugTables(): JsonResponse
-    {
-        $driver = DB::connection()->getDriverName();
-        if ($driver !== 'firebird') {
-            return response()->json(['error' => 'debugTables is only implemented for Firebird in this project.'], 400);
-        }
-
-        $rows = DB::select(
-            'SELECT TRIM(rdb$relation_name) AS name
-             FROM rdb$relations
-             WHERE rdb$system_flag = 0 AND rdb$view_blr IS NULL
-             ORDER BY 1'
-        );
-        return response()->json(array_map(fn ($r) => ['table' => $r->name], $rows));
-    }
-
-    public function debugColumns(string $table): JsonResponse
-    {
-        $driver = DB::connection()->getDriverName();
-        if ($driver !== 'firebird') {
-            return response()->json(['error' => 'debugColumns is only implemented for Firebird in this project.'], 400);
-        }
-
-        $t = strtoupper(trim($table));
-        $rows = DB::select(
-            'SELECT
-                TRIM(rf.rdb$field_name) AS name,
-                f.rdb$field_type AS field_type,
-                f.rdb$field_sub_type AS field_sub_type,
-                f.rdb$field_length AS field_length,
-                f.rdb$field_scale AS field_scale
-            FROM rdb$relation_fields rf
-            JOIN rdb$fields f ON rf.rdb$field_source = f.rdb$field_name
-            WHERE rf.rdb$relation_name = ?
-            ORDER BY rf.rdb$field_position',
-            [$t]
-        );
-
-        return response()->json(array_map(fn ($r) => (array) $r, $rows));
-    }
-
-    // ── Leads ──
     public function leadsIndex(): JsonResponse
     {
         $rows = DB::select(
@@ -147,7 +109,6 @@ class ApiController extends Controller
         return response()->json(['LEADID' => $row->LEADID, 'CREATEDAT' => $row->CREATEDAT], 201);
     }
 
-    // ── Lead Activities ──
     public function leadActivitiesIndex(int $leadId): JsonResponse
     {
         $rows = DB::select(
@@ -158,6 +119,7 @@ class ApiController extends Controller
             ORDER BY "LEAD_ACTID" DESC',
             [$leadId]
         );
+
         return response()->json(array_map(fn ($r) => (array) $r, $rows));
     }
 
@@ -191,7 +153,6 @@ class ApiController extends Controller
         return response()->json(['LEAD_ACTID' => $row->LEAD_ACTID, 'CREATIONDATE' => $row->CREATIONDATE], 201);
     }
 
-    // ── Referrer Payouts ──
     public function payoutsIndex(): JsonResponse
     {
         $rows = DB::select(
@@ -200,15 +161,16 @@ class ApiController extends Controller
             FROM "REFERRER_PAYOUT"
             ORDER BY "REFERRERPAYOUTID" DESC'
         );
+
         return response()->json(array_map(fn ($r) => (array) $r, $rows));
     }
 
-    // ── Users ──
     public function usersIndex(): JsonResponse
     {
         $rows = DB::select(
             'SELECT "USERID","EMAIL","SYSTEMROLE","ISACTIVE","LASTLOGIN" FROM "USERS" ORDER BY "USERID"'
         );
+
         return response()->json(array_map(fn ($r) => (array) $r, $rows));
     }
 }

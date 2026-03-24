@@ -51,7 +51,7 @@ class PasskeyController extends Controller
     {
         $email = $request->session()->get('user_email');
         if (!$email) {
-            return response()->json(['error' => 'You must sign in with email and password first to add a passkey.'], 403);
+            return response()->json(['error' => 'Please sign in before registering a passkey.'], 403);
         }
 
         $row = null;
@@ -80,14 +80,14 @@ class PasskeyController extends Controller
                     }
                 } catch (\Throwable $e3) {
                     return response()->json([
-                        'error' => 'Registration could not start. Check that your database has a "Users" table (or "users") with user id and email.',
+                        'error' => 'Passkey registration is temporarily unavailable.',
                     ], 500);
                 }
             }
         }
 
         if (!$row) {
-            return response()->json(['error' => 'No account found for this email. Use the exact email in your "Users" table (e.g. weijiansql@gmail.com).'], 400);
+            return response()->json(['error' => 'No active account was found for this email address.'], 400);
         }
 
         $userIdRaw = (string) ($row->USERID ?? '');
@@ -123,7 +123,7 @@ class PasskeyController extends Controller
             }
         } catch (\Throwable $e) {
             return response()->json([
-                'error' => 'Registration could not start. Ensure the "USER_PASSKEY" table exists and is readable.',
+                'error' => 'Passkey registration is temporarily unavailable.',
             ], 500);
         }
 
@@ -140,7 +140,7 @@ class PasskeyController extends Controller
                 $excludeCredentialIds
             );
         } catch (\Throwable $e) {
-            return response()->json(['error' => 'Registration could not start: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Passkey registration could not be started.'], 500);
         }
 
         $request->session()->put('passkey_challenge', $webAuthn->getChallenge());
@@ -185,7 +185,7 @@ class PasskeyController extends Controller
             );
         } catch (\Throwable $e) {
             $request->session()->forget(['passkey_challenge', 'passkey_register_user_id', 'passkey_register_email']);
-            return response()->json(['error' => 'Verification failed: ' . $e->getMessage()], 400);
+            return response()->json(['error' => 'Passkey verification failed. Please try again.'], 400);
         }
 
         // Store both as base64url; ByteBuffer jsonSerialize uses RFC 1342 format which breaks storage/lookup.
@@ -345,7 +345,7 @@ class PasskeyController extends Controller
             );
         } catch (\Throwable $e) {
             $request->session()->forget('passkey_challenge');
-            return response()->json(['error' => 'Verification failed: ' . $e->getMessage()], 400);
+            return response()->json(['error' => 'Passkey verification failed. Please try again.'], 400);
         }
 
         $newSignCount = $webAuthn->getSignatureCounter();

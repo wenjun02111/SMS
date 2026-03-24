@@ -1,0 +1,46 @@
+#completedTable,
+#rewardedTable {
+  width: max-content;
+  min-width: max-content;
+  table-layout: auto;
+}
+
+#completedTable.rewards-default-layout,
+#rewardedTable.rewards-default-layout {
+  width: 100%;
+  min-width: 100%;
+}
+
+#completedPanel .inquiries-table-scroll.rewards-default-layout,
+#rewardedPanel .inquiries-table-scroll.rewards-default-layout {
+  overflow-x: hidden;
+}
+
+#completedPanel .inquiries-table-wrap,
+#rewardedPanel .inquiries-table-wrap {
+  min-height: 380px;
+}
+
+#completedTable th[data-col="inquiryid"],
+#completedTable td[data-col="inquiryid"],
+#rewardedTable th[data-col="inquiryid"],
+#rewardedTable td[data-col="inquiryid"] {
+  width: 96px;
+  min-width: 96px;
+}
+
+#completedTable th.inquiries-col-action,
+#completedTable td.inquiries-col-action,
+#rewardedTable th.inquiries-col-action,
+#rewardedTable td.inquiries-col-action {
+  position: sticky;
+  right: 0;
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
+
+#completedTable th.inquiries-col-action .inquiries-filter-clear,
+#rewardedTable th.inquiries-col-action .inquiries-filter-clear {
+  white-space: nowrap;
+}

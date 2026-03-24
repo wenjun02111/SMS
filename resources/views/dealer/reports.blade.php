@@ -133,21 +133,17 @@
     <section class="reports-panel reports-product-panel">
         <h2 class="reports-chart-title">Product Conversion</h2>
         <div class="reports-bar-chart-placeholder">
-            <div class="reports-bar-chart-content">
-                <div class="reports-bar-chart-yaxis">
-                    @foreach ($productNames as $name)
-                    <span>{{ $name }}</span>
-                    @endforeach
-                </div>
-                <div class="reports-bar-chart-bars">
-                    @foreach ($productCounts as $i => $cnt)
-                    @php $pid = $i + 1; @endphp
+            <div class="reports-bar-chart-list">
+                @foreach ($productCounts as $i => $cnt)
+                @php $pid = $i + 1; @endphp
+                <div class="reports-bar-chart-item">
+                    <span class="reports-bar-chart-label">{{ $productNames[$i] ?? 'Product' }}</span>
                     <div class="reports-bar-row">
                         <div class="reports-bar-fill reports-product-fill reports-product-fill-p{{ $pid }}"
                              style="width:{{ $productMax > 0 ? round(($cnt / $productMax) * 100, 1) : 0 }}%"></div>
                     </div>
-                    @endforeach
                 </div>
+                @endforeach
             </div>
             <div class="reports-bar-chart-xaxis">
                 @foreach ($productTicks as $tick)

@@ -4,6 +4,7 @@ use App\Http\Middleware\CorsMiddleware;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\RequireAuth;
 use App\Http\Middleware\RequireDealer;
+use App\Http\Middleware\RequireInternalApiKey;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'auth.sms' => RequireAuth::class,
             'admin' => RequireAdmin::class,
             'dealer' => RequireDealer::class,
+            'api.internal' => RequireInternalApiKey::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

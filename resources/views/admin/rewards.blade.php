@@ -1,55 +1,7 @@
-﻿@extends('layouts.app')
+@extends('layouts.app')
 @section('title', 'Rewards - Admin')
 @push('styles')
-<style>
-    /* Keep rewards columns content-sized so short values do not stretch too wide. */
-    #completedTable,
-    #rewardedTable {
-        width: max-content;
-        min-width: max-content;
-        table-layout: auto;
-    }
-    #completedTable.rewards-default-layout,
-    #rewardedTable.rewards-default-layout {
-        width: 100%;
-        min-width: 100%;
-    }
-
-    #completedPanel .inquiries-table-scroll.rewards-default-layout,
-    #rewardedPanel .inquiries-table-scroll.rewards-default-layout {
-        overflow-x: hidden;
-    }
-
-    /* Keep payouts panels closer to the Inquiries table height so the footer stays visible. */
-    #completedPanel .inquiries-table-wrap,
-    #rewardedPanel .inquiries-table-wrap {
-        min-height: 380px;
-    }
-
-    #completedTable th[data-col="inquiryid"],
-    #completedTable td[data-col="inquiryid"],
-    #rewardedTable th[data-col="inquiryid"],
-    #rewardedTable td[data-col="inquiryid"] {
-        width: 96px;
-        min-width: 96px;
-    }
-
-    #completedTable th.inquiries-col-action,
-    #completedTable td.inquiries-col-action,
-    #rewardedTable th.inquiries-col-action,
-    #rewardedTable td.inquiries-col-action {
-        position: sticky;
-        right: 0;
-        width: 140px;
-        min-width: 140px;
-        max-width: 140px;
-    }
-
-    #completedTable th.inquiries-col-action .inquiries-filter-clear,
-    #rewardedTable th.inquiries-col-action .inquiries-filter-clear {
-        white-space: nowrap;
-    }
-</style>
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-rewards.css') }}?v=20260324-9">
 @endpush
 @section('content')
 @php
@@ -998,8 +950,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    var REWARDS_ROW_HEIGHT_PX = 44;
-
     function getFilteredRewardsRows(table) {
         if (!table) return [];
         var rows = table.querySelectorAll('tbody tr.rewards-row');
@@ -1014,11 +964,12 @@ document.addEventListener('DOMContentLoaded', function() {
     function ensureRewardsFixedHeight(table, visibleDataCount, perPage) {
         if (!table) return;
         var tbody = table.querySelector('tbody');
+        var scrollWrap = table.closest('.inquiries-table-scroll');
         if (!tbody) return;
-        if (visibleDataCount >= perPage) {
-            tbody.style.minHeight = '';
-        } else {
-            tbody.style.minHeight = (perPage * REWARDS_ROW_HEIGHT_PX) + 'px';
+        tbody.style.minHeight = '';
+        if (scrollWrap) {
+            scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0);
+            scrollWrap.classList.toggle('inquiries-table-scroll-short', visibleDataCount > 0 && visibleDataCount < perPage);
         }
     }
 
@@ -1614,4 +1565,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
-

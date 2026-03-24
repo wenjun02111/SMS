@@ -20,6 +20,9 @@
   box-sizing: border-box;
   max-width: 100%;
   overflow-x: hidden;
+  width: 111.111%;
+  zoom: 0.9;
+  transform-origin: top left;
 }
 
 .reports-page .dashboard-header .dashboard-title { font-size: 1.5rem; }
@@ -637,4 +640,75 @@
 .reports-page .report-metric-link:hover,
 .reports-page .report-metric-link:focus-visible {
   text-decoration: none;
+}
+
+/* Bring text back up slightly after the 10% page shrink */
+.reports-page .reports-tab-link {
+  font-size: 14px;
+}
+
+.reports-page .reports-period-select,
+.reports-page .reports-period-check,
+.reports-page .reports-period-apply {
+  font-size: 13px;
+}
+
+.reports-page .dashboard-metrics-grid .dashboard-metric-label {
+  font-size: 14px;
+}
+
+.reports-page .dashboard-metrics-grid .dashboard-metric-value {
+  font-size: 24px;
+}
+
+.reports-page .dashboard-metric-dealer-tag {
+  font-size: 11px;
+}
+
+.reports-page .dashboard-metric-trend {
+  font-size: clamp(10px, 0.88vw, 12px);
+}
+
+.reports-page .report-metric-chevron {
+  font-size: 20px;
+}
+
+.reports-page .dashboard-metric-btn {
+  font-size: 13px;
+}
+
+.reports-page .dashboard-panel-title {
+  font-size: 1.15rem;
+}
+
+.reports-page .dashboard-panel-header .dashboard-panel-subtitle {
+  font-size: 0.88rem;
+}
+
+.reports-page .report-donut-total {
+  font-size: 24px;
+}
+
+.reports-page .report-donut-label {
+  font-size: 13px;
+}
+
+.reports-page .inquiry-trend-badge {
+  font-size: 14px;
+}
+
+.reports-page .text-heading {
+  font-size: 1.9rem;
+}
+
+.reports-page .text-body {
+  font-size: 18px;
+}
+
+.reports-page .report-legend {
+  font-size: 12px;
+}
+
+.reports-page .inquiry-filter-btn {
+  font-size: 13px;
 }

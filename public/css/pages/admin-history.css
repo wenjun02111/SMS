@@ -1,0 +1,65 @@
+#historyTable th[data-col="id"],
+#historyTable td[data-col="id"] {
+  width: 88px;
+  min-width: 88px;
+}
+
+#historyTable th[data-col="inquiryid"],
+#historyTable td[data-col="inquiryid"] {
+  width: 120px;
+  min-width: 120px;
+}
+
+#historyTable th[data-col="user"],
+#historyTable td[data-col="user"] {
+  width: 96px;
+  min-width: 96px;
+}
+
+#historyTable th[data-col="id"] .inquiries-filter-wrap input {
+  width: 64px;
+  max-width: 64px;
+}
+
+#historyTable th[data-col="inquiryid"] .inquiries-filter-wrap input {
+  width: 92px;
+  max-width: 92px;
+}
+
+#historyTable th[data-col="user"] .inquiries-filter-wrap input {
+  width: 72px;
+  max-width: 72px;
+}
+
+#historyTable th[data-col="id"] .inquiries-filter-wrap,
+#historyTable th[data-col="inquiryid"] .inquiries-filter-wrap,
+#historyTable th[data-col="user"] .inquiries-filter-wrap {
+  width: fit-content;
+}
+
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.history-checkbox-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #d8d5ff;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #5a5f7a;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.history-checkbox-filter input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #6c5ce7;
+}

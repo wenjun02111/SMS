@@ -47,7 +47,7 @@
 
         @if ($role === 'admin')
         <div class="dashboard-nav-group dashboard-nav-group-maintain">
-            <div class="sidebar-section">Maintenance</div>
+            <div class="sidebar-section dashboard-nav-section-label">Maintenance</div>
             <a href="{{ route('admin.maintain-users') }}" class="dashboard-nav-item {{ $current === 'maintain-users' ? 'dashboard-nav-item-active' : '' }}">
                 <span class="dashboard-nav-icon"><i class="bi bi-person-gear"></i></span>
                 <span>Maintain Users</span>

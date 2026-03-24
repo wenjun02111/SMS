@@ -1,49 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Dashboard – SQL LMS Dealer Console')
 
-{{-- Link to your external CSS file --}}
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <style>
-        /* Keep the status text above the progress bar and align rows consistently */
-        .dealer-progress-cell {
-            display: flex !important;
-            flex-direction: column !important;
-            flex-wrap: nowrap !important;
-            align-items: flex-start !important;
-            justify-content: center !important;
-            gap: 6px !important;
-            width: 100%;
-            min-width: 0 !important; /* Prevents column blowout */
-        }
-        
-        .dealer-progress-text {
-            flex: 0 0 auto !important;
-            width: 100% !important;
-            white-space: nowrap !important;
-            overflow: hidden !important;
-            text-overflow: ellipsis !important;
-            text-align: left !important;
-            line-height: 1.2 !important;
-            margin: 0 !important;
-        }
-
-        .dealer-status-bar {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            align-items: center !important;
-            gap: 4px !important;
-            width: 100% !important;
-            flex: 0 0 auto !important;
-            min-width: 0 !important;
-        }
-
-        .dealer-status-segment {
-            flex: 1 1 0 !important;
-            min-width: 8px !important;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-dashboard.css') }}?v=20260324-16">
 @endpush
 
 @section('content')
@@ -150,7 +109,10 @@
                             $customerFull = trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '')) ?: '—';
                             $customerShort = \Illuminate\Support\Str::limit($customerFull, 24, '...');
                         @endphp
-                        <div class="dealer-table-row dealer-inquiry-row" data-page="{{ $rowPage }}">
+                        <a href="{{ route('dealer.inquiries', ['lead' => $r->LEADID, 'action' => 'update']) }}"
+                           class="dealer-table-row dealer-inquiry-row dealer-inquiry-row-link"
+                           data-page="{{ $rowPage }}"
+                           aria-label="Open inquiry #SQL-{{ $r->LEADID }} and update status">
                             <span class="dealer-inquiry-id">#SQL-{{ $r->LEADID }}</span>
                             <span title="{{ $customerFull !== '—' ? $customerFull : '' }}">{{ $customerShort }}</span>
                             <span>{{ $r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED)) : '—' }}</span>
@@ -166,7 +128,7 @@
                                 </div>
                             </div>
                             <span>{{ $idx < 4 ? ($r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED . ' +3 days')) : 'N/A') : 'N/A' }}</span>
-                        </div>
+                        </a>
                     @empty
                         <div class="dealer-table-row dealer-table-row--empty">
                             <div class="dealer-table-empty">No inquiries assigned yet.</div>

@@ -1,5 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Dashboard - Admin')
+@push('styles')
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-dashboard.css') }}?v=20260324-9">
+@endpush
 @section('content')
 <section class="dashboard-metrics">
     <div class="dashboard-metric-card">

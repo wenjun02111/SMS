@@ -6,15 +6,14 @@ use App\Http\Controllers\ApiController;
 Route::get('/status', [ApiController::class, 'status']);
 Route::post('/login', [ApiController::class, 'login']);
 
-Route::get('/debug/tables', [ApiController::class, 'debugTables']);
-Route::get('/debug/columns/{table}', [ApiController::class, 'debugColumns']);
+Route::middleware('api.internal')->group(function () {
+    Route::get('/leads', [ApiController::class, 'leadsIndex']);
+    Route::post('/leads', [ApiController::class, 'leadsStore']);
 
-Route::get('/leads', [ApiController::class, 'leadsIndex']);
-Route::post('/leads', [ApiController::class, 'leadsStore']);
+    Route::get('/leads/{leadId}/activities', [ApiController::class, 'leadActivitiesIndex']);
+    Route::post('/lead-activities', [ApiController::class, 'leadActivitiesStore']);
 
-Route::get('/leads/{leadId}/activities', [ApiController::class, 'leadActivitiesIndex']);
-Route::post('/lead-activities', [ApiController::class, 'leadActivitiesStore']);
+    Route::get('/payouts', [ApiController::class, 'payoutsIndex']);
 
-Route::get('/payouts', [ApiController::class, 'payoutsIndex']);
-
-Route::get('/users', [ApiController::class, 'usersIndex']);
+    Route::get('/users', [ApiController::class, 'usersIndex']);
+});

@@ -1,7 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Report - Monthly Performance Analytics')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260324-9">
+    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260324-2">
 @endpush
 @section('content')
 <div class="reports-page">
