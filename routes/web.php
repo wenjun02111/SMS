@@ -50,7 +50,7 @@ Route::middleware(['auth.sms', 'admin'])->prefix('admin')->name('admin.')->group
     Route::get('/dealers/sync', [AdminController::class, 'dealersSync'])->name('dealers.sync');
     Route::post('/dealers', [AdminController::class, 'dealersStore'])->name('dealers.store');
     Route::post('/dealers/{userId}', [AdminController::class, 'dealersUpdate'])->name('dealers.update');
-    Route::get('/rewards', [AdminController::class, 'rewards'])->name('rewards');
+    Route::get('/rewards', fn () => redirect()->route('admin.inquiries', ['tab' => 'all']))->name('rewards');
     Route::get('/rewards/serve-attachment', [AdminController::class, 'serveRewardAttachment'])->name('rewards.serve-attachment');
     Route::get('/rewards/{leadId}/activity-attachment/{leadActId}', [AdminController::class, 'rewardActivityAttachment'])->name('rewards.activity-attachment');
     Route::post('/rewards/send-email', [AdminController::class, 'sendPayoutEmail'])->name('rewards.send-email');

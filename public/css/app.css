@@ -4732,6 +4732,37 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   padding-bottom: 8px;
   border-bottom: 1px solid #f3f4f6;
 }
+.inquiries-columns-search {
+  position: relative;
+  margin-bottom: 10px;
+}
+.inquiries-columns-search-icon {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #9ca3af;
+  pointer-events: none;
+}
+.inquiries-columns-search-input {
+  width: 100%;
+  padding: 8px 10px 8px 30px;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+.inquiries-columns-search-input:focus {
+  border-color: #a78bfa;
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.14);
+}
+.inquiries-columns-search-input::placeholder {
+  color: #9ca3af;
+}
 .inquiries-columns-check {
   display: flex;
   align-items: center;
@@ -5174,6 +5205,7 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   min-width: 0;
 }
 .inquiries-header-cell .inquiries-grid-filter,
+.inquiries-header-cell .inquiries-grid-filter-all,
 .inquiries-header-cell .inquiries-grid-filter-assigned,
 .inquiries-header-cell .inquiries-grid-filter-select,
 .inquiries-header-cell .dealer-grid-filter {
@@ -5187,6 +5219,7 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   color: #374151;
 }
 .inquiries-header-cell .inquiries-grid-filter:focus,
+.inquiries-header-cell .inquiries-grid-filter-all:focus,
 .inquiries-header-cell .inquiries-grid-filter-assigned:focus,
 .inquiries-header-cell .inquiries-grid-filter-select:focus,
 .inquiries-header-cell .dealer-grid-filter:focus {
@@ -5466,7 +5499,7 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
 #assignedTable th[data-col="inquiryid"],
 #assignedTable td[data-col="inquiryid"] {
   width: 1%;
-  max-width: 105px; /* +15px */
+  max-width: 110px; /* keep consistent with Incoming + All */
   white-space: nowrap;
 }
 #assignedTable th[data-col="date"],

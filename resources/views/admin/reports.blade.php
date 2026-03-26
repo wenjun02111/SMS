@@ -84,15 +84,15 @@
             'key' => 'Completed',
             'label' => 'COMPLETED',
             'value' => $leadStatus['Closed'] ?? 0,
-            'link' => route('admin.rewards', ['tab' => 'completed']),
-            'link_aria' => 'View completed cases'
+            'link' => route('admin.inquiries', ['tab' => 'all']),
+            'link_aria' => 'View completed cases in all inquiries'
         ],
         [
             'key' => 'Rewarded',
             'label' => 'REWARDED',
             'value' => $activityStatus['reward'] ?? 0,
-            'link' => route('admin.rewards', ['tab' => 'rewarded']),
-            'link_aria' => 'View payouts rewarded'
+            'link' => route('admin.inquiries', ['tab' => 'all']),
+            'link_aria' => 'View rewarded cases in all inquiries'
         ],
     ];
 @endphp

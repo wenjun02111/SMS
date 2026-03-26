@@ -17,18 +17,14 @@
 <div class="dashboard-content inquiries-page-wrap">
     <section class="inquiries-mgmt-panel dealer-inquiries-panel">
         <div class="inquiries-panel-header">
-            <div class="inquiries-panel-title-wrap">
-                <i class="bi bi-folder2-open inquiries-panel-icon"></i>
-                <h2 class="inquiries-panel-title">My Inquiries</h2>
-            </div>
-            <div class="inquiries-panel-actions">
-                <button type="button" class="inquiries-btn inquiries-btn-secondary inquiries-sync-btn" data-sync-url="{{ route('dealer.inquiries.sync') }}">
-                    <i class="bi bi-arrow-repeat inquiries-sync-icon"></i>
-                    <span class="inquiries-sync-label">Sync</span>
-                </button>
-                <div class="inquiries-columns-dropdown">
-                    <button type="button" class="inquiries-btn inquiries-btn-secondary" id="dealerInquiryColumnsBtn" aria-haspopup="true" aria-expanded="false">Columns</button>
-                    <div class="inquiries-columns-menu" id="dealerInquiryColumnsMenu" hidden>
+        <div class="inquiries-panel-title-wrap">
+            <i class="bi bi-folder2-open inquiries-panel-icon"></i>
+            <h2 class="inquiries-panel-title">My Inquiries</h2>
+        </div>
+        <div class="inquiries-panel-actions">
+            <div class="inquiries-columns-dropdown">
+                <button type="button" class="inquiries-btn inquiries-btn-secondary" id="dealerInquiryColumnsBtn" aria-haspopup="true" aria-expanded="false">Columns</button>
+                <div class="inquiries-columns-menu" id="dealerInquiryColumnsMenu" hidden>
                         <div class="inquiries-columns-menu-title">Show columns</div>
                         <label class="inquiries-columns-check"><input type="checkbox" data-col="inquiryid"> INQUIRY ID</label>
                         <label class="inquiries-columns-check"><input type="checkbox" data-col="date"> INQUIRY DATE</label>
@@ -666,7 +662,7 @@ document.addEventListener('DOMContentLoaded', function() {
             window.dealerApplyPagination();
         };
 
-        // Bind controls once (safe because init runs after Sync too)
+    // Bind controls once after the table is initialized.
         controls.forEach(function(btn) {
             btn.onclick = function() {
                 var type = btn.getAttribute('data-page');
@@ -684,53 +680,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Simple client-side pagination: 10 inquiries per page
     initDealerPagination();
 
-    // Sync button (same behaviour pattern as admin inquiries sync)
-    var DEALER_INQUIRIES_AUTO_SYNC_MS = 15 * 60 * 1000;
-
-    function triggerDealerInquirySync(btn) {
-        if (!btn || btn.classList.contains('is-syncing')) return;
-        btn.classList.add('is-syncing');
-        var icon = btn.querySelector('.inquiries-sync-icon');
-        if (icon) {
-            icon.classList.add('spinning');
-        }
-
-        var url = btn.getAttribute('data-sync-url') || window.location.href;
-        fetch(url, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
-        }).then(function(res) {
-            return res.ok ? res.json() : Promise.reject();
-        }).then(function(data) {
-            var tbody = table.querySelector('tbody');
-            if (tbody && data.rows !== undefined) {
-                tbody.innerHTML = data.rows;
-            }
-            normalizeDealerTableStructure();
-            // Re-apply filters and column visibility after replacing rows
-            applyDealerGridFilters();
-            var currentCols = loadCols() || getDefaultColsForViewport();
-            applyVisibleCols(currentCols);
-            initDealerPagination();
-        }).catch(function() {
-            // swallow errors for now; button state will reset below
-        }).finally(function() {
-            btn.classList.remove('is-syncing');
-            if (icon) {
-                icon.classList.remove('spinning');
-            }
-        });
-    }
-
-    document.querySelectorAll('.inquiries-sync-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            triggerDealerInquirySync(btn);
-        });
-    });
-
-    window.setInterval(function() {
-        triggerDealerInquirySync(document.querySelector('.inquiries-sync-btn'));
-    }, DEALER_INQUIRIES_AUTO_SYNC_MS);
 });
 </script>
 @endpush
@@ -1753,7 +1702,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })();
 
     // Delegate click handling for Update / View buttons so it continues to work
-    // after the table body is replaced by Sync.
+            // after the table body is re-rendered.
     document.addEventListener('click', function(e) {
         var updateBtnEl = e.target.closest('.inquiries-update-btn');
         if (updateBtnEl) {

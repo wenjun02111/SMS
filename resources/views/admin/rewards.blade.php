@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Rewards - Admin')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/admin-rewards.css') }}?v=20260325-11">
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-rewards.css') }}?v=20260326-12">
 @endpush
 @section('content')
 @php
@@ -46,10 +46,6 @@
             <h2 class="inquiries-panel-title">Completed</h2>
         </div>
         <div class="inquiries-panel-actions">
-            <button type="button" class="inquiries-btn inquiries-btn-secondary inquiries-sync-btn" data-sync-type="completed" data-sync-url="{{ route('admin.rewards') }}">
-                <i class="bi bi-arrow-repeat inquiries-sync-icon"></i>
-                <span class="inquiries-sync-label">Sync</span>
-            </button>
             <div class="inquiries-columns-dropdown">
                 <button type="button" class="inquiries-btn inquiries-btn-secondary" id="completedColumnsBtn" aria-haspopup="true" aria-expanded="false">Columns</button>
                 <div class="inquiries-columns-menu" id="completedColumnsMenu" hidden>
@@ -286,10 +282,6 @@
             <h2 class="inquiries-panel-title">Rewarded</h2>
         </div>
         <div class="inquiries-panel-actions">
-            <button type="button" class="inquiries-btn inquiries-btn-secondary inquiries-sync-btn" data-sync-type="rewarded" data-sync-url="{{ route('admin.rewards') }}">
-                <i class="bi bi-arrow-repeat inquiries-sync-icon"></i>
-                <span class="inquiries-sync-label">Sync</span>
-            </button>
             <div class="inquiries-columns-dropdown">
                 <button type="button" class="inquiries-btn inquiries-btn-secondary" id="rewardedColumnsBtn" aria-haspopup="true" aria-expanded="false">Columns</button>
                 <div class="inquiries-columns-menu" id="rewardedColumnsMenu" hidden>
@@ -748,22 +740,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function replaceRewardsTableBody(nextDoc, tableId) {
-        var currentBody = document.querySelector('#' + tableId + ' tbody');
-        var nextBody = nextDoc.querySelector('#' + tableId + ' tbody');
-        if (!currentBody || !nextBody) return false;
-        currentBody.innerHTML = nextBody.innerHTML;
-        return true;
-    }
-
-    function refreshSummaryCardFromDoc(nextDoc) {
-        var card = document.getElementById('payoutSummaryCard');
-        var nextCard = nextDoc.querySelector('#payoutSummaryCard');
-        if (!card || !nextCard) return;
-        card.setAttribute('data-pending-count', nextCard.getAttribute('data-pending-count') || '0');
-        card.setAttribute('data-rewarded-count', nextCard.getAttribute('data-rewarded-count') || '0');
-    }
-
     function showRewardsToast(message) {
         var id = 'rewards-action-toast';
         var el = document.getElementById(id);
@@ -781,74 +757,6 @@ document.addEventListener('DOMContentLoaded', function() {
             el.classList.add('inquiries-mark-failed-blocked-toast-hidden');
         }, 4000);
     }
-
-    function shouldAutoSyncRewards(message) {
-        var msg = (message || '').toLowerCase();
-        return msg.indexOf('please sync and try again') !== -1 || msg.indexOf('already rewarded') !== -1 || msg.indexOf('already paid') !== -1 || msg.indexOf('already completed') !== -1;
-    }
-
-    function syncRewardsForButton(btn) {
-        var panel = btn && btn.closest ? btn.closest('.inquiries-tab-panel') : null;
-        var syncBtn = panel ? panel.querySelector('.inquiries-sync-btn') : null;
-        if (!syncBtn) {
-            syncBtn = document.querySelector('.inquiries-sync-btn[data-sync-type="completed"]') || document.querySelector('.inquiries-sync-btn');
-        }
-        triggerRewardsSync(syncBtn, true);
-    }
-
-    var REWARDS_AUTO_SYNC_MS = 15 * 60 * 1000;
-
-    function triggerRewardsSync(btn, silent) {
-        if (!btn || btn.classList.contains('is-syncing')) return;
-        btn.classList.add('is-syncing');
-        var icon = btn.querySelector('.inquiries-sync-icon');
-        if (icon) icon.classList.add('spinning');
-        var url = btn.getAttribute('data-sync-url');
-        if (!url) url = '{{ route('admin.rewards') }}';
-        var syncType = (btn.getAttribute('data-sync-type') || '').toLowerCase();
-        var req = new URL(url, window.location.origin);
-        req.searchParams.set('tab', syncType === 'rewarded' ? 'rewarded' : 'completed');
-        req.searchParams.set('_sync', Date.now().toString());
-        fetch(req.toString(), {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
-            cache: 'no-store'
-        }).then(function(res) {
-            return res.ok ? res.text() : Promise.reject();
-        }).then(function(html) {
-            var parser = new DOMParser();
-            var nextDoc = parser.parseFromString(html, 'text/html');
-            var completedUpdated = replaceRewardsTableBody(nextDoc, 'completedTable');
-            var rewardedUpdated = replaceRewardsTableBody(nextDoc, 'rewardedTable');
-            if (!completedUpdated && !rewardedUpdated) {
-                return Promise.reject();
-            }
-            refreshSummaryCardFromDoc(nextDoc);
-            bindRewardEmailButtons();
-            applyCompletedColumns(getCompletedVisibleColumns());
-            applyRewardedColumns(getRewardedVisibleColumns());
-            applyAllTables();
-            var activeTab = document.querySelector('.inquiries-tab.active');
-            if (activeTab && typeof activeTab.click === 'function') {
-                activeTab.click();
-            }
-        }).catch(function() {
-            if (!silent) showRewardsToast('Failed to sync data.');
-        }).finally(function() {
-            btn.classList.remove('is-syncing');
-            if (icon) icon.classList.remove('spinning');
-        });
-    }
-
-    document.querySelectorAll('.inquiries-sync-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            triggerRewardsSync(btn, false);
-        });
-    });
-
-    window.setInterval(function() {
-        var autoBtn = document.querySelector('.inquiries-sync-btn[data-sync-type="completed"]') || document.querySelector('.inquiries-sync-btn');
-        triggerRewardsSync(autoBtn, true);
-    }, REWARDS_AUTO_SYNC_MS);
 
     var COMPLETED_PER_PAGE = 10;
     var REWARDED_PER_PAGE = 10;
@@ -914,10 +822,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         applyRewardEmailIcon(btn, leadId);
                     } else {
                         var message = result.data.message || 'Failed to send email.';
-                        showRewardsToast(message);
-                        if (shouldAutoSyncRewards(message)) {
-                            syncRewardsForButton(btn);
+                        if (/please sync and try again|already rewarded|already paid|already completed/i.test(message) && message.toLowerCase().indexOf('refresh') === -1) {
+                            message += ' Please refresh the page.';
                         }
+                        showRewardsToast(message);
                     }
                 }).catch(function() {
                     showRewardsToast('Failed to send email.');

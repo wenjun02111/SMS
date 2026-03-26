@@ -73,16 +73,9 @@ class PasskeyController extends Controller
                     [$email]
                 );
             } catch (\Throwable $e2) {
-                try {
-                    $laravelUser = DB::selectOne('SELECT id, email FROM users WHERE email = ?', [$email]);
-                    if ($laravelUser) {
-                        $row = (object) ['USERID' => $laravelUser->id, 'EMAIL' => $laravelUser->email];
-                    }
-                } catch (\Throwable $e3) {
-                    return response()->json([
-                        'error' => 'Passkey registration is temporarily unavailable.',
-                    ], 500);
-                }
+                return response()->json([
+                    'error' => 'Passkey registration is temporarily unavailable.',
+                ], 500);
             }
         }
 

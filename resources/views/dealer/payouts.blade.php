@@ -51,10 +51,6 @@
             <h2 class="inquiries-panel-title">Completed</h2>
         </div>
         <div class="inquiries-panel-actions">
-            <button type="button" class="inquiries-btn inquiries-btn-secondary inquiries-sync-btn" id="completedSyncBtn" data-sync-url="{{ route('dealer.payouts.sync') }}">
-                <i class="bi bi-arrow-repeat inquiries-sync-icon"></i>
-                <span class="inquiries-sync-label">Sync</span>
-            </button>
             <div class="inquiries-columns-dropdown">
                 <button type="button" class="inquiries-btn inquiries-btn-secondary" id="completedColumnsBtn" aria-haspopup="true" aria-expanded="false">Columns</button>
                 <div class="inquiries-columns-menu" id="completedColumnsMenu" hidden>
@@ -145,10 +141,6 @@
             <h2 class="inquiries-panel-title">Rewarded</h2>
         </div>
         <div class="inquiries-panel-actions">
-            <button type="button" class="inquiries-btn inquiries-btn-secondary inquiries-sync-btn" id="rewardedSyncBtn" data-sync-url="{{ route('dealer.payouts.sync') }}">
-                <i class="bi bi-arrow-repeat inquiries-sync-icon"></i>
-                <span class="inquiries-sync-label">Sync</span>
-            </button>
             <div class="inquiries-columns-dropdown">
                 <button type="button" class="inquiries-btn inquiries-btn-secondary" id="rewardedColumnsBtn" aria-haspopup="true" aria-expanded="false">Columns</button>
                 <div class="inquiries-columns-menu" id="rewardedColumnsMenu" hidden>
@@ -784,87 +776,6 @@ document.addEventListener('DOMContentLoaded', function() {
             refreshRewardedColumnState();
         });
     }
-
-    var DEALER_PAYOUTS_AUTO_SYNC_MS = 15 * 60 * 1000;
-
-    function triggerDealerCompletedSync() {
-        if (!completedSyncBtn || completedSyncBtn.classList.contains('is-syncing')) return;
-        completedSyncBtn.classList.add('is-syncing');
-        var icon = completedSyncBtn.querySelector('.inquiries-sync-icon');
-        if (icon) icon.classList.add('spinning');
-
-        var url = completedSyncBtn.getAttribute('data-sync-url') || window.location.href;
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' })
-            .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
-            .then(function(data) {
-                var table = document.getElementById('completedTable');
-                var tbody = table ? table.querySelector('tbody') : null;
-                if (tbody && data && data.completed_rows !== undefined) {
-                    tbody.innerHTML = data.completed_rows;
-                }
-
-                refreshCompletedColumnState();
-                applyTableFilter('completedTable');
-                applyCompletedPagination();
-            })
-            .catch(function() {
-                // swallow errors; button state resets below
-            })
-            .finally(function() {
-                completedSyncBtn.classList.remove('is-syncing');
-                if (icon) icon.classList.remove('spinning');
-            });
-    }
-
-    function triggerDealerRewardedSync() {
-        if (!rewardedSyncBtn || rewardedSyncBtn.classList.contains('is-syncing')) return;
-        rewardedSyncBtn.classList.add('is-syncing');
-        var icon = rewardedSyncBtn.querySelector('.inquiries-sync-icon');
-        if (icon) icon.classList.add('spinning');
-
-        var url = rewardedSyncBtn.getAttribute('data-sync-url') || window.location.href;
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }, cache: 'no-store' })
-            .then(function(res) { return res.ok ? res.json() : Promise.reject(); })
-            .then(function(data) {
-                var table = document.getElementById('rewardedTable');
-                var tbody = table ? table.querySelector('tbody') : null;
-                if (tbody && data && data.rewarded_rows !== undefined) {
-                    tbody.innerHTML = data.rewarded_rows;
-                }
-
-                refreshRewardedColumnState();
-                applyTableFilter('rewardedTable');
-                applyRewardedPagination();
-            })
-            .catch(function() {
-                // swallow errors; button state resets below
-            })
-            .finally(function() {
-                rewardedSyncBtn.classList.remove('is-syncing');
-                if (icon) icon.classList.remove('spinning');
-            });
-    }
-
-    // Sync button: refresh Completed rows (same behaviour pattern as dealer inquiries sync)
-    var completedSyncBtn = document.getElementById('completedSyncBtn');
-    if (completedSyncBtn) {
-        completedSyncBtn.addEventListener('click', function() {
-            triggerDealerCompletedSync();
-        });
-    }
-
-    // Sync button: refresh Rewarded rows (same endpoint)
-    var rewardedSyncBtn = document.getElementById('rewardedSyncBtn');
-    if (rewardedSyncBtn) {
-        rewardedSyncBtn.addEventListener('click', function() {
-            triggerDealerRewardedSync();
-        });
-    }
-
-    window.setInterval(function() {
-        triggerDealerCompletedSync();
-        triggerDealerRewardedSync();
-    }, DEALER_PAYOUTS_AUTO_SYNC_MS);
 
     var completedPagNav = document.querySelector('#completedPagination .inquiries-assigned-pagination-nav');
     if (completedPagNav) {

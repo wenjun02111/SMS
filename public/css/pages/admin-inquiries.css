@@ -1,4 +1,321 @@
 /* Admin inquiry create and edit page */
+.inquiries-page-wrap {
+  padding: 15px;
+  box-sizing: border-box;
+}
+
+.inquiries-page-wrap .inquiries-table .inquiries-placeholder-cell {
+  height: 57px;
+}
+
+.inquiries-page-wrap #allPanel .inquiries-table-scroll {
+  overflow-x: auto;
+}
+
+.inquiries-page-wrap #allTable {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit {
+  width: 100%;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="inquiryid"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="inquiryid"] {
+  width: 1%;
+  max-width: 110px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="date"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="date"] {
+  width: 1%;
+  max-width: 97px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="date"] .inquiries-grid-filter-all {
+  max-width: 97px;
+}
+
+.inquiries-page-wrap #unassignedTable th[data-col="date"],
+.inquiries-page-wrap #unassignedTable td[data-col="date"],
+.inquiries-page-wrap #assignedTable th[data-col="date"],
+.inquiries-page-wrap #assignedTable td[data-col="date"],
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="date"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="date"] {
+  width: 102px;
+  min-width: 102px;
+  max-width: 102px;
+}
+
+.inquiries-page-wrap #unassignedTable th[data-col="date"] .inquiries-grid-filter,
+.inquiries-page-wrap #assignedTable th[data-col="date"] .inquiries-grid-filter-assigned,
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="date"] .inquiries-grid-filter-all {
+  max-width: 102px;
+}
+
+.inquiries-page-wrap #unassignedTable th[data-col="email"],
+.inquiries-page-wrap #unassignedTable td[data-col="email"] {
+  max-width: 180px;
+}
+
+.inquiries-page-wrap #unassignedTable th.inquiries-col-action,
+.inquiries-page-wrap #unassignedTable td.inquiries-col-action {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="inquiryid"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="inquiryid"] {
+  width: 98px;
+  min-width: 98px;
+  max-width: 98px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="customername"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="customername"] {
+  width: 275px;
+  min-width: 275px;
+  max-width: 275px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="email"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="email"] {
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="postcode"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="postcode"] {
+  width: 78px;
+  min-width: 78px;
+  max-width: 78px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="city"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="city"] {
+  width: 82px;
+  min-width: 82px;
+  max-width: 82px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="assignedto"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="assignedto"] {
+  width: 145px;
+  min-width: 145px;
+  max-width: 145px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="status"],
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="status"] {
+  width: 158px;
+  min-width: 158px;
+  max-width: 158px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th.inquiries-col-action,
+.inquiries-page-wrap #allTable.inquiries-table--fit td.inquiries-col-action {
+  width: 126px;
+  min-width: 126px;
+  max-width: 126px;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="customername"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="customername"] {
+  min-width: 250px;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="source"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="source"] {
+  max-width: 150px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="email"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="email"] {
+  max-width: 190px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="postcode"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="postcode"] {
+  width: 1%;
+  max-width: 85px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="city"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="city"] {
+  width: 1%;
+  max-width: 105px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="contactno"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="contactno"] {
+  width: 1%;
+  max-width: 125px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="users"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="users"] {
+  width: 108px;
+  min-width: 108px;
+  max-width: 108px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="demomode"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="demomode"] {
+  width: 1%;
+  max-width: 90px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="referralcode"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="referralcode"] {
+  max-width: 112px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="assignedby"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="assignedby"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="assignedto"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="assignedto"] {
+  min-width: 150px;
+  max-width: none;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="completiondate"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="completiondate"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="assigndate"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="assigndate"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="payoutsdate"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="payoutsdate"] {
+  width: 1%;
+  max-width: 112px;
+  white-space: nowrap;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="status"],
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="status"] {
+  min-width: 96px;
+}
+
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) th.inquiries-col-action,
+.inquiries-page-wrap #allTable:not(.inquiries-table--fit) td.inquiries-col-action {
+  min-width: 148px;
+  width: 148px;
+  max-width: 148px;
+}
+
+.inquiries-page-wrap #allTable .inquiries-header-cell .inquiries-filter-wrap {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.inquiries-page-wrap #allTable .inquiries-header-cell .inquiries-grid-filter-all,
+.inquiries-page-wrap #allTable .inquiries-header-cell .inquiries-grid-filter-select {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.inquiries-page-wrap #allTable .inquiries-header-cell .inquiries-filter-icon {
+  right: 10px;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit th[data-col="date"] .inquiries-filter-icon {
+  right: 20px;
+}
+
+.inquiries-page-wrap #allTable td.inquiries-col-action {
+  white-space: nowrap;
+}
+
+@media (min-width: 1025px) and (max-height: 1020px) {
+  .dashboard-main-body {
+    padding: 10px 14px 12px;
+    gap: 10px;
+  }
+
+  .dashboard-content {
+    padding: 14px 14px 16px;
+    gap: 10px;
+  }
+
+  .dashboard-topbar {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .inquiries-page-wrap > .inquiries-tabs {
+    margin-bottom: 6px;
+  }
+
+  .inquiries-page-wrap .inquiries-tab-panel .inquiries-mgmt-panel,
+  .inquiries-page-wrap > .inquiries-mgmt-panel {
+    margin-bottom: 10px;
+  }
+
+  .inquiries-panel-header {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  .inquiries-page-wrap .inquiries-table-scroll,
+  #incomingPanel .inquiries-table-scroll,
+  #assignedPanel .inquiries-table-scroll,
+  #allPanel .inquiries-table-scroll {
+    min-height: 340px;
+  }
+
+  .inquiries-table thead .inquiries-header-row th {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .inquiries-table th,
+  .inquiries-table td {
+    padding-top: 8px;
+    padding-bottom: 8px;
+    font-size: 12px;
+  }
+
+  .inquiries-header-cell .inquiries-grid-filter,
+  .inquiries-header-cell .inquiries-grid-filter-all,
+  .inquiries-header-cell .inquiries-grid-filter-assigned,
+  .inquiries-header-cell .inquiries-grid-filter-select,
+  .inquiries-header-cell .dealer-grid-filter {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .inquiries-page-wrap .inquiries-assigned-pagination {
+    margin-top: 2px;
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+}
+
 .dashboard-header-left {
   display: flex;
   align-items: center;
@@ -489,6 +806,98 @@ textarea.inquiry-form-input {
   gap: 8px;
 }
 
+.inquiries-page-wrap > .inquiries-tabs {
+  margin-top: 0;
+  margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  width: 100%;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-self: stretch;
+}
+
+.inquiries-page-wrap > .inquiries-tabs .inquiries-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px 12px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: none;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.inquiries-page-wrap > .inquiries-tabs .inquiries-tab:hover {
+  color: #374151;
+  background: transparent;
+}
+
+.inquiries-page-wrap > .inquiries-tabs .inquiries-tab.active {
+  background: transparent;
+  color: #7c3aed;
+  border-bottom-color: #7c3aed;
+  box-shadow: none;
+}
+
+.inquiries-page-wrap > .inquiries-tabs .inquiries-tab:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.35);
+  outline-offset: 2px;
+}
+
+.inquiries-tab-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1;
+}
+
+.inquiries-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  opacity: 1;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+.inquiries-page-wrap > .inquiries-tabs .inquiries-tab.active .inquiries-tab-count {
+  background: rgba(124, 58, 237, 0.12);
+  color: #6d28d9;
+}
+
+.inquiries-page-wrap #allTable.inquiries-table--fit td[data-col="assignedto"] {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#allPanel #allTable:not(.inquiries-table--fit) th.inquiries-col-action,
+#allPanel #allTable:not(.inquiries-table--fit) td.inquiries-col-action {
+  width: 148px;
+  min-width: 148px;
+  max-width: 148px;
+}
+
 @media (max-width: 768px) {
   .inquiries-page-wrap,
   .inquiries-page-wrap .inquiries-tab-panel,
@@ -501,6 +910,30 @@ textarea.inquiry-form-input {
 
   .inquiries-page-wrap {
     overflow-x: clip;
+  }
+
+  .inquiries-page-wrap > .inquiries-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    padding: 0;
+    gap: 0;
+    border-radius: 0;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .inquiries-page-wrap > .inquiries-tabs .inquiries-tab {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    padding: 8px 8px 10px;
+  }
+
+  .inquiries-page-wrap > .inquiries-tabs .inquiries-tab-label {
+    justify-content: center;
+    width: 100%;
+    gap: 4px;
   }
 
   .inquiries-mgmt-top-row {
@@ -566,7 +999,7 @@ textarea.inquiry-form-input {
 
   .inquiries-page-wrap .inquiries-panel-actions {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     align-items: stretch;
     gap: 10px;
     width: 100%;
@@ -580,7 +1013,6 @@ textarea.inquiry-form-input {
     width: 100%;
   }
 
-  .inquiries-page-wrap .inquiries-panel-actions > .inquiries-sync-btn,
   .inquiries-page-wrap .inquiries-panel-actions > .inquiries-columns-dropdown > .inquiries-btn {
     min-height: 44px;
     justify-content: center;
@@ -594,12 +1026,7 @@ textarea.inquiry-form-input {
     color: #6d28d9;
   }
 
-  .inquiries-page-wrap .inquiries-panel-actions > .inquiries-sync-btn .inquiries-sync-icon {
-    flex: 0 0 auto;
-  }
-
   .inquiries-page-wrap .inquiries-panel-actions > .inquiries-add-btn {
-    grid-column: 1 / -1;
     min-height: 46px;
     justify-content: center;
   }
@@ -607,7 +1034,9 @@ textarea.inquiry-form-input {
   #incomingPanel .inquiries-table th.inquiries-col-action,
   #incomingPanel .inquiries-table td.inquiries-col-action,
   #assignedPanel .inquiries-table th.inquiries-col-action,
-  #assignedPanel .inquiries-table td.inquiries-col-action {
+  #assignedPanel .inquiries-table td.inquiries-col-action,
+  #allPanel .inquiries-table th.inquiries-col-action,
+  #allPanel .inquiries-table td.inquiries-col-action {
     position: sticky;
     right: 0;
     z-index: 6;
@@ -641,11 +1070,6 @@ textarea.inquiry-form-input {
     width: 100%;
   }
 
-  .inquiries-page-wrap .inquiries-panel-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .inquiries-page-wrap .inquiries-panel-actions > .inquiries-sync-btn,
   .inquiries-page-wrap .inquiries-panel-actions > .inquiries-columns-dropdown > .inquiries-btn,
   .inquiries-page-wrap .inquiries-panel-actions > .inquiries-add-btn {
     font-size: 13px;
@@ -654,7 +1078,9 @@ textarea.inquiry-form-input {
   #incomingPanel .inquiries-table th.inquiries-col-action,
   #incomingPanel .inquiries-table td.inquiries-col-action,
   #assignedPanel .inquiries-table th.inquiries-col-action,
-  #assignedPanel .inquiries-table td.inquiries-col-action {
+  #assignedPanel .inquiries-table td.inquiries-col-action,
+  #allPanel .inquiries-table th.inquiries-col-action,
+  #allPanel .inquiries-table td.inquiries-col-action {
     min-width: 128px;
     width: 128px;
     max-width: 128px;

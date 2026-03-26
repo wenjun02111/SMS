@@ -9,7 +9,7 @@
     <link rel="shortcut icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="apple-touch-icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260325-35">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260326-03">
     <script>
         // Apply sidebar state ASAP (prevents flicker on page navigation)
         (function () {
@@ -409,13 +409,37 @@
             var title = menu.querySelector('.inquiries-columns-menu-title');
             if (!title) return;
 
+            var searchWrap = document.createElement('div');
+            searchWrap.className = 'inquiries-columns-search';
+
+            var searchIcon = document.createElement('i');
+            searchIcon.className = 'bi bi-search inquiries-columns-search-icon';
+            searchIcon.setAttribute('aria-hidden', 'true');
+
+            var searchInput = document.createElement('input');
+            searchInput.type = 'search';
+            searchInput.className = 'inquiries-columns-search-input';
+            searchInput.placeholder = 'Type to search';
+            searchInput.autocomplete = 'off';
+            searchInput.setAttribute('aria-label', 'Search columns');
+
+            searchWrap.appendChild(searchIcon);
+            searchWrap.appendChild(searchInput);
+
             var emptyState = document.createElement('div');
             emptyState.className = 'inquiries-columns-empty';
             emptyState.textContent = 'No columns found';
-            title.insertAdjacentElement('afterend', emptyState);
+            title.insertAdjacentElement('afterend', searchWrap);
+            searchWrap.insertAdjacentElement('afterend', emptyState);
 
+            menu._columnsSearchWrap = searchWrap;
+            menu._columnsSearchInput = searchInput;
             menu._columnsEmptyState = emptyState;
             menu._columnsCheckItems = Array.prototype.slice.call(menu.querySelectorAll('.inquiries-columns-check'));
+
+            searchInput.addEventListener('input', function() {
+                applyColumnsTypeahead(menu, searchInput.value);
+            });
         }
 
         function isMenuOpen(menu) {
@@ -426,15 +450,7 @@
 
         function matchesColumnsTypeahead(text, keyword) {
             if (!keyword) return true;
-            if (text.indexOf(keyword) === 0) return true;
-
-            for (var i = keyword.length - 1; i >= 1; i--) {
-                if (text.indexOf(keyword.slice(0, i)) === 0) {
-                    return true;
-                }
-            }
-
-            return false;
+            return text.indexOf(keyword) !== -1;
         }
 
         function applyColumnsTypeahead(menu, keyword) {
@@ -470,6 +486,9 @@
         function resetColumnsSearch(menu) {
             if (!menu) return;
             ensureColumnsMenuReady(menu);
+            if (menu._columnsSearchInput) {
+                menu._columnsSearchInput.value = '';
+            }
             applyColumnsTypeahead(menu, '');
         }
 
@@ -500,10 +519,6 @@
 
             menu.addEventListener('change', function(e) {
                 if (!e.target || e.target.tagName !== 'INPUT' || e.target.type !== 'checkbox') return;
-                resetColumnsSearch(menu);
-                if (typeof e.target.blur === 'function') {
-                    e.target.blur();
-                }
             });
 
             menu.addEventListener('click', function(e) {
@@ -512,6 +527,9 @@
 
                 window.setTimeout(function() {
                     resetColumnsSearch(menu);
+                    if (menu._columnsSearchInput && typeof menu._columnsSearchInput.focus === 'function') {
+                        menu._columnsSearchInput.focus();
+                    }
                 }, 0);
             });
         });
@@ -523,6 +541,9 @@
 
                 window.setTimeout(function() {
                     resetColumnsSearch(menu);
+                    if (menu._columnsSearchInput && typeof menu._columnsSearchInput.focus === 'function' && isMenuOpen(menu)) {
+                        menu._columnsSearchInput.focus();
+                    }
                 }, 0);
             });
         });
@@ -540,6 +561,13 @@
 
             if (e.key === 'Backspace') {
                 e.preventDefault();
+                ensureColumnsMenuReady(menu);
+                if (menu._columnsSearchInput) {
+                    menu._columnsSearchInput.focus();
+                    menu._columnsSearchInput.value = (menu._columnsSearchInput.value || '').slice(0, -1);
+                    applyColumnsTypeahead(menu, menu._columnsSearchInput.value);
+                    return;
+                }
                 applyColumnsTypeahead(menu, (menu.dataset.columnsTypeahead || '').slice(0, -1));
                 return;
             }
@@ -548,6 +576,13 @@
             if (!/[a-z0-9 _-]/i.test(e.key)) return;
 
             e.preventDefault();
+            ensureColumnsMenuReady(menu);
+            if (menu._columnsSearchInput) {
+                menu._columnsSearchInput.focus();
+                menu._columnsSearchInput.value = (menu._columnsSearchInput.value || '') + e.key;
+                applyColumnsTypeahead(menu, menu._columnsSearchInput.value);
+                return;
+            }
             applyColumnsTypeahead(menu, (menu.dataset.columnsTypeahead || '') + e.key);
         });
 

@@ -6,10 +6,6 @@
         <div class="dealers-panel-actions dealers-panel-actions-right" style="margin-bottom: 12px;">
             <div class="dealers-panel-buttons">
                 <button type="button" class="inquiries-btn inquiries-btn-secondary" id="dealerClearFilters">Clear filters</button>
-                <button type="button" class="inquiries-btn inquiries-btn-secondary inquiries-sync-btn" id="dealerSyncBtn" data-sync-url="{{ route('admin.dealers.sync') }}" data-sync-type="dealers">
-                    <i class="bi bi-arrow-repeat inquiries-sync-icon" aria-hidden="true"></i>
-                    <span>Sync</span>
-                </button>
                 <div class="inquiries-columns-dropdown dealers-columns-right">
                     <button type="button" class="inquiries-btn inquiries-btn-secondary" id="dealerColumnsBtn" aria-haspopup="true" aria-expanded="false">Columns</button>
                     <div class="inquiries-columns-menu" id="dealerColumnsMenu" hidden>
@@ -89,9 +85,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     var table = document.getElementById('dealersTable');
     if (!table) return;
-    var tbody = document.getElementById('dealersTableBody');
-    var syncBtn = document.getElementById('dealerSyncBtn');
-    var DEALERS_AUTO_SYNC_MS = 15 * 60 * 1000;
     var state = { col: 'conversionrate', dir: -1 };
 
     // ——— Column visibility (customizable like inquiries), Active hidden by default ———
@@ -301,51 +294,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function triggerDealerSync(btn) {
-        if (!btn || !tbody || btn.classList.contains('is-syncing')) return;
-
-        btn.classList.add('is-syncing');
-        btn.disabled = true;
-
-        var icon = btn.querySelector('.inquiries-sync-icon');
-        if (icon) {
-            icon.classList.add('spinning');
-        }
-
-        var url = btn.getAttribute('data-sync-url') || window.location.href;
-
-        fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now(), {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            cache: 'no-store',
-            credentials: 'same-origin'
-        }).then(function(response) {
-            if (!response.ok) {
-                throw new Error('Unable to refresh dealers.');
-            }
-
-            return response.json();
-        }).then(function(payload) {
-            tbody.innerHTML = typeof payload.rows_html === 'string' ? payload.rows_html : '';
-            refreshDealerColumnState();
-            applyDealerGridFilters();
-            applySort();
-            measureAndSizeDealerColumns();
-        }).catch(function(error) {
-            console.error(error);
-        }).finally(function() {
-            btn.disabled = false;
-            btn.classList.remove('is-syncing');
-
-            if (icon) {
-                icon.classList.remove('spinning');
-            }
-        });
-    }
-
     table.querySelectorAll('.dealer-grid-filter').forEach(function(inp) {
         inp.addEventListener('input', applyDealerGridFilters);
         inp.addEventListener('keyup', applyDealerGridFilters);
@@ -398,16 +346,6 @@ document.addEventListener('DOMContentLoaded', function() {
             state.col = null;
             state.dir = 1;
         });
-    }
-
-    if (syncBtn) {
-        syncBtn.addEventListener('click', function() {
-            triggerDealerSync(syncBtn);
-        });
-
-        window.setInterval(function() {
-            triggerDealerSync(syncBtn);
-        }, DEALERS_AUTO_SYNC_MS);
     }
 
     // ——— Sort ———

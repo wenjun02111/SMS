@@ -31,10 +31,6 @@
             <span class="dashboard-nav-icon"><i class="bi {{ $current === 'dealers' ? 'bi-people-fill' : 'bi-people' }}"></i></span>
             <span>Dealers</span>
         </a>
-        <a href="{{ route('admin.rewards') }}" class="dashboard-nav-item {{ $current === 'rewards' ? 'dashboard-nav-item-active' : '' }}">
-            <span class="dashboard-nav-icon"><i class="bi {{ $current === 'rewards' ? 'bi-gift-fill' : 'bi-gift' }}"></i></span>
-            <span>Payouts</span>
-        </a>
         <a href="{{ route('admin.reports') }}" class="dashboard-nav-item {{ $current === 'reports' ? 'dashboard-nav-item-active' : '' }}">
             <span class="dashboard-nav-icon"><i class="bi {{ $current === 'reports' ? 'bi-file-earmark-bar-graph-fill' : 'bi-file-earmark-bar-graph' }}"></i></span>
             <span>Reports</span>

@@ -137,7 +137,6 @@
     width: 100%;
   }
 
-  .inquiries-page-wrap .inquiries-panel-actions > .inquiries-sync-btn,
   .inquiries-page-wrap .inquiries-panel-actions > .inquiries-columns-dropdown > .inquiries-btn {
     min-height: 44px;
     justify-content: center;
@@ -151,8 +150,8 @@
     color: #6d28d9;
   }
 
-  .inquiries-page-wrap .inquiries-panel-actions > .inquiries-sync-btn .inquiries-sync-icon {
-    flex: 0 0 auto;
+  .inquiries-page-wrap .inquiries-panel-actions > .inquiries-columns-dropdown:only-child {
+    grid-column: 1 / -1;
   }
 
   #completedTable th.inquiries-col-action,
@@ -194,7 +193,6 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .inquiries-page-wrap .inquiries-panel-actions > .inquiries-sync-btn,
   .inquiries-page-wrap .inquiries-panel-actions > .inquiries-columns-dropdown > .inquiries-btn {
     font-size: 13px;
   }

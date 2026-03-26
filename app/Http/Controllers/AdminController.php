@@ -956,6 +956,9 @@ class AdminController extends Controller
         $assignedTotal = count($assigned);
         $assignedForView = $assigned;
         $assignedLastPage = $assignedTotal > 0 ? (int) ceil($assignedTotal / $assignedPerPage) : 1;
+        $allRows = $rows;
+        $allPerPage = 10;
+        $allTotal = count($allRows);
 
         return view('admin.inquiries', [
             'unassigned' => $unassigned,
@@ -964,6 +967,9 @@ class AdminController extends Controller
             'assignedPerPage' => $assignedPerPage,
             'assignedCurrentPage' => 1,
             'assignedLastPage' => $assignedLastPage,
+            'allRows' => $allRows,
+            'allTotal' => $allTotal,
+            'allPerPage' => $allPerPage,
             'totalNewInquiries' => $totalNewInquiries,
             'totalOngoing' => $totalOngoing,
             'productLabels' => $productLabels,
@@ -1215,14 +1221,17 @@ class AdminController extends Controller
 
         $unassignedHtml = view('admin.partials.inquiries_unassigned_rows', $data)->render();
         $assignedHtml = view('admin.partials.inquiries_assigned_rows', $data)->render();
+        $allHtml = view('admin.partials.inquiries_all_rows', $data)->render();
 
         return response()->json([
             'unassigned' => $unassignedHtml,
             'assigned' => $assignedHtml,
+            'all' => $allHtml,
             'totalNewInquiries' => $data['totalNewInquiries'] ?? 0,
             'totalOngoing' => $data['totalOngoing'] ?? 0,
             'assignedTotal' => $data['assignedTotal'] ?? 0,
             'assignedLastPage' => $data['assignedLastPage'] ?? 1,
+            'allTotal' => $data['allTotal'] ?? 0,
         ]);
     }
 

@@ -1,9 +1,10 @@
 @extends('layouts.app')
 @section('title', 'Dashboard - Admin')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/admin-dashboard.css') }}?v=20260325-14">
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-dashboard.css') }}?v=20260326-19">
 @endpush
 @section('content')
+<div class="admin-dashboard-page">
 <section class="dashboard-metrics">
     <div class="dashboard-metric-card">
         <div class="dashboard-metric-icon dashboard-metric-icon-leads"><i class="bi bi-graph-up-arrow"></i></div>
@@ -174,6 +175,7 @@
         </div>
     </div>
 </section>
+</div>
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>

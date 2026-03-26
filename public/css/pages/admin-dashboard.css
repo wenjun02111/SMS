@@ -87,6 +87,180 @@
   margin-top: 2px;
 }
 
+.admin-dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+}
+
+@media (min-width: 1100px) and (max-height: 980px) {
+  .admin-dashboard-page {
+    gap: 15px;
+    margin-top: -2px;
+    margin-bottom: -4px;
+  }
+
+  .admin-dashboard-page .dashboard-metrics {
+    gap: 13px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-card {
+    padding: 15px 17px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-icon {
+    width: 33px;
+    height: 33px;
+    font-size: 18px;
+    margin-bottom: 6px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-label {
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .admin-dashboard-page .dashboard-metric-value {
+    font-size: 21px;
+    line-height: 1;
+  }
+
+  .admin-dashboard-page .dashboard-metric-pill {
+    font-size: 11.5px;
+    padding: 4px 9px;
+  }
+
+  .admin-dashboard-page .dashboard-charts-container {
+    padding: 17px 19px;
+    border-radius: 16px;
+  }
+
+  .admin-dashboard-page .dashboard-charts-container-header {
+    margin-bottom: 13px;
+    padding-bottom: 10px;
+  }
+
+  .admin-dashboard-page .dashboard-row {
+    gap: 13px;
+  }
+
+  .admin-dashboard-page .dashboard-panel {
+    padding: 14px 16px 12px;
+  }
+
+  .admin-dashboard-page .dashboard-panel-header {
+    gap: 8px;
+  }
+
+  .admin-dashboard-page .dashboard-panel-title,
+  .admin-dashboard-page .dashboard-chart-title-text {
+    font-size: 13.75px;
+  }
+
+  .admin-dashboard-page .dashboard-panel-body {
+    margin-top: 9px;
+  }
+
+  .admin-dashboard-page .dashboard-chart-panel .dashboard-panel-body,
+  .admin-dashboard-page .dashboard-chart-container {
+    min-height: 184px;
+    height: 184px;
+  }
+
+  .admin-dashboard-page .dashboard-chart-tab {
+    padding: 6px 11px;
+  }
+
+  .admin-dashboard-page .dashboard-table {
+    font-size: 12.875px;
+  }
+
+  .admin-dashboard-page .dashboard-table th,
+  .admin-dashboard-page .dashboard-table td {
+    padding: 8px 11px;
+  }
+
+  .admin-dashboard-page .dashboard-badge {
+    padding: 4px 10px;
+    font-size: 11.25px;
+  }
+}
+
+@media (min-width: 1100px) and (max-height: 900px) {
+  .admin-dashboard-page {
+    gap: 10px;
+    margin-top: -10px;
+    margin-bottom: -12px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-card {
+    padding: 10px 12px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-icon {
+    width: 29px;
+    height: 29px;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-label {
+    font-size: 10.75px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-value {
+    font-size: 17.5px;
+  }
+
+  .admin-dashboard-page .dashboard-metric-pill {
+    font-size: 10.25px;
+    padding: 3px 7px;
+  }
+
+  .admin-dashboard-page .dashboard-charts-container {
+    padding: 12px 14px;
+  }
+
+  .admin-dashboard-page .dashboard-charts-container-header {
+    margin-bottom: 8px;
+    padding-bottom: 7px;
+  }
+
+  .admin-dashboard-page .dashboard-panel {
+    padding: 10px 12px 9px;
+  }
+
+  .admin-dashboard-page .dashboard-panel-body {
+    margin-top: 6px;
+  }
+
+  .admin-dashboard-page .dashboard-chart-panel .dashboard-panel-body,
+  .admin-dashboard-page .dashboard-chart-container {
+    min-height: 148px;
+    height: 148px;
+  }
+
+  .admin-dashboard-page .dashboard-chart-tab {
+    padding: 4px 10px;
+    font-size: 11.25px;
+  }
+
+  .admin-dashboard-page .dashboard-table {
+    font-size: 11.625px;
+  }
+
+  .admin-dashboard-page .dashboard-table th,
+  .admin-dashboard-page .dashboard-table td {
+    padding: 6px 9px;
+  }
+
+  .admin-dashboard-page .dashboard-badge {
+    padding: 4px 7px;
+    font-size: 10.25px;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-charts-container {
     padding: 16px 14px;

@@ -11,6 +11,15 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // This project authenticates against the existing Firebird USERS table,
+        // uses signed URLs + file/cache storage for password flows, and uses
+        // file-backed Laravel sessions. Keep the migration file so older
+        // migration history remains valid, but do not create Laravel scaffold
+        // tables on fresh installs unless explicitly requested.
+        if (!env('ENABLE_LARAVEL_SCAFFOLD_TABLES', false)) {
+            return;
+        }
+
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->string('name');
