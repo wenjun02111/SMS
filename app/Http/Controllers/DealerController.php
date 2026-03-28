@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesInquiryAttachments;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class DealerController extends Controller
 {
+    use ResolvesInquiryAttachments;
+
     public function dashboard(Request $request): View
     {
         $dealerId = $request->session()->get('user_id');
@@ -490,6 +492,7 @@ class DealerController extends Controller
     {
         $dealerId = $request->session()->get('user_id');
         $focusLeadId = (int) $request->query('lead', 0);
+        $dealerConsoleCounts = $this->getDealerConsoleCounts($dealerId);
         $leads = [];
         if ($dealerId) {
             $dealerInquiriesSql = 'SELECT FIRST 200
@@ -729,10 +732,12 @@ class DealerController extends Controller
                             if (isset($assignDateMap[$lid])) {
                                 $r->ASSIGNDATE = $assignDateMap[$lid];
                             }
-                            $r->ATTACHMENT_URLS = $this->buildLeadActivityAttachmentUrls(
+                            $r->ATTACHMENT_URLS = $this->buildInquiryActivityAttachmentUrls(
                                 $attachmentMap[$lid] ?? null,
                                 $lid,
-                                $attachmentActMap[$lid] ?? 0
+                                $attachmentActMap[$lid] ?? 0,
+                                'dealer.inquiries.serve-attachment',
+                                'dealer.inquiries.activity-attachment'
                             );
                         }
                     }
@@ -744,6 +749,9 @@ class DealerController extends Controller
         return view('dealer.inquiries', [
             'leads' => $leads,
             'focusLeadId' => $focusLeadId,
+            'dealerInquiryCount' => $dealerConsoleCounts['inquiries'],
+            'dealerPendingPayoutCount' => $dealerConsoleCounts['pending_payouts'],
+            'dealerConsoleTab' => 'inquiries',
             'currentPage' => 'inquiries',
         ]);
     }
@@ -1173,55 +1181,6 @@ class DealerController extends Controller
         return response('', 404);
     }
 
-    private function resolveInquiryAttachmentPath(string $path): ?string
-    {
-        $path = ltrim($path, '/');
-        $candidates = [
-            Storage::disk('public')->path($path),
-            storage_path('app/public/' . $path),
-            storage_path('app/private/' . $path),
-            storage_path('app/' . $path),
-            public_path($path),
-            public_path('storage/' . $path),
-        ];
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                return $candidate;
-            }
-        }
-        return null;
-    }
-
-    private function buildLeadActivityAttachmentUrls(mixed $attachmentRaw, int $leadId, int $leadActId): array
-    {
-        $urls = [];
-        if ($attachmentRaw === null || trim((string) $attachmentRaw) === '') {
-            return $urls;
-        }
-
-        $attachmentStr = trim((string) $attachmentRaw);
-        $attachmentStr = str_replace('\\', '/', $attachmentStr);
-
-        if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
-            foreach (explode(',', $attachmentStr) as $path) {
-                $path = trim(str_replace('\\', '/', $path));
-                if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
-                    $urls[] = route('dealer.inquiries.serve-attachment', ['path' => $path]);
-                }
-            }
-
-            return $urls;
-        }
-
-        if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
-            $urls[] = route('dealer.inquiries.serve-attachment', ['path' => $attachmentStr]);
-        } elseif ($leadId > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
-            $urls[] = route('dealer.inquiries.activity-attachment', ['leadId' => $leadId, 'leadActId' => $leadActId]);
-        }
-
-        return $urls;
-    }
-
     public function updateInquiryStatus(Request $request): JsonResponse
     {
         $isMultipart = $request->hasFile('attachments');
@@ -1459,10 +1418,11 @@ class DealerController extends Controller
     public function payouts(Request $request): View
     {
         $dealerId = $request->session()->get('user_id');
+        $dealerConsoleCounts = $this->getDealerConsoleCounts($dealerId);
         $rows = [];
         $completed = [];
         $rewarded = [];
-        $totalCompletedLeads = 0;
+        $totalCompletedLeads = $dealerConsoleCounts['pending_payouts'];
 
         if ($dealerId) {
             // Base LEAD data (dealer-only)
@@ -1731,19 +1691,23 @@ class DealerController extends Controller
 
             // Build attachment URLs for Completed list (dealer)
             foreach ($completed as $r) {
-                $r->COMPLETED_ATTACHMENT_URLS = $this->buildLeadActivityAttachmentUrls(
+                $r->COMPLETED_ATTACHMENT_URLS = $this->buildInquiryActivityAttachmentUrls(
                     $r->COMPLETED_ATTACHMENT ?? null,
                     (int) ($r->LEADID ?? 0),
-                    (int) ($r->COMPLETED_LEAD_ACT_ID ?? 0)
+                    (int) ($r->COMPLETED_LEAD_ACT_ID ?? 0),
+                    'dealer.inquiries.serve-attachment',
+                    'dealer.inquiries.activity-attachment'
                 );
             }
 
             // Build attachment URLs for Rewarded list (dealer)
             foreach ($rewarded as $r) {
-                $r->REWARD_ATTACHMENT_URLS = $this->buildLeadActivityAttachmentUrls(
+                $r->REWARD_ATTACHMENT_URLS = $this->buildInquiryActivityAttachmentUrls(
                     $r->REWARD_ATTACHMENT ?? null,
                     (int) ($r->LEADID ?? 0),
-                    (int) ($r->REWARD_LEAD_ACT_ID ?? 0)
+                    (int) ($r->REWARD_LEAD_ACT_ID ?? 0),
+                    'dealer.inquiries.serve-attachment',
+                    'dealer.inquiries.activity-attachment'
                 );
             }
 
@@ -1818,29 +1782,6 @@ class DealerController extends Controller
                 // ignore mapping failures
             }
 
-            // Total pending reward for this dealer: latest status Completed (not Rewarded/Paid)
-            try {
-                $closedRow = DB::selectOne(
-                    'SELECT COUNT(*) as cnt
-                     FROM (
-                         SELECT a."LEADID", a."STATUS"
-                         FROM "LEAD_ACT" a
-                         JOIN (
-                             SELECT "LEADID", MAX("CREATIONDATE") AS max_created
-                             FROM "LEAD_ACT"
-                             GROUP BY "LEADID"
-                         ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
-                     ) latest
-                     JOIN "LEAD" l ON l."LEADID" = latest."LEADID"
-                     WHERE l."ASSIGNED_TO" = ?
-                       AND UPPER(TRIM(latest."STATUS")) = \'COMPLETED\'
-                       AND TRIM(COALESCE(l."REFERRALCODE", \'\')) <> \'\'',
-                    [$dealerId]
-                );
-                $totalCompletedLeads = (int) ($closedRow->cnt ?? $closedRow->CNT ?? current((array) $closedRow) ?? 0);
-            } catch (\Throwable $e) {
-                $totalCompletedLeads = 0;
-            }
         }
 
         $productLabels = [
@@ -1863,8 +1804,68 @@ class DealerController extends Controller
             'totalCompletedLeads' => $totalCompletedLeads,
             'totalRewardedLeads' => count($rewarded),
             'productLabels' => $productLabels,
-            'currentPage' => 'payouts',
+            'dealerInquiryCount' => $dealerConsoleCounts['inquiries'],
+            'dealerPendingPayoutCount' => $dealerConsoleCounts['pending_payouts'],
+            'dealerConsoleTab' => 'pending-payouts',
+            'currentPage' => 'inquiries',
         ]);
+    }
+
+    private function getDealerConsoleCounts($dealerId): array
+    {
+        $counts = [
+            'inquiries' => 0,
+            'pending_payouts' => 0,
+        ];
+
+        if (!$dealerId) {
+            return $counts;
+        }
+
+        try {
+            $inquiryRow = DB::selectOne(
+                'SELECT COUNT(*) AS "CNT"
+                 FROM "LEAD"
+                 WHERE "ASSIGNED_TO" = ?
+                   AND UPPER(TRIM(COALESCE(
+                       (SELECT FIRST 1 la."STATUS"
+                          FROM "LEAD_ACT" la
+                         WHERE la."LEADID" = "LEAD"."LEADID"
+                         ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC),
+                       "CURRENTSTATUS",
+                       \'Pending\'
+                   ))) = \'PENDING\'',
+                [$dealerId]
+            );
+            $counts['inquiries'] = (int) ($inquiryRow->CNT ?? $inquiryRow->cnt ?? current((array) $inquiryRow) ?? 0);
+        } catch (\Throwable $e) {
+            $counts['inquiries'] = 0;
+        }
+
+        try {
+            $pendingRow = DB::selectOne(
+                'SELECT COUNT(*) AS "CNT"
+                 FROM (
+                     SELECT a."LEADID", a."STATUS"
+                     FROM "LEAD_ACT" a
+                     JOIN (
+                         SELECT "LEADID", MAX("CREATIONDATE") AS max_created
+                         FROM "LEAD_ACT"
+                         GROUP BY "LEADID"
+                     ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
+                 ) latest
+                 JOIN "LEAD" l ON l."LEADID" = latest."LEADID"
+                 WHERE l."ASSIGNED_TO" = ?
+                   AND UPPER(TRIM(latest."STATUS")) = \'COMPLETED\'
+                   AND TRIM(COALESCE(l."REFERRALCODE", \'\')) <> \'\'',
+                [$dealerId]
+            );
+            $counts['pending_payouts'] = (int) ($pendingRow->CNT ?? $pendingRow->cnt ?? current((array) $pendingRow) ?? 0);
+        } catch (\Throwable $e) {
+            $counts['pending_payouts'] = 0;
+        }
+
+        return $counts;
     }
 
     public function reports(Request $request): View
@@ -1907,9 +1908,71 @@ class DealerController extends Controller
         $dateFrom = Carbon::now()->startOfMonth();
         $dateTo = Carbon::now()->endOfMonth();
         $periodLabel = 'Current Month';
-        $trendLabels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+        $trendLabels = array_map(fn($i) => str_pad((string) $i, 2, '0', STR_PAD_LEFT), range(1, $dateFrom->daysInMonth));
     }
 
+    $statusMap = [
+        'PENDING' => 'PENDING', 'Pending' => 'PENDING',
+        'FOLLOW UP' => 'FOLLOW UP', 'FOLLOWUP' => 'FOLLOW UP', 'FollowUp' => 'FOLLOW UP',
+        'DEMO' => 'DEMO', 'Demo' => 'DEMO',
+        'CONFIRMED' => 'CONFIRMED', 'Confirmed' => 'CONFIRMED', 'CASE CONFIRMED' => 'CONFIRMED',
+        'COMPLETED' => 'COMPLETED', 'Completed' => 'COMPLETED', 'CASE COMPLETED' => 'COMPLETED',
+        'REWARDED' => 'REWARDED', 'Rewarded' => 'REWARDED', 'REWARD' => 'REWARDED', 'REWARD DISTRIBUTED' => 'REWARDED', 'Reward Distributed' => 'REWARDED',
+    ];
+    $buildStatusCounts = function (Carbon $rangeStart, Carbon $rangeEnd) use ($dealerId, $statusMap) {
+        $counts = [
+            'PENDING' => 0,
+            'FOLLOW UP' => 0,
+            'DEMO' => 0,
+            'CONFIRMED' => 0,
+            'COMPLETED' => 0,
+            'REWARDED' => 0,
+        ];
+        if (!$dealerId) {
+            return $counts;
+        }
+
+        $rows = DB::select(
+            'SELECT l."LEADID",
+                COALESCE(
+                    (SELECT FIRST 1 la."STATUS"
+                       FROM "LEAD_ACT" la
+                      WHERE la."LEADID" = l."LEADID"
+                      ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC),
+                    l."CURRENTSTATUS",
+                    \'Pending\'
+                ) AS "LATEST_STATUS"
+            FROM "LEAD" l
+            WHERE l."ASSIGNED_TO" = ? AND l."CREATEDAT" >= ? AND l."CREATEDAT" <= ?',
+            [$dealerId, $rangeStart->format('Y-m-d H:i:s'), $rangeEnd->format('Y-m-d H:i:s')]
+        );
+
+        foreach ($rows as $row) {
+            $raw = trim($row->LATEST_STATUS ?? '');
+            if (strtoupper($raw) === 'FAILED') {
+                continue;
+            }
+            $normalized = $statusMap[strtoupper($raw)] ?? $statusMap[$raw] ?? 'PENDING';
+            if (isset($counts[$normalized])) {
+                $counts[$normalized]++;
+            } else {
+                $counts['PENDING']++;
+            }
+        }
+
+        return $counts;
+    };
+
+    $metricStatusCounts = $dealerId
+        ? $buildStatusCounts(Carbon::now()->startOfMonth(), Carbon::now()->endOfDay())
+        : [
+            'PENDING' => 0,
+            'FOLLOW UP' => 0,
+            'DEMO' => 0,
+            'CONFIRMED' => 0,
+            'COMPLETED' => 0,
+            'REWARDED' => 0,
+        ];
     $statusCounts = [
         'PENDING' => 0,
         'FOLLOW UP' => 0,
@@ -1933,7 +1996,7 @@ class DealerController extends Controller
         $totalInquiry = (int) ($totalRow->CNT ?? 0);
 
         $numBuckets = count($trendLabels);
-        if ($period === 'week' || ($period === 'range' && $days <= 7)) {
+        if ($period === 'week' || $period === 'month' || ($period === 'range' && $days <= 7)) {
             $dayCounts = [];
             for ($i = 0; $i < $numBuckets; $i++) {
                 $d = $dateFrom->copy()->addDays($i)->format('Y-m-d');
@@ -1972,61 +2035,9 @@ class DealerController extends Controller
                 $weekCounts[] = (int) ($row->CNT ?? 0);
             }
             $inquiryTrendData = $weekCounts;
-        } else {
-            $trendRows = DB::select(
-                'SELECT
-                    SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") BETWEEN 1 AND 7 THEN 1 ELSE 0 END) AS "W1",
-                    SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") BETWEEN 8 AND 14 THEN 1 ELSE 0 END) AS "W2",
-                    SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") BETWEEN 15 AND 21 THEN 1 ELSE 0 END) AS "W3",
-                    SUM(CASE WHEN EXTRACT(DAY FROM l."CREATEDAT") >= 22 THEN 1 ELSE 0 END) AS "W4"
-                FROM "LEAD" l
-                WHERE l."ASSIGNED_TO" = ?
-                    AND l."CREATEDAT" IS NOT NULL
-                    AND l."CREATEDAT" >= ? AND l."CREATEDAT" <= ?
-                    AND EXTRACT(YEAR FROM l."CREATEDAT") = ?
-                    AND EXTRACT(MONTH FROM l."CREATEDAT") = ?',
-                [$dealerId, $df, $dt, $dateFrom->year, $dateFrom->month]
-            );
-            if (!empty($trendRows)) {
-                $t = $trendRows[0];
-                $inquiryTrendData = [(int) ($t->W1 ?? 0), (int) ($t->W2 ?? 0), (int) ($t->W3 ?? 0), (int) ($t->W4 ?? 0)];
-            }
         }
 
-        $rows = DB::select(
-            'SELECT l."LEADID",
-                COALESCE(
-                    (SELECT FIRST 1 la."STATUS"
-                       FROM "LEAD_ACT" la
-                      WHERE la."LEADID" = l."LEADID"
-                      ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC),
-                    l."CURRENTSTATUS",
-                    \'Pending\'
-                ) AS "LATEST_STATUS"
-            FROM "LEAD" l
-            WHERE l."ASSIGNED_TO" = ? AND l."CREATEDAT" >= ? AND l."CREATEDAT" <= ?',
-            [$dealerId, $df, $dt]
-        );
-        $statusMap = [
-            'PENDING' => 'PENDING', 'Pending' => 'PENDING',
-            'FOLLOW UP' => 'FOLLOW UP', 'FOLLOWUP' => 'FOLLOW UP', 'FollowUp' => 'FOLLOW UP',
-            'DEMO' => 'DEMO', 'Demo' => 'DEMO',
-            'CONFIRMED' => 'CONFIRMED', 'Confirmed' => 'CONFIRMED', 'CASE CONFIRMED' => 'CONFIRMED',
-            'COMPLETED' => 'COMPLETED', 'Completed' => 'COMPLETED', 'CASE COMPLETED' => 'COMPLETED',
-            'REWARDED' => 'REWARDED', 'Rewarded' => 'REWARDED', 'REWARD' => 'REWARDED', 'REWARD DISTRIBUTED' => 'REWARDED', 'Reward Distributed' => 'REWARDED',
-        ];
-        foreach ($rows as $r) {
-            $raw = trim($r->LATEST_STATUS ?? '');
-            if (strtoupper($raw) === 'FAILED') {
-                continue;
-            }
-            $normalized = $statusMap[strtoupper($raw)] ?? $statusMap[$raw] ?? 'PENDING';
-            if (isset($statusCounts[$normalized])) {
-                $statusCounts[$normalized]++;
-            } else {
-                $statusCounts['PENDING']++;
-            }
-        }
+        $statusCounts = $buildStatusCounts($dateFrom, $dateTo);
 
         $productRows = DB::select(
             'SELECT la."DEALTPRODUCT" FROM "LEAD_ACT" la
@@ -2049,6 +2060,7 @@ class DealerController extends Controller
 
     return view('dealer.reports', [
         'currentPage' => 'reports',
+        'metricStatusCounts' => $metricStatusCounts,
         'statusCounts' => $statusCounts,
         'totalInquiry' => $totalInquiry,
         'inquiryTrendData' => $inquiryTrendData,

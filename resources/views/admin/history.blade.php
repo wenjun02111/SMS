@@ -1,17 +1,46 @@
 @extends('layouts.app')
 @section('title', 'History - Admin')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/admin-history.css') }}?v=20260325-13">
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-history.css') }}?v=20260327-01">
 @endpush
 @section('content')
 <section class="dashboard-panel dashboard-table-panel">
     <div class="dashboard-panel-body">
         <div class="history-toolbar">
-            <button type="button" class="inquiries-btn inquiries-btn-secondary" id="historyClearFilters">Clear filters</button>
-            <label class="history-checkbox-filter" for="historySystemMarkedFailOnly">
-                <input type="checkbox" id="historySystemMarkedFailOnly">
-                <span>System Marked Fail</span>
-            </label>
+            <form method="GET" action="{{ route('admin.history') }}" class="history-date-filter-form" id="historyDateFilterForm">
+                <label class="history-date-range-field" for="historyDateRange">
+                    <span>Date Range:</span>
+                    <select name="date_range" id="historyDateRange" class="history-date-range-select">
+                        <option value="today" @selected($dateRange === 'today')>Today</option>
+                        <option value="yesterday" @selected($dateRange === 'yesterday')>Yesterday</option>
+                        <option value="2_days_ago" @selected($dateRange === '2_days_ago')>2 Days Ago</option>
+                        <option value="this_week" @selected($dateRange === 'this_week')>This week</option>
+                        <option value="custom" @selected($dateRange === 'custom')>Custom</option>
+                    </select>
+                </label>
+                <div class="history-custom-range" id="historyCustomRange" @if($dateRange !== 'custom') hidden @endif>
+                    <label class="history-date-input-field" for="historyStartDate">
+                        <span>Start</span>
+                        <input type="date" id="historyStartDate" name="start_date" value="{{ $startDateInput }}">
+                    </label>
+                    <label class="history-date-input-field" for="historyEndDate">
+                        <span>End</span>
+                        <input type="date" id="historyEndDate" name="end_date" value="{{ $endDateInput }}">
+                    </label>
+                    <button type="submit" class="inquiries-btn inquiries-btn-secondary history-apply-btn">Apply</button>
+                </div>
+                <div class="history-date-summary">
+                    <span><strong>Start:</strong> {{ $filterStartDate }}</span>
+                    <span><strong>End:</strong> {{ $filterEndDate }}</span>
+                </div>
+            </form>
+            <div class="history-toolbar-actions">
+                <button type="button" class="inquiries-btn inquiries-btn-secondary" id="historyClearFilters">Clear filters</button>
+                <label class="history-checkbox-filter" for="historySystemMarkedFailOnly">
+                    <input type="checkbox" id="historySystemMarkedFailOnly">
+                    <span>System Marked Fail</span>
+                </label>
+            </div>
         </div>
         <div class="table-responsive">
             <table class="dashboard-table inquiries-table" id="historyTable">
@@ -57,7 +86,7 @@
                             <td data-col="date">{{ $dateStr ?: '-' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="7">No activities yet.</td></tr>
+                        <tr><td colspan="7">No activities found for the selected date range.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -71,6 +100,24 @@ document.addEventListener('DOMContentLoaded', function() {
     var table = document.getElementById('historyTable');
     if (!table) return;
     var systemMarkedFailOnly = document.getElementById('historySystemMarkedFailOnly');
+    var dateFilterForm = document.getElementById('historyDateFilterForm');
+    var dateRangeSelect = document.getElementById('historyDateRange');
+    var customRange = document.getElementById('historyCustomRange');
+    var startDateField = document.getElementById('historyStartDate');
+    var endDateField = document.getElementById('historyEndDate');
+
+    function syncDateRangeUi() {
+        var isCustom = !!(dateRangeSelect && dateRangeSelect.value === 'custom');
+        if (customRange) {
+            customRange.hidden = !isCustom;
+        }
+        if (startDateField) {
+            startDateField.required = isCustom;
+        }
+        if (endDateField) {
+            endDateField.required = isCustom;
+        }
+    }
 
     function applyTableFilter() {
         var searchInput = document.getElementById('historySearchInput');
@@ -100,6 +147,17 @@ document.addEventListener('DOMContentLoaded', function() {
     table.querySelectorAll('thead .inquiries-grid-filter').forEach(function(inp) {
         inp.addEventListener('input', applyTableFilter);
     });
+    if (dateRangeSelect) {
+        dateRangeSelect.addEventListener('change', function() {
+            syncDateRangeUi();
+            if (dateRangeSelect.value !== 'custom' && dateFilterForm) {
+                if (startDateField) startDateField.value = '';
+                if (endDateField) endDateField.value = '';
+                dateFilterForm.submit();
+            }
+        });
+        syncDateRangeUi();
+    }
     if (systemMarkedFailOnly) {
         systemMarkedFailOnly.addEventListener('change', applyTableFilter);
     }
@@ -112,6 +170,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 inp.value = '';
             });
             if (systemMarkedFailOnly) systemMarkedFailOnly.checked = false;
+            var shouldReload = false;
+            if (dateRangeSelect && dateRangeSelect.value !== 'today') shouldReload = true;
+            if (startDateField && startDateField.value) shouldReload = true;
+            if (endDateField && endDateField.value) shouldReload = true;
+            if (shouldReload) {
+                window.location = '{{ route('admin.history') }}';
+                return;
+            }
             applyTableFilter();
         });
     }

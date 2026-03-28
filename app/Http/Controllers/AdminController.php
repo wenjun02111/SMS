@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesInquiryAttachments;
+use App\Http\Controllers\Concerns\UsesSetupLinkStore;
 use App\Mail\InquiryAssignedToDealer;
 use App\Mail\PayoutCompletedNotification;
 use App\Mail\UserPasswordResetLink;
-use App\Support\MaintainUserTemporaryPasswordStore;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -13,7 +14,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -21,6 +21,9 @@ use Carbon\Carbon;
 
 class AdminController extends Controller
 {
+    use ResolvesInquiryAttachments;
+    use UsesSetupLinkStore;
+
     private function buildDealerItems(): array
     {
         $rows = DB::select(
@@ -1546,10 +1549,12 @@ class AdminController extends Controller
                 'description' => trim((string) ($r->DESCRIPTION ?? '')),
                 'status' => $status,
                 'created_at' => $createdAtIso,
-                'attachment_urls' => $this->buildAdminLeadActivityAttachmentUrls(
+                'attachment_urls' => $this->buildInquiryActivityAttachmentUrls(
                     $r->ATTACHMENT ?? null,
                     (int) ($r->LEADID ?? $leadId),
-                    (int) ($r->LEAD_ACTID ?? 0)
+                    (int) ($r->LEAD_ACTID ?? 0),
+                    'admin.rewards.serve-attachment',
+                    'admin.rewards.activity-attachment'
                 ),
             ];
         }
@@ -1745,7 +1750,14 @@ class AdminController extends Controller
                 $existing = DB::selectOne(
                     'SELECT FIRST 1 "LEADID","COMPANYNAME","CONTACTNAME","EMAIL","CURRENTSTATUS","CREATEDAT"
                      FROM "LEAD"
-                     WHERE UPPER(TRIM("COMPANYNAME")) = UPPER(TRIM(?))',
+                     WHERE UPPER(TRIM("COMPANYNAME")) = UPPER(TRIM(?))
+                     ORDER BY
+                        CASE
+                            WHEN UPPER(TRIM(COALESCE("CURRENTSTATUS", \'\'))) = \'FAILED\' THEN 1
+                            ELSE 0
+                        END ASC,
+                        COALESCE("LASTMODIFIED", "CREATEDAT") DESC,
+                        "LEADID" DESC',
                     [$validated['COMPANYNAME']]
                 );
                 if ($existing) {
@@ -1770,11 +1782,8 @@ class AdminController extends Controller
                         $line2 = $parts ? implode(' ', $parts) . '.' : '';
                         $message = trim($line1 . "\n\n" . $line2);
 
-                        $input = $request->all();
-                        $input['duplicate_ok'] = 1;
-
                         return back()
-                            ->withInput($input)
+                            ->withInput($request->except('duplicate_ok'))
                             ->with('duplicate_warning', $message);
                     }
                 }
@@ -1891,7 +1900,14 @@ class AdminController extends Controller
                 $existing = DB::selectOne(
                     'SELECT FIRST 1 "LEADID","COMPANYNAME","CONTACTNAME","EMAIL","CURRENTSTATUS","CREATEDAT"
                      FROM "LEAD"
-                     WHERE UPPER(TRIM("COMPANYNAME")) = UPPER(TRIM(?)) AND "LEADID" <> ?',
+                     WHERE UPPER(TRIM("COMPANYNAME")) = UPPER(TRIM(?)) AND "LEADID" <> ?
+                     ORDER BY
+                        CASE
+                            WHEN UPPER(TRIM(COALESCE("CURRENTSTATUS", \'\'))) = \'FAILED\' THEN 1
+                            ELSE 0
+                        END ASC,
+                        COALESCE("LASTMODIFIED", "CREATEDAT") DESC,
+                        "LEADID" DESC',
                     [$validated['COMPANYNAME'], $leadId]
                 );
                 if ($existing) {
@@ -1916,12 +1932,9 @@ class AdminController extends Controller
                         $line2 = $parts ? implode(' ', $parts) . '.' : '';
                         $message = trim($line1 . "\n\n" . $line2);
 
-                        $input = $request->all();
-                        $input['duplicate_ok'] = 1;
-
                         return redirect()
                             ->route('admin.inquiries.edit', $leadId)
-                            ->withInput($input)
+                            ->withInput($request->except('duplicate_ok'))
                             ->with('duplicate_warning', $message);
                     }
                 }
@@ -2076,385 +2089,6 @@ class AdminController extends Controller
         ]);
     }
 
-    public function rewards(): View
-    {
-        // Base LEAD data – same as inquiries() / assigned tab
-        $rows = DB::select(
-            'SELECT FIRST 200
-                "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
-                "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
-                "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
-                "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
-            FROM "LEAD"
-            ORDER BY "LEADID" DESC'
-        );
-
-        // Only assigned leads
-        $assigned = [];
-        foreach ($rows as $r) {
-            if (trim((string) ($r->ASSIGNED_TO ?? '')) !== '') {
-                $assigned[] = $r;
-            }
-        }
-
-        // Sort: latest assigned first
-        usort($assigned, function ($a, $b) {
-            $ta = strtotime($a->LASTMODIFIED ?? $a->CREATEDAT ?? '0');
-            $tb = strtotime($b->LASTMODIFIED ?? $b->CREATEDAT ?? '0');
-            return $tb <=> $ta;
-        });
-
-        // Override CURRENTSTATUS from latest LEAD_ACT per LEADID (same approach as inquiries())
-        try {
-            $leadIds = array_values(array_unique(array_filter(array_map(
-                fn ($r) => (int) ($r->LEADID ?? 0),
-                $rows
-            ))));
-            if (!empty($leadIds)) {
-                $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
-                $acts = DB::select(
-                    'SELECT a."LEADID", a."STATUS"
-                     FROM "LEAD_ACT" a
-                     JOIN (
-                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
-                         FROM "LEAD_ACT"
-                         WHERE "LEADID" IN (' . $placeholders . ')
-                         GROUP BY "LEADID"
-                     ) x
-                       ON x."LEADID" = a."LEADID" AND x.MAXCD = a."CREATIONDATE"
-                     WHERE a."LEADID" IN (' . $placeholders . ')',
-                    array_merge($leadIds, $leadIds)
-                );
-                $statusMap = [];
-                foreach ($acts as $a) {
-                    $lid = (int) ($a->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $statusMap[$lid] = trim((string) ($a->STATUS ?? ''));
-                    }
-                }
-                if (!empty($statusMap)) {
-                    foreach ($assigned as $r) {
-                        $lid = (int) ($r->LEADID ?? 0);
-                        if ($lid > 0 && isset($statusMap[$lid])) {
-                            $r->CURRENTSTATUS = $statusMap[$lid];
-                        }
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            // keep CURRENTSTATUS from LEAD if override fails
-        }
-
-        // Fetch latest COMPLETED date and REWARDED date from LEAD_ACT per LEADID
-        $completedDateMap = [];
-        $rewardedDateMap = [];
-        $dealtProductMap = [];
-        $assignedAttachmentMap = [];
-        $assignedAttachmentActMap = [];
-        try {
-            $leadIdsForActs = array_values(array_unique(array_filter(array_map(
-                fn ($r) => (int) ($r->LEADID ?? 0),
-                $rows
-            ))));
-            if (!empty($leadIdsForActs)) {
-                $placeholders = implode(',', array_fill(0, count($leadIdsForActs), '?'));
-                $actRows = DB::select(
-                    'SELECT "LEADID", MAX("CREATIONDATE") AS COMPLETED_AT
-                     FROM "LEAD_ACT"
-                     WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\' AND "LEADID" IN (' . $placeholders . ')
-                     GROUP BY "LEADID"',
-                    $leadIdsForActs
-                );
-                foreach ($actRows as $ar) {
-                    $lid = (int) ($ar->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $completedDateMap[$lid] = $ar->COMPLETED_AT ?? $ar->completed_at ?? null;
-                    }
-                }
-
-                $rewardRows = DB::select(
-                    'SELECT "LEADID", MAX("CREATIONDATE") AS REWARDED_AT
-                     FROM "LEAD_ACT"
-                     WHERE UPPER(TRIM("STATUS")) = \'REWARDED\' AND "LEADID" IN (' . $placeholders . ')
-                     GROUP BY "LEADID"',
-                    $leadIdsForActs
-                );
-                foreach ($rewardRows as $rr) {
-                    $lid = (int) ($rr->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $rewardedDateMap[$lid] = $rr->REWARDED_AT ?? $rr->rewarded_at ?? null;
-                    }
-                }
-
-                $dealRows = DB::select(
-                    'SELECT a."LEADID", a."DEALTPRODUCT"
-                     FROM "LEAD_ACT" a
-                     JOIN (
-                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
-                         FROM "LEAD_ACT"
-                         WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\' AND "LEADID" IN (' . $placeholders . ')
-                         GROUP BY "LEADID"
-                     ) m ON m."LEADID" = a."LEADID" AND m.MAXCD = a."CREATIONDATE"
-                     WHERE UPPER(TRIM(a."STATUS")) = \'COMPLETED\' AND a."LEADID" IN (' . $placeholders . ')',
-                    array_merge($leadIdsForActs, $leadIdsForActs)
-                );
-                foreach ($dealRows as $dr) {
-                    $lid = (int) ($dr->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $dealtProductMap[$lid] = $dr->DEALTPRODUCT ?? $dr->dealtproduct ?? null;
-                    }
-                }
-                $attachRows = DB::select(
-                    'SELECT "LEADID", "LEAD_ACTID", "ATTACHMENT", "CREATIONDATE"
-                     FROM "LEAD_ACT"
-                     WHERE "LEADID" IN (' . $placeholders . ')
-                       AND "ATTACHMENT" IS NOT NULL
-                     ORDER BY "LEADID" ASC, "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
-                    $leadIdsForActs
-                );
-                foreach ($attachRows as $ar) {
-                    $lid = (int) ($ar->LEADID ?? 0);
-                    if ($lid <= 0 || array_key_exists($lid, $assignedAttachmentMap)) {
-                        continue;
-                    }
-                    $attachment = $ar->ATTACHMENT ?? $ar->attachment ?? null;
-                    if ($attachment === null || trim((string) $attachment) === '') {
-                        continue;
-                    }
-                    $assignedAttachmentMap[$lid] = $attachment;
-                    $assignedAttachmentActMap[$lid] = (int) ($ar->LEAD_ACTID ?? $ar->lead_actid ?? 0);
-                }
-            }
-        } catch (\Throwable $e) {
-            $completedDateMap = [];
-            $rewardedDateMap = [];
-            $dealtProductMap = [];
-            $assignedAttachmentMap = [];
-            $assignedAttachmentActMap = [];
-        }
-
-        // Attach completion/rewarded dates, dealt products, and latest attachment to assigned rows where available
-        if (!empty($completedDateMap) || !empty($rewardedDateMap) || !empty($dealtProductMap) || !empty($assignedAttachmentMap)) {
-            foreach ($assigned as $r) {
-                $lid = (int) ($r->LEADID ?? 0);
-                if ($lid <= 0) continue;
-                if (isset($completedDateMap[$lid])) {
-                    $r->COMPLETED_AT = $completedDateMap[$lid];
-                }
-                if (isset($rewardedDateMap[$lid])) {
-                    $r->REWARDED_AT = $rewardedDateMap[$lid];
-                }
-                if (isset($dealtProductMap[$lid])) {
-                    $r->DEALTPRODUCT = $dealtProductMap[$lid];
-                }
-                if (array_key_exists($lid, $assignedAttachmentMap)) {
-                    $r->ASSIGNED_ATTACHMENT = $assignedAttachmentMap[$lid];
-                    $r->ASSIGNED_LEAD_ACT_ID = $assignedAttachmentActMap[$lid] ?? 0;
-                }
-                $urls = [];
-                $attachmentRaw = $r->ASSIGNED_ATTACHMENT ?? null;
-                $leadActId = (int) ($r->ASSIGNED_LEAD_ACT_ID ?? 0);
-                if ($attachmentRaw !== null && trim((string) $attachmentRaw) !== '') {
-                    $attachmentStr = trim((string) $attachmentRaw);
-                    $attachmentStr = str_replace('\\', '/', $attachmentStr);
-                    if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
-                        foreach (explode(',', $attachmentStr) as $path) {
-                            $path = trim(str_replace('\\', '/', $path));
-                            if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
-                                $urls[] = route('admin.rewards.serve-attachment', ['path' => $path]);
-                            }
-                        }
-                    } else {
-                        if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
-                            $urls[] = route('admin.rewards.serve-attachment', ['path' => $attachmentStr]);
-                        } elseif ($lid > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
-                            $urls[] = route('admin.rewards.activity-attachment', ['leadId' => $lid, 'leadActId' => $leadActId]);
-                        }
-                    }
-                }
-                $r->ASSIGNED_ATTACHMENT_URLS = $urls;
-            }
-        }
-
-        // Split into Completed vs Rewarded/Paid by latest status
-        $completed = [];
-        $rewarded = [];
-        foreach ($assigned as $r) {
-            $status = strtoupper(trim((string) ($r->CURRENTSTATUS ?? '')));
-            $referral = trim((string) ($r->REFERRALCODE ?? ''));
-            if ($status === 'COMPLETED') {
-                if ($referral !== '') {
-                    $completed[] = $r;
-                }
-            } elseif (in_array($status, ['REWARDED', 'PAID'], true)) {
-                $rewarded[] = $r;
-            }
-        }
-
-        // Attach latest REWARDED/PAID attachment per lead for rewarded list
-        try {
-            $rewardedIds = array_values(array_unique(array_filter(array_map(
-                fn ($r) => (int) ($r->LEADID ?? 0),
-                $rewarded
-            ))));
-            if (!empty($rewardedIds)) {
-                $placeholders = implode(',', array_fill(0, count($rewardedIds), '?'));
-                $attachRows = DB::select(
-                    'SELECT a."LEADID", a."LEAD_ACTID", a."ATTACHMENT"
-                     FROM "LEAD_ACT" a
-                     JOIN (
-                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
-                         FROM "LEAD_ACT"
-                         WHERE UPPER(TRIM("STATUS")) IN (\'REWARDED\', \'PAID\', \'REWARD DISTRIBUTED\')
-                           AND "LEADID" IN (' . $placeholders . ')
-                         GROUP BY "LEADID"
-                     ) m ON m."LEADID" = a."LEADID" AND m.MAXCD = a."CREATIONDATE"
-                     WHERE UPPER(TRIM(a."STATUS")) IN (\'REWARDED\', \'PAID\', \'REWARD DISTRIBUTED\')
-                       AND a."LEADID" IN (' . $placeholders . ')',
-                    array_merge($rewardedIds, $rewardedIds)
-                );
-                $attachmentMap = [];
-                $attachmentActMap = [];
-                foreach ($attachRows as $ar) {
-                    $lid = (int) ($ar->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $attachmentMap[$lid] = $ar->ATTACHMENT ?? $ar->attachment ?? null;
-                        $attachmentActMap[$lid] = (int) ($ar->LEAD_ACTID ?? 0);
-                    }
-                }
-                if (!empty($attachmentMap)) {
-                    foreach ($rewarded as $r) {
-                        $lid = (int) ($r->LEADID ?? 0);
-                        if ($lid > 0 && array_key_exists($lid, $attachmentMap)) {
-                            $r->REWARD_ATTACHMENT = $attachmentMap[$lid];
-                            $r->REWARD_LEAD_ACT_ID = $attachmentActMap[$lid] ?? 0;
-                        }
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            // ignore attachment mapping failures
-        }
-
-        // Build attachment URLs for Rewarded list (admin)
-        foreach ($rewarded as $r) {
-            $urls = [];
-            $attachmentRaw = $r->REWARD_ATTACHMENT ?? null;
-            $leadId = (int) ($r->LEADID ?? 0);
-            $leadActId = (int) ($r->REWARD_LEAD_ACT_ID ?? 0);
-            if ($attachmentRaw !== null && trim((string) $attachmentRaw) !== '') {
-                $attachmentStr = trim((string) $attachmentRaw);
-                $attachmentStr = str_replace('\\', '/', $attachmentStr);
-                if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
-                    foreach (explode(',', $attachmentStr) as $path) {
-                        $path = trim(str_replace('\\', '/', $path));
-                        if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
-                            $urls[] = route('admin.rewards.serve-attachment', ['path' => $path]);
-                        }
-                    }
-                } else {
-                    if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
-                        $urls[] = route('admin.rewards.serve-attachment', ['path' => $attachmentStr]);
-                    } elseif ($leadId > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
-                        $urls[] = route('admin.rewards.activity-attachment', ['leadId' => $leadId, 'leadActId' => $leadActId]);
-                    }
-                }
-            }
-            $r->REWARD_ATTACHMENT_URLS = $urls;
-        }
-
-        // Resolve display names for source, assigned by, and assigned to.
-        try {
-            $assignmentByLeadMap = $this->latestAssignmentUserMap(array_map(
-                static fn ($row) => (int) ($row->LEADID ?? 0),
-                array_merge($completed, $rewarded)
-            ));
-            $ids = [];
-            foreach (array_merge($completed, $rewarded) as $r) {
-                $to = trim((string) ($r->ASSIGNED_TO ?? ''));
-                $by = trim((string) ($r->CREATEDBY ?? ''));
-                if ($to !== '') $ids[$to] = true;
-                if ($by !== '') $ids[$by] = true;
-                $leadId = (int) ($r->LEADID ?? 0);
-                $assignerId = $leadId > 0 ? trim((string) ($assignmentByLeadMap[$leadId] ?? '')) : '';
-                if ($assignerId !== '') $ids[$assignerId] = true;
-            }
-            $maps = $this->userDisplayMaps(array_keys($ids));
-            $assignedToMap = $maps['assignedToMap'];
-            $actorMap = $maps['actorMap'];
-            foreach (array_merge($completed, $rewarded) as $r) {
-                $to = trim((string) ($r->ASSIGNED_TO ?? ''));
-                $by = trim((string) ($r->CREATEDBY ?? ''));
-                $leadId = (int) ($r->LEADID ?? 0);
-                $assignerId = $leadId > 0 ? trim((string) ($assignmentByLeadMap[$leadId] ?? '')) : '';
-                if ($to !== '' && isset($assignedToMap[$to])) $r->ASSIGNED_TO_NAME = $assignedToMap[$to];
-                if ($by !== '' && isset($actorMap[$by])) $r->CREATEDBY_NAME = $actorMap[$by];
-                if ($assignerId !== '') $r->ASSIGNEDBY = $assignerId;
-                if ($assignerId !== '' && isset($actorMap[$assignerId])) {
-                    $r->ASSIGNEDBY_NAME = $actorMap[$assignerId];
-                }
-            }
-        } catch (\Throwable $e) {
-        }
-
-        // Total pending reward: leads whose LATEST LEAD_ACT status is Completed (not Rewarded/Paid)
-        $closedRow = DB::selectOne(
-            'SELECT COUNT(*) as cnt
-             FROM (
-                 SELECT a."LEADID", a."STATUS"
-                 FROM "LEAD_ACT" a
-                 JOIN (
-                     SELECT "LEADID", MAX("CREATIONDATE") AS max_created
-                     FROM "LEAD_ACT"
-                     GROUP BY "LEADID"
-                 ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
-             ) latest
-             JOIN "LEAD" l ON l."LEADID" = latest."LEADID"
-             WHERE UPPER(TRIM(latest."STATUS")) = \'COMPLETED\'
-               AND TRIM(COALESCE(l."REFERRALCODE", \'\')) <> \'\''
-        );
-        $totalCompletedLeads = (int) ($closedRow->cnt ?? $closedRow->CNT ?? current((array) $closedRow) ?? 0);
-
-        $rewardedRow = DB::selectOne(
-            'SELECT COUNT(*) as cnt
-             FROM (
-                 SELECT a."LEADID", a."STATUS"
-                 FROM "LEAD_ACT" a
-                 JOIN (
-                     SELECT "LEADID", MAX("CREATIONDATE") AS max_created
-                     FROM "LEAD_ACT"
-                     GROUP BY "LEADID"
-                 ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
-             ) latest
-             WHERE UPPER(TRIM(latest."STATUS")) = \'REWARDED\''
-        );
-        $totalRewardedLeads = (int) ($rewardedRow->cnt ?? $rewardedRow->CNT ?? current((array) $rewardedRow) ?? 0);
-
-        // Product labels for PRODUCTS column (if needed later)
-        $productLabels = [
-            1 => 'Account',
-            2 => 'Payroll',
-            3 => 'Production',
-            4 => 'Mobile Sales',
-            5 => 'Ecommerce',
-            6 => 'EBI POS',
-            7 => 'Sudu AI',
-            8 => 'X-Store',
-            9 => 'Vision',
-            10 => 'HRMS',
-            11 => 'Others',
-        ];
-
-        return view('admin.rewards', [
-            'completed' => $completed,
-            'rewarded' => $rewarded,
-            'totalCompletedLeads' => $totalCompletedLeads,
-            'totalRewardedLeads' => $totalRewardedLeads,
-            'productLabels' => $productLabels,
-            'currentPage' => 'rewards',
-        ]);
-    }
-
     /**
      * Serve a reward attachment by storage path (admin).
      */
@@ -2514,54 +2148,6 @@ class AdminController extends Controller
             return response($attachment, 200, ['Content-Type' => $mime]);
         }
         return response('', 404);
-    }
-
-    private function resolveInquiryAttachmentPath(string $path): ?string
-    {
-        $path = ltrim($path, '/');
-        $candidates = [
-            Storage::disk('public')->path($path),
-            storage_path('app/public/' . $path),
-            storage_path('app/private/' . $path),
-            storage_path('app/' . $path),
-            public_path($path),
-            public_path('storage/' . $path),
-        ];
-        foreach ($candidates as $candidate) {
-            if (is_file($candidate)) {
-                return $candidate;
-            }
-        }
-        return null;
-    }
-
-    private function buildAdminLeadActivityAttachmentUrls(mixed $attachmentRaw, int $leadId, int $leadActId): array
-    {
-        $urls = [];
-        if ($attachmentRaw === null || trim((string) $attachmentRaw) === '') {
-            return $urls;
-        }
-
-        $attachmentStr = trim((string) $attachmentRaw);
-        $attachmentStr = str_replace('\\', '/', $attachmentStr);
-
-        if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
-            foreach (explode(',', $attachmentStr) as $path) {
-                $path = trim(str_replace('\\', '/', $path));
-                if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
-                    $urls[] = route('admin.rewards.serve-attachment', ['path' => $path]);
-                }
-            }
-            return array_values(array_unique($urls));
-        }
-
-        if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
-            $urls[] = route('admin.rewards.serve-attachment', ['path' => $attachmentStr]);
-        } elseif ($leadId > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
-            $urls[] = route('admin.rewards.activity-attachment', ['leadId' => $leadId, 'leadActId' => $leadActId]);
-        }
-
-        return array_values(array_unique($urls));
     }
 
     /**
@@ -2706,6 +2292,125 @@ class AdminController extends Controller
             }
             return null;
         };
+
+        $metricDate = Carbon::create((int) $now->format('Y'), (int) $now->format('n'), 1, 0, 0, 0);
+        $metricPrevDate = (clone $metricDate)->subMonth();
+        $metricMonth = (int) $metricDate->format('n');
+        $metricYear = (int) $metricDate->format('Y');
+        $metricPrevMonth = (int) $metricPrevDate->format('n');
+        $metricPrevYear = (int) $metricPrevDate->format('Y');
+
+        // Top metric cards stay live for the current month and do not follow the report filters.
+        $metricLeadStatusRows = DB::select(
+            'SELECT l."CURRENTSTATUS" AS status, COUNT(*) AS c
+             FROM "LEAD" l
+             WHERE EXTRACT(YEAR FROM l."CREATEDAT") = ? AND EXTRACT(MONTH FROM l."CREATEDAT") = ?
+             GROUP BY l."CURRENTSTATUS"',
+            [$metricYear, $metricMonth]
+        );
+        $metricLeadStatus = [
+            'Open' => 0,
+            'Ongoing' => 0,
+            'Closed' => 0,
+            'Failed' => 0,
+        ];
+        foreach ($metricLeadStatusRows as $row) {
+            $key = (string) $get($row, 'status');
+            if (isset($metricLeadStatus[$key])) {
+                $metricLeadStatus[$key] = (int) $get($row, 'c');
+            }
+        }
+
+        $metricLastMonthLeadStatusRows = DB::select(
+            'SELECT l."CURRENTSTATUS" AS status, COUNT(*) AS c
+             FROM "LEAD" l
+             WHERE EXTRACT(YEAR FROM l."CREATEDAT") = ? AND EXTRACT(MONTH FROM l."CREATEDAT") = ?
+             GROUP BY l."CURRENTSTATUS"',
+            [$metricPrevYear, $metricPrevMonth]
+        );
+        $metricLastMonthLeadStatus = [
+            'Open' => 0,
+            'Ongoing' => 0,
+            'Closed' => 0,
+            'Failed' => 0,
+        ];
+        foreach ($metricLastMonthLeadStatusRows as $row) {
+            $key = (string) $get($row, 'status');
+            if (isset($metricLastMonthLeadStatus[$key])) {
+                $metricLastMonthLeadStatus[$key] = (int) $get($row, 'c');
+            }
+        }
+
+        $metricUnassignedCount = $metricLeadStatus['Open'] ?? 0;
+        $metricLastMonthUnassignedCount = $metricLastMonthLeadStatus['Open'] ?? 0;
+
+        $metricActivityRows = DB::select(
+            'SELECT a."STATUS" AS status, COUNT(*) AS c
+             FROM "LEAD_ACT" a
+             JOIN (
+                 SELECT "LEADID", MAX("CREATIONDATE") AS max_created
+                 FROM "LEAD_ACT"
+                 WHERE EXTRACT(YEAR FROM "CREATIONDATE") = ? AND EXTRACT(MONTH FROM "CREATIONDATE") = ?
+                 GROUP BY "LEADID"
+             ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
+             JOIN "LEAD" l ON l."LEADID" = a."LEADID"
+             WHERE 1 = 1
+             GROUP BY a."STATUS"',
+            [$metricYear, $metricMonth]
+        );
+        $metricActivityStatus = [
+            'Created' => 0,
+            'Pending' => 0,
+            'FollowUp' => 0,
+            'Demo' => 0,
+            'Confirmed' => 0,
+            'Completed' => 0,
+            'Failed' => 0,
+            'reward' => 0,
+        ];
+        foreach ($metricActivityRows as $row) {
+            $key = (string) $get($row, 'status');
+            if ($key === 'Rewarded') {
+                $key = 'reward';
+            }
+            if (isset($metricActivityStatus[$key])) {
+                $metricActivityStatus[$key] = (int) $get($row, 'c');
+            }
+        }
+
+        $metricLastMonthActivityRows = DB::select(
+            'SELECT a."STATUS" AS status, COUNT(*) AS c
+             FROM "LEAD_ACT" a
+             JOIN (
+                 SELECT "LEADID", MAX("CREATIONDATE") AS max_created
+                 FROM "LEAD_ACT"
+                 WHERE EXTRACT(YEAR FROM "CREATIONDATE") = ? AND EXTRACT(MONTH FROM "CREATIONDATE") = ?
+                 GROUP BY "LEADID"
+             ) m ON m."LEADID" = a."LEADID" AND m.max_created = a."CREATIONDATE"
+             JOIN "LEAD" l ON l."LEADID" = a."LEADID"
+             WHERE 1 = 1
+             GROUP BY a."STATUS"',
+            [$metricPrevYear, $metricPrevMonth]
+        );
+        $metricLastMonthActivity = [
+            'Created' => 0,
+            'Pending' => 0,
+            'FollowUp' => 0,
+            'Demo' => 0,
+            'Confirmed' => 0,
+            'Completed' => 0,
+            'Failed' => 0,
+            'reward' => 0,
+        ];
+        foreach ($metricLastMonthActivityRows as $row) {
+            $key = (string) $get($row, 'status');
+            if ($key === 'Rewarded') {
+                $key = 'reward';
+            }
+            if (isset($metricLastMonthActivity[$key])) {
+                $metricLastMonthActivity[$key] = (int) $get($row, 'c');
+            }
+        }
 
         // Lead status summary
         $leadStatusRows = DB::select(
@@ -2917,13 +2622,13 @@ class AdminController extends Controller
             return (int) round(($current - $lastMonth) / $lastMonth * 100);
         };
         $metricPercent = [
-            'unassigned' => $percentChange($unassignedCount, $lastMonthUnassignedCount),
-            'Pending' => $percentChange($activityStatus['Pending'] ?? 0, $lastMonthActivity['Pending'] ?? 0),
-            'FollowUp' => $percentChange($activityStatus['FollowUp'] ?? 0, $lastMonthActivity['FollowUp'] ?? 0),
-            'Demo' => $percentChange($activityStatus['Demo'] ?? 0, $lastMonthActivity['Demo'] ?? 0),
-            'Confirmed' => $percentChange($activityStatus['Confirmed'] ?? 0, $lastMonthActivity['Confirmed'] ?? 0),
-            'Completed' => $percentChange($leadStatus['Closed'] ?? 0, $lastMonthLeadStatus['Closed'] ?? 0),
-            'Rewarded' => $percentChange($activityStatus['reward'] ?? 0, $lastMonthActivity['reward'] ?? 0),
+            'unassigned' => $percentChange($metricUnassignedCount, $metricLastMonthUnassignedCount),
+            'Pending' => $percentChange($metricActivityStatus['Pending'] ?? 0, $metricLastMonthActivity['Pending'] ?? 0),
+            'FollowUp' => $percentChange($metricActivityStatus['FollowUp'] ?? 0, $metricLastMonthActivity['FollowUp'] ?? 0),
+            'Demo' => $percentChange($metricActivityStatus['Demo'] ?? 0, $metricLastMonthActivity['Demo'] ?? 0),
+            'Confirmed' => $percentChange($metricActivityStatus['Confirmed'] ?? 0, $metricLastMonthActivity['Confirmed'] ?? 0),
+            'Completed' => $percentChange($metricLeadStatus['Closed'] ?? 0, $metricLastMonthLeadStatus['Closed'] ?? 0),
+            'Rewarded' => $percentChange($metricActivityStatus['reward'] ?? 0, $metricLastMonthActivity['reward'] ?? 0),
         ];
 
         // Product Conversion Rate (from LEAD_ACT.DEALTPRODUCT) for current month
@@ -2979,6 +2684,9 @@ class AdminController extends Controller
             'leadStatus' => $leadStatus,
             'unassignedLeads' => (int) $unassignedCount,
             'activityStatus' => $activityStatus,
+            'metricLeadStatus' => $metricLeadStatus,
+            'metricUnassignedLeads' => (int) $metricUnassignedCount,
+            'metricActivityStatus' => $metricActivityStatus,
             'payoutStatus' => $payoutStatus,
             'metricPercent' => $metricPercent,
             'inquiryTrend' => $inquiryTrend,
@@ -3688,15 +3396,107 @@ class AdminController extends Controller
         ]);
     }
 
-    public function history(): View
+    public function history(Request $request): View
     {
+        $historyDateFilter = $this->resolveHistoryDateFilter($request);
+
         $rows = DB::select(
             'SELECT FIRST 100
                 "LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS"
             FROM "LEAD_ACT"
-            ORDER BY "LEAD_ACTID" DESC'
+            WHERE "CREATIONDATE" >= ? AND "CREATIONDATE" <= ?
+            ORDER BY "LEAD_ACTID" DESC',
+            [
+                $historyDateFilter['rangeStart']->format('Y-m-d H:i:s'),
+                $historyDateFilter['rangeEnd']->format('Y-m-d H:i:s'),
+            ]
         );
-        return view('admin.history', ['items' => $rows, 'currentPage' => 'history']);
+
+        return view('admin.history', array_merge($historyDateFilter, [
+            'items' => $rows,
+            'currentPage' => 'history',
+        ]));
+    }
+
+    private function resolveHistoryDateFilter(Request $request): array
+    {
+        $dateRange = strtolower(trim((string) $request->query('date_range', 'today')));
+        $supportedRanges = ['today', 'yesterday', '2_days_ago', 'this_week', 'custom'];
+        if (!in_array($dateRange, $supportedRanges, true)) {
+            $dateRange = 'today';
+        }
+
+        $startDateInput = trim((string) $request->query('start_date', ''));
+        $endDateInput = trim((string) $request->query('end_date', ''));
+
+        $today = Carbon::today();
+        $rangeStart = $today->copy()->startOfDay();
+        $rangeEnd = $today->copy()->endOfDay();
+
+        if ($dateRange === 'yesterday') {
+            $rangeStart = $today->copy()->subDay()->startOfDay();
+            $rangeEnd = $rangeStart->copy()->endOfDay();
+        } elseif ($dateRange === '2_days_ago') {
+            $rangeStart = $today->copy()->subDays(2)->startOfDay();
+            $rangeEnd = $rangeStart->copy()->endOfDay();
+        } elseif ($dateRange === 'this_week') {
+            $rangeStart = Carbon::now()->startOfWeek(Carbon::MONDAY)->startOfDay();
+            $rangeEnd = Carbon::now()->endOfDay();
+        } elseif ($dateRange === 'custom') {
+            $customStart = $this->parseHistoryFilterDate($startDateInput);
+            $customEnd = $this->parseHistoryFilterDate($endDateInput);
+
+            if ($customStart === null && $customEnd !== null) {
+                $customStart = $customEnd->copy();
+            }
+            if ($customEnd === null && $customStart !== null) {
+                $customEnd = $customStart->copy();
+            }
+
+            if ($customStart === null || $customEnd === null) {
+                $dateRange = 'today';
+            } else {
+                if ($customStart->gt($customEnd)) {
+                    [$customStart, $customEnd] = [$customEnd, $customStart];
+                }
+
+                $rangeStart = $customStart->copy()->startOfDay();
+                $rangeEnd = $customEnd->copy()->endOfDay();
+                $startDateInput = $customStart->format('Y-m-d');
+                $endDateInput = $customEnd->format('Y-m-d');
+            }
+        }
+
+        if ($dateRange !== 'custom') {
+            $startDateInput = '';
+            $endDateInput = '';
+        }
+
+        return [
+            'dateRange' => $dateRange,
+            'startDateInput' => $startDateInput,
+            'endDateInput' => $endDateInput,
+            'filterStartDate' => $rangeStart->format('Y-m-d'),
+            'filterEndDate' => $rangeEnd->format('Y-m-d'),
+            'rangeStart' => $rangeStart,
+            'rangeEnd' => $rangeEnd,
+        ];
+    }
+
+    private function parseHistoryFilterDate(string $value): ?Carbon
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        try {
+            $date = Carbon::createFromFormat('Y-m-d', $value);
+
+            return $date && $date->format('Y-m-d') === $value ? $date : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public function maintainUsers(Request $request): View|RedirectResponse|JsonResponse
@@ -3751,14 +3551,14 @@ class AdminController extends Controller
             $params[] = $like;
         }
 
-        $sql = 'SELECT "USERID","EMAIL","SYSTEMROLE","ISACTIVE","ALIAS","COMPANY","POSTCODE","CITY","LASTLOGIN","PASSWORDHASH" FROM "USERS" u';
+        $sql = 'SELECT "USERID","EMAIL","SYSTEMROLE","ISACTIVE","ALIAS","COMPANY","POSTCODE","CITY","LASTLOGIN" FROM "USERS" u';
         if (!empty($where)) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
         $sql .= ' ORDER BY "USERID"';
 
         $rows = DB::select($sql, $params);
-        $setupLinks = $this->tempPasswordStore()->allSetupLinks();
+        $setupLinks = $this->setupLinkStore()->allSetupLinks();
 
         $users = array_map(function ($r) use ($setupLinks) {
             $userId = (string) ($r->USERID ?? '');
@@ -3786,13 +3586,12 @@ class AdminController extends Controller
                 'POSTCODE' => (string) ($r->POSTCODE ?? ''),
                 'CITY' => (string) ($r->CITY ?? ''),
                 'LASTLOGIN' => $r->LASTLOGIN ?? null,
-                'HASPASSWORD' => trim((string) ($r->PASSWORDHASH ?? '')) !== '',
                 'HAS_LOGGED_IN' => $hasLoggedIn,
-                'PASSWORD_SETUP_LINK_PENDING' => $setupLinkPending,
-                'PASSWORD_SETUP_LINK_SENT' => $setupLinkEmailedAt !== '',
-                'PASSWORD_SETUP_LINK_EXPIRED' => $setupLinkExpired,
-                'PASSWORD_SETUP_LINK_EMAILED_AT' => $setupLinkEmailedAt !== '' ? $setupLinkEmailedAt : null,
-                'PASSWORD_SETUP_LINK_EXPIRES_AT' => $setupLinkExpiresAt !== '' ? $setupLinkExpiresAt : null,
+                'PASSKEY_SETUP_LINK_PENDING' => $setupLinkPending,
+                'PASSKEY_SETUP_LINK_SENT' => $setupLinkEmailedAt !== '',
+                'PASSKEY_SETUP_LINK_EXPIRED' => $setupLinkExpired,
+                'PASSKEY_SETUP_LINK_EMAILED_AT' => $setupLinkEmailedAt !== '' ? $setupLinkEmailedAt : null,
+                'PASSKEY_SETUP_LINK_EXPIRES_AT' => $setupLinkExpiresAt !== '' ? $setupLinkExpiresAt : null,
             ];
         }, $rows);
 
@@ -3885,22 +3684,22 @@ class AdminController extends Controller
         if ($createAction === 'create_email' && $createdUser && trim((string) ($createdUser->USERID ?? '')) !== '') {
             try {
                 $newUser = DB::selectOne(
-                    'SELECT "USERID","EMAIL","ALIAS","COMPANY","PASSWORDHASH","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
+                    'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
                     [(string) $createdUser->USERID]
                 );
 
-                if (!$newUser || !$this->sendMaintainUserSetPasswordLink($newUser)) {
-                    return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send set password link email.');
+                if (!$newUser || !$this->sendMaintainUserPasskeySetupLink($newUser)) {
+                    return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send passkey setup link email.');
                 }
 
-                return redirect()->route('admin.maintain-users')->with('success', 'User created and set password link emailed.');
+                return redirect()->route('admin.maintain-users')->with('success', 'User created and passkey setup link emailed.');
             } catch (\Throwable $e) {
                 report($e);
-                return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send set password link email.');
+                return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send passkey setup link email.');
             }
         }
 
-        return redirect()->route('admin.maintain-users')->with('success', 'User created successfully. Send a set password link when ready.');
+        return redirect()->route('admin.maintain-users')->with('success', 'User created successfully. Send a passkey setup link when ready.');
     }
 
     public function maintainUsersUpdate(Request $request, string $userid): RedirectResponse
@@ -3921,7 +3720,7 @@ class AdminController extends Controller
             'POSTCODE' => 'nullable|string|digits:5',
             'CITY' => 'nullable|string|max:100',
             'ISACTIVE' => 'nullable|boolean',
-            'SEND_RESET_LINK' => 'nullable|boolean',
+            'SEND_PASSKEY_SETUP_LINK' => 'nullable|boolean',
         ], [
             'EMAIL.email' => 'Invalid Email Address Format.',
             'POSTCODE.digits' => 'Invalid Postcode.',
@@ -3936,7 +3735,7 @@ class AdminController extends Controller
         $postcode = trim((string) ($validated['POSTCODE'] ?? ''));
         $city = trim((string) ($validated['CITY'] ?? ''));
         $isActive = (bool) ($validated['ISACTIVE'] ?? true);
-        $sendResetLink = (bool) ($validated['SEND_RESET_LINK'] ?? false);
+        $sendPasskeySetupLink = (bool) ($validated['SEND_PASSKEY_SETUP_LINK'] ?? false);
 
         if ($isDealer && ($alias === '' || $company === '' || $postcode === '' || $city === '')) {
             return back()->withInput()->with('error', 'Dealer accounts require alias, company, postcode, and city.');
@@ -4017,40 +3816,43 @@ class AdminController extends Controller
             throw $e;
         }
 
-        $resetLinkSent = false;
-        if ($sendResetLink) {
+        $passkeySetupLinkSent = false;
+        if ($sendPasskeySetupLink) {
             try {
                 $updatedUser = DB::selectOne(
-                    'SELECT "USERID","EMAIL","PASSWORDHASH","ALIAS","COMPANY" FROM "USERS" WHERE "USERID" = ?',
+                    'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
                     [$userid]
                 );
-                if (!$updatedUser || trim((string) ($updatedUser->EMAIL ?? '')) === '' || trim((string) ($updatedUser->PASSWORDHASH ?? '')) === '') {
-                    return redirect()->route('admin.maintain-users')->with('error', 'User updated, but reset link could not be sent because the account is missing email or password data.');
+                if (!$updatedUser || trim((string) ($updatedUser->EMAIL ?? '')) === '') {
+                    return redirect()->route('admin.maintain-users')->with('error', 'User updated, but passkey setup link could not be sent because the account is missing email data.');
                 }
 
-                $this->sendMaintainUserPasswordResetLink($updatedUser);
-                $resetLinkSent = true;
+                $this->sendMaintainUserPasskeySetupLink(
+                    $updatedUser,
+                    'A passkey setup link is ready for your SQL SMS account.'
+                );
+                $passkeySetupLinkSent = true;
             } catch (\Throwable $e) {
                 report($e);
-                return redirect()->route('admin.maintain-users')->with('error', 'User updated, but failed to send password reset link.');
+                return redirect()->route('admin.maintain-users')->with('error', 'User updated, but failed to send passkey setup link.');
             }
         }
 
-        $successMessage = $resetLinkSent
-            ? 'User updated and password reset link sent.'
+        $successMessage = $passkeySetupLinkSent
+            ? 'User updated and passkey setup link sent.'
             : 'User updated successfully.';
 
         return redirect()->route('admin.maintain-users')->with('success', $successMessage);
     }
 
-    public function maintainUsersSendTempPassword(Request $request, string $userid): RedirectResponse
+    public function maintainUsersSendPasskeySetupLink(Request $request, string $userid): RedirectResponse
     {
         if (strtolower((string) $request->session()->get('user_role')) === 'manager') {
             return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access Maintain Users.');
         }
 
         $user = DB::selectOne(
-            'SELECT "USERID","EMAIL","ALIAS","COMPANY","PASSWORDHASH","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
+            'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
             [$userid]
         );
 
@@ -4059,20 +3861,20 @@ class AdminController extends Controller
         }
 
         if ($user->LASTLOGIN !== null) {
-            return redirect()->route('admin.maintain-users')->with('error', 'Set password links can only be sent to users who have never logged in.');
+            return redirect()->route('admin.maintain-users')->with('error', 'Passkey setup links can only be sent to users who have never logged in.');
         }
 
         try {
-            $this->sendMaintainUserSetPasswordLink($user);
+            $this->sendMaintainUserPasskeySetupLink($user);
         } catch (\Throwable $e) {
             report($e);
-            return redirect()->route('admin.maintain-users')->with('error', 'Failed to send set password link email.');
+            return redirect()->route('admin.maintain-users')->with('error', 'Failed to send passkey setup link email.');
         }
 
-        return redirect()->route('admin.maintain-users')->with('success', 'Set password link emailed.');
+        return redirect()->route('admin.maintain-users')->with('success', 'Passkey setup link emailed.');
     }
 
-    public function maintainUsersSendTempPasswords(Request $request): RedirectResponse
+    public function maintainUsersSendPasskeySetupLinks(Request $request): RedirectResponse
     {
         if (strtolower((string) $request->session()->get('user_role')) === 'manager') {
             return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access Maintain Users.');
@@ -4090,7 +3892,7 @@ class AdminController extends Controller
 
         $placeholders = implode(',', array_fill(0, count($selectedUserIds), '?'));
         $users = DB::select(
-            'SELECT "USERID","EMAIL","ALIAS","COMPANY","PASSWORDHASH","LASTLOGIN","ISACTIVE"
+            'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE"
              FROM "USERS"
              WHERE "LASTLOGIN" IS NULL
                AND "USERID" IN (' . $placeholders . ')
@@ -4103,7 +3905,7 @@ class AdminController extends Controller
 
         foreach ($users as $user) {
             try {
-                if ($this->sendMaintainUserSetPasswordLink($user)) {
+                if ($this->sendMaintainUserPasskeySetupLink($user)) {
                     $sent++;
                 }
             } catch (\Throwable $e) {
@@ -4112,74 +3914,22 @@ class AdminController extends Controller
         }
 
         if ($sent === 0) {
-            return redirect()->route('admin.maintain-users')->with('error', 'No eligible users found for set password link email.');
+            return redirect()->route('admin.maintain-users')->with('error', 'No eligible users found for passkey setup link email.');
         }
 
-        return redirect()->route('admin.maintain-users')->with('success', 'Set password link emailed to ' . $sent . ' user(s).');
+        return redirect()->route('admin.maintain-users')->with('success', 'Passkey setup link emailed to ' . $sent . ' user(s).');
     }
 
-    private function sendMaintainUserPasswordResetLink(object $user): void
-    {
-        $userId = trim((string) ($user->USERID ?? ''));
-        $email = trim((string) ($user->EMAIL ?? ''));
-        $passwordHash = trim((string) ($user->PASSWORDHASH ?? ''));
-        if ($userId === '' || $email === '' || $passwordHash === '') {
-            return;
-        }
-
-        $alias = trim((string) ($user->ALIAS ?? ''));
-        $company = trim((string) ($user->COMPANY ?? ''));
-        $companyUpper = strtoupper($company);
-        if ($companyUpper === 'E STREAM SDN BHD') {
-            $recipientName = $alias !== '' ? $alias : $email;
-        } else {
-            $recipientName = $company !== '' ? $company : ($alias !== '' ? $alias : $email);
-        }
-
-        // Keep only the latest reset link valid for each user.
-        $nonce = bin2hex(random_bytes(16));
-        $nonceCacheKey = 'user_password_reset_nonce:' . $userId;
-        Cache::put($nonceCacheKey, $nonce, now()->addMinutes(20));
-
-        $resetUrl = URL::temporarySignedRoute(
-            'password.reset.form',
-            now()->addMinutes(15),
-            [
-                'userid' => $userId,
-                'hash' => sha1($passwordHash),
-                'nonce' => $nonce,
-            ]
-        );
-
-        $systemName = trim((string) config('app.name', ''));
-        if ($systemName === '' || strtoupper($systemName) === 'LARAVEL') {
-            $systemName = 'SQL SMS';
-        }
-
-        Mail::to($email)->send(new UserPasswordResetLink(
-            toEmail: $email,
-            recipientName: $recipientName,
-            resetUrl: $resetUrl,
-            systemName: $systemName
-        ));
-    }
-
-    private function sendMaintainUserSetPasswordLink(object $user): bool
+    private function sendMaintainUserPasskeySetupLink(object $user, ?string $introLine = null): bool
     {
         $userId = trim((string) ($user->USERID ?? ''));
         $email = trim((string) ($user->EMAIL ?? ''));
         $isActive = (bool) ($user->ISACTIVE ?? false);
-        if ($userId === '' || $email === '' || !$isActive || $user->LASTLOGIN !== null) {
+        if ($userId === '' || $email === '' || !$isActive) {
             return false;
         }
 
-        DB::update(
-            'UPDATE "USERS" SET "PASSWORDHASH" = ? WHERE "USERID" = ? AND "LASTLOGIN" IS NULL',
-            [Hash::make(Str::random(64)), $userId]
-        );
-        $this->tempPasswordStore()->forgetPassword($userId);
-
-        $token = $this->tempPasswordStore()->issueSetupToken($userId, 1440);
+        $token = $this->setupLinkStore()->issueSetupToken($userId, 1440);
         if ($token === '') {
             return false;
         }
@@ -4194,41 +3944,19 @@ class AdminController extends Controller
         Mail::to($email)->send(new UserPasswordResetLink(
             toEmail: $email,
             recipientName: $recipientName,
-            resetUrl: route('password.set.form', ['token' => $token]),
+            resetUrl: route('passkey.setup.form', ['token' => $token]),
             systemName: $systemName,
-            subjectLine: 'Set up your SQL SMS password',
-            introLine: 'Your SQL SMS account is ready.',
-            instructionLine: 'Click the link below to create your password:',
-            buttonLabel: 'Set password',
+            subjectLine: 'Set up your SQL SMS passkey',
+            introLine: $introLine ?? 'Your SQL SMS account is ready.',
+            instructionLine: 'Click the link below to start setting up your passkey:',
+            buttonLabel: 'Set up passkey',
             expiryLine: 'This link will expire in 24 hours.',
-            ignoreLine: 'If you were not expecting this email, you can ignore it.'
+            ignoreLine: ''
         ));
 
-        $this->tempPasswordStore()->markSetupTokenEmailed($userId);
+        $this->setupLinkStore()->markSetupTokenEmailed($userId);
 
         return true;
-    }
-
-    private function ensureMaintainUserTemporaryPassword(object $user): string
-    {
-        $userId = trim((string) ($user->USERID ?? ''));
-        if ($userId === '' || $user->LASTLOGIN !== null) {
-            return '';
-        }
-
-        $existing = $this->tempPasswordStore()->getPassword($userId);
-        if ($existing !== null && $existing !== '') {
-            return $existing;
-        }
-
-        $temporaryPassword = $this->generateTemporaryPassword();
-        DB::update(
-            'UPDATE "USERS" SET "PASSWORDHASH" = ? WHERE "USERID" = ?',
-            [Hash::make($temporaryPassword), $userId]
-        );
-        $this->tempPasswordStore()->put($userId, $temporaryPassword);
-
-        return $temporaryPassword;
     }
 
     private function maintainUserRecipientName(object $user): string
@@ -4243,24 +3971,6 @@ class AdminController extends Controller
         }
 
         return $company !== '' ? $company : ($alias !== '' ? $alias : $email);
-    }
-
-    private function generateTemporaryPassword(int $length = 10): string
-    {
-        $characters = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-        $max = strlen($characters) - 1;
-        $password = '';
-
-        for ($i = 0; $i < max(8, $length); $i++) {
-            $password .= $characters[random_int(0, $max)];
-        }
-
-        return $password;
-    }
-
-    private function tempPasswordStore(): MaintainUserTemporaryPasswordStore
-    {
-        return app(MaintainUserTemporaryPasswordStore::class);
     }
 
     /**
@@ -4315,6 +4025,7 @@ class AdminController extends Controller
         }
     }
 }
+
 
 
 

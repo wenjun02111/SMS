@@ -2,7 +2,7 @@
 @section('title', 'My Inquiries – SQL LMS Dealer Console')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/dealer-inquiries.css') }}?v=20260325-21">
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-inquiries.css') }}?v=20260327-02">
 @endpush
 
 @section('content')
@@ -15,6 +15,7 @@
     $statusFilterOptions = ['Followup', 'Demo', 'Confirmed', 'Completed', 'Rewarded', 'Failed'];
 @endphp
 <div class="dashboard-content inquiries-page-wrap">
+    @include('dealer.partials.console-inquiries-tabs', ['dealerConsoleTab' => $dealerConsoleTab ?? 'inquiries'])
     <section class="inquiries-mgmt-panel dealer-inquiries-panel">
         <div class="inquiries-panel-header">
         <div class="inquiries-panel-title-wrap">
@@ -138,7 +139,7 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+function initDealerInquiriesPage() {
     var table = document.getElementById('dealerInquiriesTable');
     if (!table) return;
 
@@ -406,6 +407,106 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    var dealerInquirySort = { col: null, dir: 1 };
+
+    function clearDealerInquiryPlaceholderRows() {
+        Array.prototype.slice.call(table.querySelectorAll('tbody tr.inquiries-placeholder-row')).forEach(function(row) {
+            row.remove();
+        });
+    }
+
+    function getDealerInquirySortValue(row, col) {
+        var cell = row.querySelector('td[data-col="' + col + '"]');
+        return (cell && cell.textContent) ? cell.textContent.trim().toLowerCase() : '';
+    }
+
+    function setDealerInquiryInitialOrder() {
+        table.querySelectorAll('tbody tr.inquiry-row').forEach(function(row, index) {
+            row.setAttribute('data-initial-index', String(index));
+        });
+    }
+
+    function refreshDealerInquiryPaginationAfterSort() {
+        if (typeof window.refreshDealerPagination === 'function') {
+            window.refreshDealerPagination();
+            return;
+        }
+        window.dealerPaginationState.currentPage = 1;
+        if (typeof window.dealerApplyPagination === 'function') {
+            window.dealerApplyPagination();
+        }
+    }
+
+    function sortDealerInquiriesTable() {
+        var tbody = table.querySelector('tbody');
+        if (!tbody || !dealerInquirySort.col) return;
+        clearDealerInquiryPlaceholderRows();
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.inquiry-row'));
+        var emptyRow = Array.from(tbody.querySelectorAll('tr')).find(function(row) {
+            return !row.classList.contains('inquiry-row') && !!row.querySelector('.dealer-table-empty, .inquiries-empty, .inquiries-empty-cell');
+        }) || null;
+
+        rows.sort(function(a, b) {
+            var va = getDealerInquirySortValue(a, dealerInquirySort.col);
+            var vb = getDealerInquirySortValue(b, dealerInquirySort.col);
+            var cmp = va.localeCompare(vb, undefined, { numeric: true });
+            return dealerInquirySort.dir * cmp;
+        });
+
+        rows.forEach(function(row) { tbody.appendChild(row); });
+        if (rows.length === 0 && emptyRow) tbody.appendChild(emptyRow);
+        refreshDealerInquiryPaginationAfterSort();
+    }
+
+    function clearDealerInquiriesSort() {
+        var tbody = table.querySelector('tbody');
+        if (!tbody) return;
+        dealerInquirySort.col = null;
+        dealerInquirySort.dir = 1;
+        table.querySelectorAll('thead th[data-col]').forEach(function(header) {
+            header.classList.remove('inquiries-sort-asc', 'inquiries-sort-desc');
+        });
+        clearDealerInquiryPlaceholderRows();
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr.inquiry-row'));
+        var emptyRow = Array.from(tbody.querySelectorAll('tr')).find(function(row) {
+            return !row.classList.contains('inquiry-row') && !!row.querySelector('.dealer-table-empty, .inquiries-empty, .inquiries-empty-cell');
+        }) || null;
+
+        rows.sort(function(a, b) {
+            var ia = parseInt(a.getAttribute('data-initial-index') || '0', 10);
+            var ib = parseInt(b.getAttribute('data-initial-index') || '0', 10);
+            return ia - ib;
+        });
+
+        rows.forEach(function(row) { tbody.appendChild(row); });
+        if (rows.length === 0 && emptyRow) tbody.appendChild(emptyRow);
+        refreshDealerInquiryPaginationAfterSort();
+    }
+
+    function initSortableDealerInquiries() {
+        table.querySelectorAll('thead th[data-col]').forEach(function(th) {
+            th.classList.add('inquiries-sortable');
+            th.style.cursor = 'pointer';
+            th.addEventListener('click', function(e) {
+                if (e.target.closest('input, select, button, .inquiries-filter-wrap, .dealer-operator-btn, .dealer-operator-dropdown')) return;
+                var col = th.getAttribute('data-col');
+                if (!col) return;
+                dealerInquirySort.dir = (dealerInquirySort.col === col) ? -dealerInquirySort.dir : 1;
+                dealerInquirySort.col = col;
+                table.querySelectorAll('thead th[data-col]').forEach(function(header) {
+                    header.classList.remove('inquiries-sort-asc', 'inquiries-sort-desc');
+                    if (header.getAttribute('data-col') === col) {
+                        header.classList.add(dealerInquirySort.dir === 1 ? 'inquiries-sort-asc' : 'inquiries-sort-desc');
+                    }
+                });
+                sortDealerInquiriesTable();
+            });
+        });
+    }
+
+    setDealerInquiryInitialOrder();
+    initSortableDealerInquiries();
+
     function applyDealerGridFilters() {
         var filters = {};
         table.querySelectorAll('.inquiries-grid-filter').forEach(function(inp) {
@@ -487,6 +588,7 @@ document.addEventListener('DOMContentLoaded', function() {
             table.querySelectorAll('.inquiries-grid-filter').forEach(function(inp) { inp.value = ''; });
             resetDealerInquiryOperatorMenus(table);
             applyDealerGridFilters();
+            clearDealerInquiriesSort();
         });
     }
 
@@ -557,33 +659,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function clearPlaceholderRows() {
-            Array.prototype.slice.call(table.querySelectorAll('tbody tr.inquiries-placeholder-row')).forEach(function(row) {
-                row.remove();
-            });
+            clearDealerInquiryPlaceholderRows();
         }
 
         function ensureFixedHeight(visibleDataCount) {
             var tbody = table.querySelector('tbody');
             if (!tbody) return;
             clearPlaceholderRows();
-            if (scrollWrap) {
-                scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0);
-                scrollWrap.classList.remove('inquiries-table-scroll-short');
-            }
+            var allRows = getAllRows();
+            var allowZeroFill = allRows.length > 0;
+            var useShortHeight = (visibleDataCount > 0 && visibleDataCount < perPage) || (visibleDataCount === 0 && allowZeroFill);
 
-            if (window.innerWidth && window.innerWidth <= 768) {
-                if (scrollWrap) {
-                    scrollWrap.classList.toggle('inquiries-table-scroll-short', visibleDataCount > 0 && visibleDataCount < perPage);
-                }
-                return;
-            }
+            if (visibleDataCount < perPage && (visibleDataCount > 0 || allowZeroFill)) {
+                var visibleHeaderCount = Array.prototype.slice.call(table.querySelectorAll('thead tr:first-child th')).filter(function(cell) {
+                    return cell.style.display !== 'none' && window.getComputedStyle(cell).display !== 'none';
+                }).length || 1;
 
-            if (visibleDataCount > 0 && visibleDataCount < perPage) {
-                var sampleRow = tbody.querySelector('tr.inquiry-row');
-                var rowHeight = sampleRow ? Math.ceil(sampleRow.getBoundingClientRect().height) - 1 : 55;
-                if (!rowHeight || rowHeight < 40) rowHeight = 55;
-
-                var headerCount = table.querySelectorAll('thead tr:first-child th').length || 1;
                 for (var i = visibleDataCount; i < perPage; i++) {
                     var row = document.createElement('tr');
                     row.className = 'inquiries-placeholder-row';
@@ -591,12 +682,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     var cell = document.createElement('td');
                     cell.className = 'inquiries-placeholder-cell';
-                    cell.colSpan = headerCount;
-                    cell.style.height = rowHeight + 'px';
+                    cell.colSpan = visibleHeaderCount;
 
                     row.appendChild(cell);
                     tbody.appendChild(row);
                 }
+            }
+
+            if (scrollWrap) {
+                scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0 && !allowZeroFill);
+                scrollWrap.classList.toggle('inquiries-table-scroll-short', useShortHeight);
             }
         }
 
@@ -662,15 +757,21 @@ document.addEventListener('DOMContentLoaded', function() {
             window.dealerApplyPagination();
         };
 
+        window.refreshDealerPagination = function() {
+            window.dealerPaginationState.currentPage = 1;
+            window.dealerApplyPagination();
+        };
+
     // Bind controls once after the table is initialized.
         controls.forEach(function(btn) {
             btn.onclick = function() {
                 var type = btn.getAttribute('data-page');
                 var currentPage = window.dealerPaginationState.currentPage;
+                var currentLastPage = parseInt(pagination.getAttribute('data-last-page') || '1', 10);
                 if (type === 'first') window.dealerGoToPage(1);
-                if (type === 'prev') window.dealerGoToPage(currentPage - 1);
-                if (type === 'next') window.dealerGoToPage(currentPage + 1);
-                if (type === 'last') window.dealerGoToPage(lastPage);
+                else if (type === 'prev') window.dealerGoToPage(currentPage - 1);
+                else if (type === 'next') window.dealerGoToPage(currentPage + 1);
+                else if (type === 'last') window.dealerGoToPage(currentLastPage);
             };
         });
 
@@ -679,8 +780,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Simple client-side pagination: 10 inquiries per page
     initDealerPagination();
+}
 
-});
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDealerInquiriesPage, { once: true });
+} else {
+    initDealerInquiriesPage();
+}
 </script>
 @endpush
 

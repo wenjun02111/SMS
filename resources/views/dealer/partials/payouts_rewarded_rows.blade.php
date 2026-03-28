@@ -36,7 +36,10 @@
         $pillOrder = [1 => 10, 3 => 11, 4 => 12, 2 => 20, 10 => 21, 8 => 30, 5 => 31, 6 => 40, 9 => 50, 7 => 60, 11 => 70];
         $dealtRaw = $r->DEALTPRODUCT ?? null;
         $dealtProductIds = [];
-        $attachmentUrls = is_array($r->REWARD_ATTACHMENT_URLS ?? null) ? $r->REWARD_ATTACHMENT_URLS : [];
+        $attachmentUrls = is_array($r->REWARD_ATTACHMENT_URLS ?? null) ? array_values(array_filter($r->REWARD_ATTACHMENT_URLS, function ($url) {
+            $normalized = is_string($url) ? trim($url) : '';
+            return $normalized !== '' && !in_array(strtolower($normalized), ['-', 'null', 'undefined', '#'], true);
+        })) : [];
         if ($dealtRaw !== null && trim((string) $dealtRaw) !== '') {
             $tokens = preg_split('/[,\s\(\)]+/', (string) $dealtRaw);
             foreach ($tokens as $tok) {

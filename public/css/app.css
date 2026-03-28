@@ -96,7 +96,7 @@ body {
   max-width: 520px;
   background: var(--card-bg);
   border-radius: 24px;
-  padding: 48px 48px 40px;
+  padding: 56px 56px 48px;
   box-shadow: var(--shadow-soft);
   text-align: center;
 }
@@ -108,7 +108,7 @@ body {
 }
 
 .login-logo-img {
-  max-width: 200px;
+  max-width: 228px;
   height: auto;
 }
 
@@ -121,9 +121,9 @@ body {
 }
 
 .login-subtitle {
-  margin: 8px 0 24px;
+  margin: 10px 0 28px;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   text-transform: uppercase;
   letter-spacing: 0.16em;
 }
@@ -133,6 +133,27 @@ body {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.login-form-passkey-login {
+  margin-top: 34px;
+}
+
+.login-card-passkey-login {
+  padding-top: 121px;
+  padding-bottom: 113px;
+}
+
+.login-card-passkey-login .login-logo {
+  margin-top: -70px;
+}
+
+.login-card-passkey-login .login-subtitle {
+  margin: 8px 0 0;
+}
+
+.login-card-passkey-login .login-form-passkey-login {
+  margin-top: 84px;
 }
 
 .login-label {
@@ -245,8 +266,8 @@ body {
   background: var(--primary);
   color: white;
   font-weight: 600;
-  font-size: 15px;
-  padding: 11px 0;
+  font-size: 16px;
+  padding: 13px 0;
   cursor: pointer;
   box-shadow: 0 10px 20px rgba(109, 61, 245, 0.4);
   transition: background 0.15s ease, transform 0.1s ease,
@@ -341,7 +362,8 @@ body {
 
 .login-passkey-note {
   margin-top: 14px;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.45;
   color: var(--text-muted);
   text-align: center;
 }
@@ -537,7 +559,7 @@ body {
   display: grid;
   grid-template-rows: auto auto 1fr auto;
   align-items: start;
-  gap: 12px;
+  gap: 10px;
   padding: 48px 48px 40px;
   box-sizing: border-box;
   color: #ffffff;
@@ -574,10 +596,10 @@ body {
 .login-splash-panel::after {
   content: "";
   position: absolute;
-  width: 180px;
-  height: 180px;
-  right: -48px;
-  bottom: -56px;
+  width: 188px;
+  height: 188px;
+  right: -50px;
+  bottom: -58px;
   border-radius: 999px;
   background: radial-gradient(circle, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 72%);
   pointer-events: none;
@@ -708,11 +730,11 @@ body {
   align-items: flex-end;
   justify-content: center;
   gap: 10px;
-  margin-top: 44px;
+  margin-top: 28px;
 }
 
 .login-splash-logo {
-  width: min(186px, 64%);
+  width: min(176px, 60%);
   height: auto;
   filter: brightness(0) invert(1);
   opacity: 0.96;
@@ -729,7 +751,7 @@ body {
   display: inline-block;
   min-width: 0.82em;
   color: #ffffff;
-  font-size: clamp(30px, 4vw, 54px);
+  font-size: clamp(28px, 3.7vw, 50px);
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.05em;
@@ -759,7 +781,7 @@ body {
   white-space: nowrap;
   width: auto;
   color: rgba(255, 255, 255, 0.96);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -776,8 +798,8 @@ body {
   z-index: 1;
   justify-self: center;
   align-self: center;
-  width: min(100%, 316px);
-  margin-top: -54px;
+  width: min(100%, 252px);
+  margin-top: -18px;
   left: 0;
   animation: login-splash-float 4.6s ease-in-out infinite;
 }
@@ -795,10 +817,10 @@ body {
   z-index: 2;
   left: 24px;
   right: 24px;
-  bottom: 26px;
+  bottom: 20px;
   margin: 0;
   text-align: center;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: #ffffff;
@@ -872,6 +894,79 @@ body {
 .login-main-layout .login-card {
   max-width: 520px;
   margin: 0 auto;
+}
+
+.login-root-passkey-setup .login-main-layout {
+  width: min(360px, 100%);
+}
+
+.login-root-passkey-setup .login-card {
+  max-width: 360px;
+  padding: 28px 28px 24px;
+  border-radius: 20px;
+}
+
+.login-root-passkey-setup .login-logo,
+.login-root-passkey-setup .login-subtitle {
+  display: none;
+}
+
+.login-root-passkey-setup .login-form {
+  gap: 14px;
+}
+
+.login-root-passkey-setup .login-splash-panel {
+  padding: 28px 28px 24px;
+  border-radius: 20px;
+}
+
+.login-root-passkey-setup .login-splash-panel::before {
+  inset: 14px;
+  border-radius: 16px;
+}
+
+.login-root-passkey-setup .login-splash-hero {
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.login-root-passkey-setup .login-splash-logo {
+  width: min(144px, 58%);
+}
+
+.login-root-passkey-setup .login-splash-wordmark span {
+  font-size: clamp(22px, 4vw, 40px);
+}
+
+.login-root-passkey-setup .login-splash-typing-text {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+}
+
+.login-root-passkey-setup .login-splash-illustration {
+  width: min(100%, 220px);
+  margin-top: -22px;
+}
+
+.login-root-passkey-setup .login-splash-credits {
+  left: 16px;
+  right: 16px;
+  bottom: 18px;
+  font-size: 13px;
+}
+
+.login-root-passkey-setup .login-splash-moon {
+  top: 24px;
+  right: 22px;
+  width: 62px;
+  height: 62px;
+}
+
+.login-root-passkey-setup .login-splash-moon-cut {
+  top: 9px;
+  left: 25px;
+  width: 38px;
+  height: 38px;
 }
 @media (max-width: 480px) {
   .login-card {
@@ -1986,13 +2081,81 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
 
 .dashboard-profile-passkey-link {
   display: block;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
   margin-bottom: 10px;
   font-size: 14px;
   color: #2563eb;
   text-decoration: none;
+  cursor: pointer;
+  text-align: center;
 }
 .dashboard-profile-passkey-link:hover {
   text-decoration: underline;
+}
+
+.dashboard-passkey-modal-open {
+  overflow: hidden;
+}
+
+.dashboard-passkey-quick-modal[hidden] {
+  display: none !important;
+}
+
+.dashboard-passkey-quick-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.28);
+}
+
+.dashboard-passkey-quick-card {
+  position: relative;
+  width: min(420px, 100%);
+  padding: 26px 24px 24px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+}
+
+.dashboard-passkey-quick-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dashboard-passkey-quick-title {
+  margin: 0;
+  font-size: 24px;
+  color: #111827;
+}
+
+.dashboard-passkey-quick-subtitle {
+  margin: 8px 0 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
+.dashboard-passkey-quick-actions {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-passkey-quick-status {
+  margin-top: 16px;
 }
 
 .dashboard-profile-signout-form {

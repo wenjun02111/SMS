@@ -3,38 +3,12 @@
 namespace App\Support;
 
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class MaintainUserTemporaryPasswordStore
 {
     private const STORAGE_PATH = 'private/maintain-user-temp-passwords.json';
-
-    public function allDecrypted(): array
-    {
-        $records = $this->read();
-        $decrypted = [];
-
-        foreach ($records as $userId => $record) {
-            if (!is_array($record)) {
-                continue;
-            }
-
-            $password = $this->decryptValue($record['password'] ?? null);
-            if ($password === null) {
-                continue;
-            }
-
-            $decrypted[(string) $userId] = [
-                'password' => $password,
-                'created_at' => isset($record['created_at']) ? (string) $record['created_at'] : null,
-                'emailed_at' => isset($record['emailed_at']) ? (string) $record['emailed_at'] : null,
-            ];
-        }
-
-        return $decrypted;
-    }
 
     public function allSetupLinks(): array
     {
@@ -80,44 +54,6 @@ class MaintainUserTemporaryPasswordStore
         return $links;
     }
 
-    public function getPassword(string $userId): ?string
-    {
-        $userId = trim($userId);
-        if ($userId === '') {
-            return null;
-        }
-
-        $records = $this->read();
-        $record = $records[$userId] ?? null;
-        if (!is_array($record)) {
-            return null;
-        }
-
-        return $this->decryptValue($record['password'] ?? null);
-    }
-
-    public function put(string $userId, string $password): void
-    {
-        $userId = trim($userId);
-        if ($userId === '' || $password === '') {
-            return;
-        }
-
-        $records = $this->read();
-        $existing = isset($records[$userId]) && is_array($records[$userId]) ? $records[$userId] : [];
-        $records[$userId] = [
-            'password' => Crypt::encryptString($password),
-            'created_at' => $existing['created_at'] ?? now()->toIso8601String(),
-            'emailed_at' => $existing['emailed_at'] ?? null,
-            'setup_token_hash' => $existing['setup_token_hash'] ?? null,
-            'setup_token_created_at' => $existing['setup_token_created_at'] ?? null,
-            'setup_token_emailed_at' => $existing['setup_token_emailed_at'] ?? null,
-            'setup_token_expires_at' => $existing['setup_token_expires_at'] ?? null,
-        ];
-
-        $this->write($records);
-    }
-
     public function issueSetupToken(string $userId, int $ttlMinutes = 1440): string
     {
         $userId = trim($userId);
@@ -139,22 +75,6 @@ class MaintainUserTemporaryPasswordStore
         $this->write($records);
 
         return $token;
-    }
-
-    public function markEmailed(string $userId): void
-    {
-        $userId = trim($userId);
-        if ($userId === '') {
-            return;
-        }
-
-        $records = $this->read();
-        if (!isset($records[$userId]) || !is_array($records[$userId])) {
-            return;
-        }
-
-        $records[$userId]['emailed_at'] = now()->toIso8601String();
-        $this->write($records);
     }
 
     public function markSetupTokenEmailed(string $userId): void
@@ -222,31 +142,6 @@ class MaintainUserTemporaryPasswordStore
         return null;
     }
 
-    public function forgetPassword(string $userId): void
-    {
-        $userId = trim($userId);
-        if ($userId === '') {
-            return;
-        }
-
-        $records = $this->read();
-        if (!isset($records[$userId]) || !is_array($records[$userId])) {
-            return;
-        }
-
-        unset(
-            $records[$userId]['password'],
-            $records[$userId]['created_at'],
-            $records[$userId]['emailed_at']
-        );
-
-        if (empty($records[$userId])) {
-            unset($records[$userId]);
-        }
-
-        $this->write($records);
-    }
-
     public function forgetSetupToken(string $userId): void
     {
         $userId = trim($userId);
@@ -308,19 +203,6 @@ class MaintainUserTemporaryPasswordStore
             self::STORAGE_PATH,
             json_encode($records, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
         );
-    }
-
-    private function decryptValue(mixed $value): ?string
-    {
-        if (!is_string($value) || trim($value) === '') {
-            return null;
-        }
-
-        try {
-            return Crypt::decryptString($value);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 
     private function isExpired(string $value): bool

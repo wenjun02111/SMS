@@ -30,6 +30,17 @@ class RequireAuth
         if (!$request->session()->has('user_role')) {
             return redirect('/login');
         }
+
+        if ($request->session()->get('passkey_setup_required')) {
+            if (
+                !$request->routeIs('passkey.register.form') &&
+                !$request->routeIs('passkey.register.options') &&
+                !$request->routeIs('passkey.register.verify')
+            ) {
+                return redirect()->route('login');
+            }
+        }
+
         return $next($request);
     }
 }

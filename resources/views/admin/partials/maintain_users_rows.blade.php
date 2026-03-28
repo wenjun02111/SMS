@@ -5,25 +5,25 @@
             ? 'maintain-users-pill-role-admin'
             : ($roleUpper === 'MANAGER' ? 'maintain-users-pill-role-manager' : 'maintain-users-pill-role-dealer');
         $lastLoginStr = $u['LASTLOGIN'] ? \Carbon\Carbon::parse($u['LASTLOGIN'])->format('Y-m-d H:i') : '';
-        $passwordStatus = ($u['HAS_LOGGED_IN'] ?? false)
+        $passkeyStatus = ($u['HAS_LOGGED_IN'] ?? false)
             ? 'protected'
-            : (($u['PASSWORD_SETUP_LINK_SENT'] ?? false)
-                ? (($u['PASSWORD_SETUP_LINK_EXPIRED'] ?? false) ? 'link expired' : 'link sent')
+            : (($u['PASSKEY_SETUP_LINK_SENT'] ?? false)
+                ? (($u['PASSKEY_SETUP_LINK_EXPIRED'] ?? false) ? 'link expired' : 'link sent')
                 : 'ready to send');
         $searchHaystack = strtolower(
             ($u['USERID'] ?? '') . ' ' .
             ($u['EMAIL'] ?? '') . ' ' .
             ($u['ALIAS'] ?? '') . ' ' .
             ($u['COMPANY'] ?? '') . ' ' .
-            $passwordStatus . ' ' .
+            $passkeyStatus . ' ' .
             (($u['HAS_LOGGED_IN'] ?? false) ? 'logged in' : 'not logged in') . ' ' .
             $roleUpper . ' ' .
             ($u['ISACTIVE'] ? 'active' : 'inactive') . ' ' .
             $lastLoginStr
         );
-        $setupLinkTitle = ($u['PASSWORD_SETUP_LINK_SENT'] ?? false)
-            ? 'Set password link already emailed - send again'
-            : 'Send set password link';
+        $setupLinkTitle = ($u['PASSKEY_SETUP_LINK_SENT'] ?? false)
+            ? 'Passkey setup link already emailed - send again'
+            : 'Send passkey setup link';
     @endphp
     <tr class="maintain-users-row" data-search="{{ $searchHaystack }}"
         data-userid="{{ $u['USERID'] }}"
@@ -33,7 +33,7 @@
         data-company="{{ e($u['COMPANY'] ?? '') }}"
         data-postcode="{{ e($u['POSTCODE'] ?? '') }}"
         data-city="{{ e($u['CITY'] ?? '') }}"
-        data-password="{{ $passwordStatus }}"
+        data-passkey="{{ $passkeyStatus }}"
         data-active="{{ $u['ISACTIVE'] ? '1' : '0' }}">
         <td data-col="userid">{{ $u['USERID'] }}</td>
         <td data-col="email">{{ $u['EMAIL'] }}</td>
@@ -42,10 +42,10 @@
         </td>
         <td data-col="alias">{{ $u['ALIAS'] ?: '-' }}</td>
         <td data-col="company">{{ $u['COMPANY'] ?: '-' }}</td>
-        <td data-col="password">
-            @if (!($u['HAS_LOGGED_IN'] ?? false) && ($u['PASSWORD_SETUP_LINK_SENT'] ?? false) && !($u['PASSWORD_SETUP_LINK_EXPIRED'] ?? false))
+        <td data-col="passkey">
+            @if (!($u['HAS_LOGGED_IN'] ?? false) && ($u['PASSKEY_SETUP_LINK_SENT'] ?? false) && !($u['PASSKEY_SETUP_LINK_EXPIRED'] ?? false))
                 <span class="maintain-users-pill-password sent">Link sent</span>
-            @elseif (!($u['HAS_LOGGED_IN'] ?? false) && ($u['PASSWORD_SETUP_LINK_EXPIRED'] ?? false))
+            @elseif (!($u['HAS_LOGGED_IN'] ?? false) && ($u['PASSKEY_SETUP_LINK_EXPIRED'] ?? false))
                 <span class="maintain-users-pill-password expired">Link expired</span>
             @elseif (!($u['HAS_LOGGED_IN'] ?? false))
                 <span class="maintain-users-pill-password empty">Ready to send</span>
@@ -71,10 +71,10 @@
                     <i class="bi bi-pencil-square" aria-hidden="true"></i>
                 </button>
                 @if (!($u['HAS_LOGGED_IN'] ?? false))
-                    <form method="POST" action="{{ route('admin.maintain-users.send-temp-password', $u['USERID']) }}" class="maintain-users-inline-form">
+                    <form method="POST" action="{{ route('admin.maintain-users.send-passkey-setup-link', $u['USERID']) }}" class="maintain-users-inline-form">
                         @csrf
-                        <button type="submit" class="maintain-users-temp-send-btn" title="{{ $setupLinkTitle }}" aria-label="Send set password link">
-                            <i class="bi {{ ($u['PASSWORD_SETUP_LINK_SENT'] ?? false) ? 'bi-envelope-fill' : 'bi-envelope' }}" aria-hidden="true"></i>
+                        <button type="submit" class="maintain-users-temp-send-btn" title="{{ $setupLinkTitle }}" aria-label="Send passkey setup link">
+                            <i class="bi {{ ($u['PASSKEY_SETUP_LINK_SENT'] ?? false) ? 'bi-envelope-fill' : 'bi-envelope' }}" aria-hidden="true"></i>
                         </button>
                     </form>
                 @endif

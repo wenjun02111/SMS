@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Inquiries Management – Admin')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260326-39">
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260327-42">
 @endpush
 @section('content')
 @php
@@ -9,7 +9,7 @@
     $assignEmailPending = session('assign_email_pending');
     $incomingStatusFilterOptions = ['Open'];
     $assignedStatusFilterOptions = ['Followup', 'Demo', 'Confirmed', 'Completed', 'Rewarded', 'Failed'];
-    $allStatusFilterOptions = ['Open', 'Created', 'Pending', 'Ongoing', 'Followup', 'Demo', 'Confirmed', 'Completed', 'Rewarded', 'Failed'];
+    $allStatusFilterOptions = ['Open', 'Pending', 'Followup', 'Demo', 'Confirmed', 'Completed', 'Rewarded', 'Failed'];
     $allInquiryCount = (int) ($allTotal ?? count($allRows ?? []));
 @endphp
 <div class="inquiries-page-wrap">
@@ -429,18 +429,16 @@
                     <td data-col="completiondate">{{ !empty($r->COMPLETED_AT) ? date('d/m/Y', strtotime($r->COMPLETED_AT)) : '—' }}</td>
                     <td data-col="payoutsdate">{{ !empty($r->REWARDED_AT) ? date('d/m/Y', strtotime($r->REWARDED_AT)) : '—' }}</td>
                     <td data-col="attachment">
-                        @php $assignedAttachUrls = !empty($r->ASSIGNED_ATTACHMENT_URLS) && is_array($r->ASSIGNED_ATTACHMENT_URLS) ? $r->ASSIGNED_ATTACHMENT_URLS : []; @endphp
+                        @php
+                            $assignedAttachUrls = !empty($r->ASSIGNED_ATTACHMENT_URLS) && is_array($r->ASSIGNED_ATTACHMENT_URLS)
+                                ? array_values(array_filter($r->ASSIGNED_ATTACHMENT_URLS, function ($url) {
+                                    $normalized = is_string($url) ? trim($url) : '';
+                                    return $normalized !== '' && !in_array(strtolower($normalized), ['-', 'null', 'undefined', '#'], true);
+                                }))
+                                : [];
+                        @endphp
                         @if(!empty($assignedAttachUrls))
-                            <div class="payouts-attachment-list">
-                                @foreach(array_slice($assignedAttachUrls, 0, 3) as $u)
-                                    <a href="{{ $u }}" target="_blank" rel="noopener" class="payouts-attachment-link">
-                                        <img src="{{ $u }}" alt="Attachment" class="payouts-attachment-thumb">
-                                    </a>
-                                @endforeach
-                                @if(count($assignedAttachUrls) > 3)
-                                    <span class="payouts-attachment-more">+{{ count($assignedAttachUrls) - 3 }}</span>
-                                @endif
-                            </div>
+                            <a href="{{ $assignedAttachUrls[0] }}" target="_blank" rel="noopener" class="inquiries-btn inquiries-btn-secondary">Attachment</a>
                         @else
                             —
                         @endif
@@ -1686,8 +1684,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!table) return;
         var tbody = table.querySelector('tbody');
         if (!tbody || !state.col) return;
+        clearInquiryPlaceholderRows(tbody);
         var rows = [].slice.call(tbody.querySelectorAll('tr.inquiry-row'));
-        var emptyRow = tbody.querySelector('tr:not(.inquiry-row)');
+        var emptyRow = Array.from(tbody.querySelectorAll('tr')).find(function(row) {
+            return !row.classList.contains('inquiry-row') && !!row.querySelector('.inquiries-empty');
+        }) || null;
         rows.sort(function(a, b) {
             var va = getSortValue(a, state.col);
             var vb = getSortValue(b, state.col);
@@ -1695,7 +1696,14 @@ document.addEventListener('DOMContentLoaded', function() {
             return state.dir * cmp;
         });
         rows.forEach(function(r) { tbody.appendChild(r); });
-        if (emptyRow) tbody.appendChild(emptyRow);
+        if (rows.length === 0 && emptyRow) tbody.appendChild(emptyRow);
+        if (tableId === 'unassignedTable' && typeof window.refreshIncomingPagination === 'function') {
+            window.refreshIncomingPagination();
+        } else if (tableId === 'assignedTable' && typeof window.refreshAssignedPagination === 'function') {
+            window.refreshAssignedPagination();
+        } else if (tableId === 'allTable' && typeof window.refreshAllPagination === 'function') {
+            window.refreshAllPagination();
+        }
     }
     function setInitialOrder(tableId) {
         var table = document.getElementById(tableId);
@@ -1719,6 +1727,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         var tbody = table.querySelector('tbody');
         if (!tbody) return;
+        clearInquiryPlaceholderRows(tbody);
         var rows = [].slice.call(tbody.querySelectorAll('tr.inquiry-row'));
         var emptyRow = Array.from(tbody.querySelectorAll('tr')).find(function(row) {
             return !row.classList.contains('inquiry-row') && !!row.querySelector('.inquiries-empty');
@@ -1730,6 +1739,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         rows.forEach(function(r) { tbody.appendChild(r); });
         if (rows.length === 0 && emptyRow) tbody.appendChild(emptyRow);
+        if (tableId === 'unassignedTable' && typeof window.refreshIncomingPagination === 'function') {
+            window.refreshIncomingPagination();
+        } else if (tableId === 'assignedTable' && typeof window.refreshAssignedPagination === 'function') {
+            window.refreshAssignedPagination();
+        } else if (tableId === 'allTable' && typeof window.refreshAllPagination === 'function') {
+            window.refreshAllPagination();
+        }
     }
     function initSortableInquiries() {
         ['unassignedTable', 'assignedTable', 'allTable'].forEach(function(tableId) {
@@ -1769,7 +1785,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (row.classList.contains('inquiries-placeholder-row')) return;
             if (row.classList.contains('inquiry-row')) {
                 var rowText = (row.textContent || '').replace(/\s+/g, '');
-                var hasVisualContent = !!row.querySelector('button, a, img, .inquiries-status, .inquiries-pill, .payouts-attachment-list');
+                var hasVisualContent = !!row.querySelector('button, a, img, .inquiries-status, .inquiries-pill');
                 if (rowText === '' && !hasVisualContent) {
                     row.remove();
                 }
@@ -1805,9 +1821,10 @@ document.addEventListener('DOMContentLoaded', function() {
         return Math.max(count, 1);
     }
 
-    function appendInquiryPlaceholderRows(table, tbody, visibleDataCount, perPage) {
+    function appendInquiryPlaceholderRows(table, tbody, visibleDataCount, perPage, allowZeroFill) {
         if (!table || !tbody) return;
-        if (visibleDataCount <= 0 || visibleDataCount >= perPage) return;
+        if (visibleDataCount >= perPage) return;
+        if (visibleDataCount <= 0 && !allowZeroFill) return;
         var missingCount = perPage - visibleDataCount;
         var colspan = getInquiryVisibleColumnCount(table);
         for (var i = 0; i < missingCount; i += 1) {
@@ -1821,12 +1838,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function updateInquiryTableHeightMode(scrollWrap, table, tbody, visibleDataCount, perPage) {
+    function updateInquiryTableHeightMode(scrollWrap, table, tbody, visibleDataCount, perPage, allowZeroFill) {
         clearInquiryPlaceholderRows(tbody);
-        appendInquiryPlaceholderRows(table, tbody, visibleDataCount, perPage);
+        appendInquiryPlaceholderRows(table, tbody, visibleDataCount, perPage, allowZeroFill);
         if (!scrollWrap) return;
-        scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0);
-        scrollWrap.classList.toggle('inquiries-table-scroll-short', visibleDataCount > 0 && visibleDataCount < perPage);
+        var useShortHeight = (visibleDataCount > 0 && visibleDataCount < perPage) || (visibleDataCount === 0 && allowZeroFill);
+        scrollWrap.classList.toggle('inquiries-table-scroll-empty', visibleDataCount === 0 && !allowZeroFill);
+        scrollWrap.classList.toggle('inquiries-table-scroll-short', useShortHeight);
     }
 
     function resetInquiryTableScroll(panelId) {
@@ -2084,7 +2102,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function ensureFixedHeight(visibleDataCount) {
             tbody.style.minHeight = '';
-            updateInquiryTableHeightMode(scrollWrap, table, tbody, visibleDataCount, getPerPage());
+            updateInquiryTableHeightMode(scrollWrap, table, tbody, visibleDataCount, getPerPage(), getAllRows().length > 0);
         }
 
         function applyPage(current) {
@@ -2213,7 +2231,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         function ensureFixedHeight(visibleDataCount) {
             tbody.style.minHeight = '';
-            updateInquiryTableHeightMode(scrollWrap, assignedTable, tbody, visibleDataCount, getPerPage());
+            updateInquiryTableHeightMode(scrollWrap, assignedTable, tbody, visibleDataCount, getPerPage(), getAllRowsAssigned().length > 0);
         }
 
         function applyAssignedPage(current) {
@@ -2309,7 +2327,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         function ensureFixedHeight(visibleDataCount) {
             tbody.style.minHeight = '';
-            updateInquiryTableHeightMode(scrollWrap, table, tbody, visibleDataCount, getPerPage());
+            updateInquiryTableHeightMode(scrollWrap, table, tbody, visibleDataCount, getPerPage(), getAllRowsAll().length > 0);
         }
         function updateInfoText(current, lastPage, total) {
             var per = getPerPage();

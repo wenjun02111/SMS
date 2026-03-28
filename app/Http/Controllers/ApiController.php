@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class ApiController extends Controller
 {
@@ -16,53 +15,9 @@ class ApiController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
-
-        $row = DB::selectOne(
-            'SELECT "USERID", "PASSWORDHASH", "SYSTEMROLE", "ISACTIVE" FROM "USERS" WHERE "EMAIL" = ?',
-            [$validated['email']]
-        );
-
-        if (!$row) {
-            return response()->json(['error' => 'Invalid email or password'], 401);
-        }
-
-        if (!$row->ISACTIVE) {
-            return response()->json(['error' => 'Account is deactivated'], 403);
-        }
-
-        $stored = (string) ($row->PASSWORDHASH ?? '');
-        $looksHashed = str_starts_with($stored, '$2y$')
-            || str_starts_with($stored, '$2a$')
-            || str_starts_with($stored, '$argon2');
-        $ok = $looksHashed
-            ? Hash::check($validated['password'], $stored)
-            : hash_equals($stored, $validated['password']);
-
-        if (!$ok) {
-            return response()->json(['error' => 'Invalid email or password'], 401);
-        }
-
-        if (!$looksHashed) {
-            DB::update(
-                'UPDATE "USERS" SET "PASSWORDHASH" = ? WHERE "USERID" = ?',
-                [Hash::make($validated['password']), $row->USERID]
-            );
-        }
-
-        DB::update('UPDATE "USERS" SET "LASTLOGIN" = CURRENT_TIMESTAMP WHERE "USERID" = ?', [$row->USERID]);
-
-        $role = $row->SYSTEMROLE === 'Admin' ? 'admin' : 'dealer';
-
         return response()->json([
-            'message' => 'Login successful',
-            'userID' => $row->USERID,
-            'email' => $validated['email'],
-            'role' => $role,
-        ]);
+            'error' => 'Password-based API login has been removed. Use the web app passkey flow instead.',
+        ], 410);
     }
 
     public function leadsIndex(): JsonResponse

@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Maintain Users')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/admin-maintain-users.css') }}?v=20260325-13">
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-maintain-users.css') }}?v=20260327-01">
 @endpush
 
 @section('content')
@@ -12,7 +12,7 @@
                 <div class="maintain-users-batch-form">
                     <button type="button" class="maintain-users-batch-btn" id="maintainUsersBatchOpenBtn">
                         <i class="bi bi-envelope"></i>
-                        <span>Send Set Password Links</span>
+                        <span>Send Passkey Setup Links</span>
                     </button>
                 </div>
                 <button type="button" class="maintain-users-add-btn" id="maintainUsersAddBtn">
@@ -71,10 +71,10 @@
                             <i class="bi bi-search inquiries-filter-icon"></i>
                         </span>
                     </th>
-                    <th data-col="password" class="inquiries-header-cell">
-                        <span class="inquiries-header-label">SET PASSWORD</span>
+                    <th data-col="passkey" class="inquiries-header-cell">
+                        <span class="inquiries-header-label">PASSKEY SETUP</span>
                         <span class="inquiries-filter-wrap">
-                            <input type="text" class="inquiries-grid-filter" data-col="password" placeholder="">
+                            <input type="text" class="inquiries-grid-filter" data-col="passkey" placeholder="">
                             <i class="bi bi-search inquiries-filter-icon"></i>
                         </span>
                     </th>
@@ -126,7 +126,7 @@
 <div class="maintain-users-modal-backdrop" id="maintainUsersModal">
     <div class="maintain-users-modal">
         <h3 class="maintain-users-modal-title">Add User</h3>
-        <div class="maintain-users-modal-sub">Create a new admin, manager, or dealer account and optionally email a set password link.</div>
+        <div class="maintain-users-modal-sub">Create a new admin, manager, or dealer account and optionally email a passkey setup link.</div>
         <form method="POST" action="{{ route('admin.maintain-users.store') }}">
             @csrf
             <div class="maintain-users-form-grid">
@@ -184,7 +184,7 @@
             <div class="maintain-users-modal-actions">
                 <button type="button" class="maintain-users-btn-secondary" id="maintainUsersCancelBtn">Cancel</button>
                 <button type="submit" name="CREATE_ACTION" value="create" class="maintain-users-btn-soft">Create user</button>
-                <button type="submit" name="CREATE_ACTION" value="create_email" class="maintain-users-btn-primary">Create &amp; Email Link</button>
+                <button type="submit" name="CREATE_ACTION" value="create_email" class="maintain-users-btn-primary">Create &amp; Email Setup Link</button>
             </div>
         </form>
     </div>
@@ -193,7 +193,7 @@
 <div class="maintain-users-modal-backdrop" id="maintainUsersEditModal">
     <div class="maintain-users-modal">
         <h3 class="maintain-users-modal-title">Edit User</h3>
-        <div class="maintain-users-modal-sub">Update account details and optionally send a reset link.</div>
+        <div class="maintain-users-modal-sub">Update account details and optionally send a passkey setup link.</div>
         <form method="POST" id="maintainUsersEditForm" action="">
             @csrf
             @method('PUT')
@@ -234,10 +234,10 @@
                     </div>
                 </div>
                 <div class="maintain-users-field full">
-                    <label for="edit_SEND_RESET_LINK">Send password reset link</label>
-                    <label class="maintain-users-reset-option" for="edit_SEND_RESET_LINK">
-                        <input type="checkbox" id="edit_SEND_RESET_LINK" name="SEND_RESET_LINK" value="1">
-                        <span class="maintain-users-reset-option-text">Email a secure reset link after update</span>
+                    <label for="edit_SEND_PASSKEY_SETUP_LINK">Send passkey setup link</label>
+                    <label class="maintain-users-reset-option" for="edit_SEND_PASSKEY_SETUP_LINK">
+                        <input type="checkbox" id="edit_SEND_PASSKEY_SETUP_LINK" name="SEND_PASSKEY_SETUP_LINK" value="1">
+                        <span class="maintain-users-reset-option-text">Email a secure passkey setup link after update</span>
                     </label>
                 </div>
             </div>
@@ -251,8 +251,8 @@
 
 <div class="maintain-users-modal-backdrop" id="maintainUsersBatchModal">
     <div class="maintain-users-modal">
-        <h3 class="maintain-users-modal-title">Send Set Password Links</h3>
-        <form method="POST" action="{{ route('admin.maintain-users.send-temp-passwords') }}" id="maintainUsersBatchForm">
+        <h3 class="maintain-users-modal-title">Send Passkey Setup Links</h3>
+        <form method="POST" action="{{ route('admin.maintain-users.send-passkey-setup-links') }}" id="maintainUsersBatchForm">
             @csrf
             <div class="maintain-users-batch-summary">
                 <span id="maintainUsersBatchCount">{{ count($batchEligibleUsers) }} eligible user(s)</span>
@@ -487,7 +487,7 @@
                 setDealerSectionState(editDealerFieldsSection, role === 'DEALER');
                 setCompanyFieldState(editCompanyInput, role === 'DEALER');
                 document.getElementById('edit_ISACTIVE').value = active;
-                document.getElementById('edit_SEND_RESET_LINK').checked = false;
+                document.getElementById('edit_SEND_PASSKEY_SETUP_LINK').checked = false;
                 editModal.classList.add('is-open');
             }
             function closeEditModal() {
@@ -579,13 +579,16 @@
                     });
                 }
 
-                function ensureFixedHeight(visibleCount) {
+                function ensureFixedHeight(visibleRows) {
                     const tbody = table.querySelector('tbody');
                     if (!tbody) return;
                     clearPlaceholderRows();
 
+                    const visibleCount = Array.isArray(visibleRows) ? visibleRows.length : 0;
                     if (visibleCount > 0 && visibleCount < perPage) {
-                        const sampleRow = tbody.querySelector('tr.maintain-users-row');
+                        const sampleRow = (Array.isArray(visibleRows) ? visibleRows.find(function (row) {
+                            return row && row.style.display !== 'none';
+                        }) : null) || tbody.querySelector('tr.maintain-users-row:not([style*="display: none"])') || tbody.querySelector('tr.maintain-users-row');
                         const tableWrap = table.closest('.maintain-users-table-wrap');
                         const rowHeightAdjust = tableWrap
                             ? (parseFloat(getComputedStyle(tableWrap).getPropertyValue('--maintain-users-placeholder-row-adjust')) || 0)
@@ -645,11 +648,12 @@
                         row.style.display = 'none';
                     });
 
-                    matchingRows.slice(start, end).forEach(function (row) {
+                    const visibleRows = matchingRows.slice(start, end);
+                    visibleRows.forEach(function (row) {
                         row.style.display = '';
                     });
 
-                    ensureFixedHeight(end - start);
+                    ensureFixedHeight(visibleRows);
 
                     if (infoEl) {
                         const fromText = total === 0 ? 0 : start + 1;

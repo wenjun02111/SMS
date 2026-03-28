@@ -64,6 +64,16 @@
   max-width: 180px;
 }
 
+.inquiries-page-wrap #assignedTable th[data-col="assignedto"],
+.inquiries-page-wrap #assignedTable td[data-col="assignedto"] {
+  min-width: 110px;
+}
+
+.inquiries-page-wrap #assignedTable th[data-col="status"],
+.inquiries-page-wrap #assignedTable td[data-col="status"] {
+  min-width: 130px;
+}
+
 .inquiries-page-wrap #unassignedTable th.inquiries-col-action,
 .inquiries-page-wrap #unassignedTable td.inquiries-col-action {
   width: 150px;
@@ -377,6 +387,154 @@
   height: auto;
 }
 
+@media (min-width: 1280px) {
+  .inquiry-create-header {
+    gap: 12px;
+  }
+
+  .inquiry-create-header .dashboard-title {
+    font-size: 20px;
+  }
+
+  .inquiry-create-header .dashboard-subtitle {
+    margin-top: 2px;
+  }
+
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    width: 96%;
+    max-width: 1500px;
+    margin: 4px auto 12px;
+    padding: 14px 16px 16px;
+    border-radius: 16px;
+  }
+
+  .inquiry-create-layout {
+    gap: 14px;
+  }
+
+  .inquiry-create-main {
+    min-width: 0;
+  }
+
+  .inquiry-create-fox {
+    flex: 0 0 142px;
+  }
+
+  .inquiry-create-fox-img {
+    max-width: 142px;
+  }
+
+  .inquiry-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+
+  .inquiry-form-grid .inquiry-form-compact-field {
+    grid-column: auto;
+  }
+
+  .inquiry-form-grid .inquiry-form-message-compact {
+    grid-column: span 2;
+  }
+
+  .inquiry-form-row3 {
+    grid-template-columns: 0.85fr 1.15fr 1fr;
+    gap: 8px 12px;
+  }
+
+  .inquiry-form-label {
+    gap: 3px;
+    font-size: 12px;
+  }
+
+  .inquiry-form-label-title {
+    font-size: 13px;
+  }
+
+  .inquiry-form-input {
+    padding: 6px 9px;
+    font-size: 12.5px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 78px;
+    max-height: 104px;
+  }
+
+  .inquiry-form-checkboxes {
+    grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+    gap: 6px 12px;
+  }
+
+  .inquiry-form-checkbox-label {
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .inquiry-form-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .inquiry-toggle {
+    max-width: none;
+    width: 100%;
+  }
+
+  .inquiry-toggle-option {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .inquiry-form-actions {
+    margin-top: 10px;
+    gap: 10px;
+  }
+}
+
+@media (min-width: 1280px) and (max-height: 980px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    padding: 12px 14px 14px;
+  }
+
+  .inquiry-create-layout {
+    gap: 10px;
+  }
+
+  .inquiry-create-fox {
+    flex-basis: 118px;
+  }
+
+  .inquiry-create-fox-img {
+    max-width: 118px;
+  }
+
+  .inquiry-form-grid {
+    gap: 7px 10px;
+  }
+
+  .inquiry-form-row3 {
+    gap: 7px 10px;
+  }
+
+  .inquiry-form-label-title {
+    font-size: 12px;
+  }
+
+  .inquiry-form-input {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 66px;
+  }
+
+  .inquiry-form-actions {
+    margin-top: 8px;
+  }
+}
+
 @media (max-width: 960px) {
   .inquiry-create-layout {
     flex-direction: column;
@@ -490,6 +648,969 @@
   }
 }
 
+@media (min-width: 860px) {
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row {
+    display: grid !important;
+    grid-template-columns: minmax(140px, 210px) minmax(240px, 340px) !important;
+    gap: 10px 12px !important;
+    align-items: start !important;
+    justify-content: start !important;
+    width: fit-content !important;
+    max-width: 100% !important;
+    margin-top: -2px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-postcode-field,
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-city-field {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-postcode-field .inquiry-form-input,
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-city-field .inquiry-form-input {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+@media (min-width: 860px) {
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row {
+    display: grid !important;
+    grid-template-columns: minmax(150px, 220px) minmax(260px, 1fr) !important;
+    gap: 10px 12px !important;
+    align-items: start !important;
+    justify-content: start !important;
+    width: min(100%, 620px);
+    max-width: 100%;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-postcode-field,
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-city-field {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+}
+
+.inquiry-address-tail-row {
+  display: grid;
+  gap: 12px 16px;
+}
+
+.inquiry-create-panel #inquiryFormGrid .inquiry-inline-toggle {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #7c3aed;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.inquiry-create-panel #inquiryFormGrid .inquiry-inline-toggle:hover,
+.inquiry-create-panel #inquiryFormGrid .inquiry-inline-toggle:focus-visible {
+  color: #6d28d9;
+  text-decoration: underline;
+  outline: none;
+}
+
+/* Final compact desktop layout for add/edit inquiry */
+@media (min-width: 992px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    width: 80%;
+    max-width: 1120px;
+    margin: 8px auto 16px;
+    padding: 16px 20px 18px;
+    border-radius: 18px;
+  }
+
+  .inquiry-create-layout {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .inquiry-create-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .inquiry-create-fox {
+    flex: 0 0 92px;
+    justify-content: center;
+  }
+
+  .inquiry-create-fox-img {
+    max-width: 92px;
+  }
+
+  .inquiry-form {
+    margin-top: 0;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px 18px;
+    align-items: start;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-section-title {
+    display: none;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-label,
+  .inquiry-create-panel #inquiryFormGrid .inquiry-address2-inner,
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-details-field > label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-label-title {
+    font-size: 13px;
+    line-height: 1.3;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-company-wrapper,
+  .inquiry-create-panel #inquiryFormGrid .inquiry-toggle {
+    width: 100%;
+    max-width: none;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-input {
+    min-height: 38px;
+    padding: 7px 11px;
+    font-size: 13px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid textarea.inquiry-form-input {
+    min-height: 96px;
+    max-height: 120px;
+    resize: vertical;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-toggle-option {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-form-section-title-contact {
+    order: 1;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-span-3:nth-of-type(1),
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-span-3:nth-of-type(2),
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-span-3:nth-of-type(3),
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-span-3:nth-of-type(4) {
+    order: 2;
+    grid-column: auto;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-form-section-title-business {
+    order: 10;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-businessnature-field {
+    order: 11;
+    grid-column: 1;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-details-field {
+    display: contents;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-details-field > label:nth-child(2) {
+    order: 12;
+    grid-column: 2;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-details-field > label:nth-child(1) {
+    order: 13;
+    grid-column: 1;
+    max-width: 220px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-details-field > label:nth-child(3) {
+    order: 14;
+    grid-column: 2;
+    max-width: 280px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-form-section-title-address {
+    order: 20;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address1-field {
+    order: 21;
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address1-field .inquiry-form-input {
+    width: 100%;
+    max-width: none;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address2-field {
+    order: 22;
+    grid-column: 1 / -1;
+    margin-top: -4px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-postcode-field {
+    max-width: none;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row {
+    order: 23;
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(150px, 220px) minmax(260px, 1fr);
+    gap: 10px 14px;
+    align-items: start;
+    justify-content: start;
+    max-width: 720px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-form-section-title-details {
+    order: 30;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-products-field {
+    order: 31;
+    grid-column: 1 / -1;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-referral-field {
+    order: 32;
+    grid-column: 1 / -1;
+    max-width: 360px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-message-field {
+    order: 33;
+    grid-column: 1 / -1;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-actions-field {
+    order: 34;
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 2px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-actions-field .login-primary-btn {
+    width: auto;
+    min-width: 240px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-actions-field .inquiry-form-cancel {
+    width: auto;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: #6b7280;
+    padding: 0;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-actions-field .inquiry-form-cancel:hover {
+    color: #374151;
+    text-decoration: underline;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-checkboxes {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px 16px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-checkbox-label {
+    gap: 6px;
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 992px) and (max-height: 920px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    padding: 14px 18px 16px;
+  }
+
+  .inquiry-create-fox {
+    display: none;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid {
+    gap: 9px 16px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-input {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid textarea.inquiry-form-input {
+    min-height: 84px;
+    max-height: 102px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid .inquiry-form-checkboxes {
+    gap: 6px 12px;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-actions-field {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .inquiry-address-tail-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 992px) {
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row {
+    display: grid !important;
+    grid-template-columns: 170px minmax(280px, 360px) !important;
+    gap: 10px 12px !important;
+    align-items: start;
+    justify-content: start;
+    width: fit-content;
+    max-width: 100%;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-postcode-field,
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-address-tail-row > .inquiry-city-field {
+    margin: 0;
+    max-width: none;
+  }
+}
+
+@media (min-width: 992px) {
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-row {
+    order: 10;
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.35fr) minmax(120px, 0.7fr) minmax(180px, 0.95fr);
+    gap: 10px 16px;
+    align-items: start;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-row > .inquiry-businessnature-field {
+    grid-column: 1;
+    max-width: none;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-row > .inquiry-business-details-field {
+    grid-column: 2 / 5;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(120px, 0.7fr) minmax(180px, 0.95fr);
+    gap: 10px 16px;
+    align-items: start;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-row > .inquiry-business-details-field > label {
+    max-width: none;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-row > .inquiry-business-details-field > label:nth-child(2) {
+    order: 1;
+    grid-column: 1;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-row > .inquiry-business-details-field > label:nth-child(1) {
+    order: 2;
+    grid-column: 2;
+  }
+
+  .inquiry-create-panel #inquiryFormGrid > .inquiry-business-row > .inquiry-business-details-field > label:nth-child(3) {
+    order: 3;
+    grid-column: 3;
+  }
+}
+
+/* Final desktop enhancement for Add/Edit inquiry */
+@media (min-width: 1280px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    width: 96%;
+    max-width: 1480px;
+    margin: 8px auto 16px;
+    padding: 16px 18px 18px;
+    border-radius: 18px;
+  }
+
+  .inquiry-create-layout {
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .inquiry-create-main {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .inquiry-create-fox {
+    flex: 0 0 104px;
+    justify-content: center;
+  }
+
+  .inquiry-create-fox-img {
+    max-width: 104px;
+  }
+
+  .inquiry-form {
+    margin-top: 0;
+  }
+
+  .inquiry-form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 12px 16px;
+    align-items: start;
+  }
+
+  .inquiry-form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    grid-column: 1 / -1;
+    margin: 2px 0 -2px;
+    color: #7c3aed;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .inquiry-form-section-title::after {
+    content: "";
+    flex: 1 1 auto;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(124, 58, 237, 0.18), rgba(124, 58, 237, 0.03));
+  }
+
+  .inquiry-form-section-title-contact {
+    order: 1;
+  }
+
+  .inquiry-span-3 {
+    grid-column: span 3;
+    order: 2;
+  }
+
+  .inquiry-form-section-title-business {
+    order: 10;
+  }
+
+  .inquiry-businessnature-field {
+    order: 11;
+    grid-column: span 4;
+  }
+
+  .inquiry-business-details-field {
+    order: 12;
+    grid-column: span 8;
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(110px, 2fr) minmax(0, 2fr);
+    gap: 12px 16px;
+    align-items: start;
+  }
+
+  .inquiry-business-details-field > label:nth-child(1) {
+    order: 2;
+  }
+
+  .inquiry-business-details-field > label:nth-child(2) {
+    order: 1;
+  }
+
+  .inquiry-business-details-field > label:nth-child(3) {
+    order: 3;
+  }
+
+  .inquiry-form-section-title-address {
+    order: 20;
+  }
+
+  .inquiry-address1-field {
+    order: 21;
+  }
+
+  .inquiry-form-grid:not(.has-address2) .inquiry-address1-field {
+    grid-column: span 6;
+  }
+
+  .inquiry-form-grid.has-address2 .inquiry-address1-field {
+    grid-column: span 4;
+  }
+
+  .inquiry-address2-field {
+    order: 22;
+    grid-column: span 4;
+  }
+
+  .inquiry-postcode-field {
+    order: 23;
+  }
+
+  .inquiry-city-field {
+    order: 24;
+  }
+
+  .inquiry-form-grid:not(.has-address2) .inquiry-postcode-field,
+  .inquiry-form-grid:not(.has-address2) .inquiry-city-field {
+    grid-column: span 3;
+  }
+
+  .inquiry-form-grid.has-address2 .inquiry-postcode-field,
+  .inquiry-form-grid.has-address2 .inquiry-city-field {
+    grid-column: span 2;
+  }
+
+  .inquiry-form-section-title-details {
+    order: 30;
+  }
+
+  .inquiry-products-field {
+    order: 31;
+    grid-column: span 8;
+  }
+
+  .inquiry-referral-field {
+    order: 32;
+    grid-column: span 4;
+    align-self: start;
+  }
+
+  .inquiry-message-field {
+    order: 40;
+    grid-column: span 8;
+  }
+
+  .inquiry-actions-field {
+    order: 41;
+    grid-column: span 4;
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 0;
+  }
+
+  .inquiry-actions-field .login-primary-btn,
+  .inquiry-actions-field .inquiry-form-cancel {
+    width: 100%;
+    text-align: center;
+  }
+
+  .inquiry-form-label {
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .inquiry-form-label-title {
+    font-size: 13px;
+  }
+
+  .inquiry-company-wrapper,
+  .inquiry-toggle {
+    width: 100%;
+    max-width: none;
+  }
+
+  .inquiry-form-input {
+    min-height: 38px;
+    padding: 8px 11px;
+    font-size: 13px;
+  }
+
+  .inquiry-toggle-option {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .inquiry-inline-toggle {
+    margin-top: 4px;
+    font-size: 13px;
+  }
+
+  .inquiry-form-checkboxes {
+    grid-template-columns: repeat(5, minmax(120px, 1fr));
+    gap: 8px 12px;
+  }
+
+  .inquiry-form-checkbox-label {
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 112px;
+    max-height: 132px;
+    resize: vertical;
+  }
+}
+
+@media (min-width: 1280px) and (max-height: 980px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    padding: 12px 14px 14px;
+  }
+
+  .inquiry-create-fox {
+    display: none;
+  }
+
+  .inquiry-form-grid,
+  .inquiry-business-details-field {
+    gap: 10px 14px;
+  }
+
+  .inquiry-form-input {
+    min-height: 36px;
+    padding: 7px 10px;
+  }
+
+  .inquiry-form-checkboxes {
+    gap: 7px 10px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 96px;
+    max-height: 116px;
+  }
+}
+
+.inquiry-form-section-title {
+  display: none;
+}
+
+.inquiry-form-actions-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+@media (min-width: 1280px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    width: 96%;
+    max-width: 1500px;
+    margin: 4px auto 12px;
+    padding: 12px 14px 14px;
+    border-radius: 16px;
+  }
+
+  .inquiry-create-layout {
+    gap: 12px;
+  }
+
+  .inquiry-create-fox {
+    flex: 0 0 88px;
+  }
+
+  .inquiry-create-fox-img {
+    max-width: 88px;
+  }
+
+  .inquiry-form-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 10px 14px;
+    align-items: start;
+  }
+
+  .inquiry-form-section-title {
+    display: block;
+    grid-column: 1 / -1;
+    margin: 2px 0 -2px;
+    color: #7c3aed;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .inquiry-span-3 {
+    grid-column: span 3;
+  }
+
+  .inquiry-businessnature-field {
+    grid-column: span 4;
+  }
+
+  .inquiry-business-details-field {
+    grid-column: span 8;
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 2fr) minmax(0, 2fr);
+    gap: 10px 14px;
+    align-items: start;
+  }
+
+  .inquiry-business-details-field > label:nth-child(1) {
+    order: 2;
+  }
+
+  .inquiry-business-details-field > label:nth-child(2) {
+    order: 1;
+  }
+
+  .inquiry-business-details-field > label:nth-child(3) {
+    order: 3;
+  }
+
+  .inquiry-form-grid:not(.has-address2) .inquiry-address1-field {
+    grid-column: span 6;
+  }
+
+  .inquiry-form-grid.has-address2 .inquiry-address1-field {
+    grid-column: span 4;
+  }
+
+  .inquiry-address2-field {
+    grid-column: span 4;
+  }
+
+  .inquiry-form-grid:not(.has-address2) .inquiry-postcode-field,
+  .inquiry-form-grid:not(.has-address2) .inquiry-city-field {
+    grid-column: span 3;
+  }
+
+  .inquiry-form-grid.has-address2 .inquiry-postcode-field,
+  .inquiry-form-grid.has-address2 .inquiry-city-field {
+    grid-column: span 2;
+  }
+
+  .inquiry-products-field {
+    grid-column: span 8;
+  }
+
+  .inquiry-referral-field {
+    grid-column: span 4;
+  }
+
+  .inquiry-message-field {
+    grid-column: span 8;
+  }
+
+  .inquiry-actions-field {
+    grid-column: span 4;
+    justify-content: flex-end;
+    align-self: stretch;
+    gap: 10px;
+    margin-top: 0;
+  }
+
+  .inquiry-actions-field .login-primary-btn {
+    width: 100%;
+  }
+
+  .inquiry-actions-field .inquiry-form-cancel {
+    text-align: center;
+  }
+
+  .inquiry-form-label {
+    gap: 3px;
+    font-size: 12px;
+  }
+
+  .inquiry-form-label-title {
+    font-size: 13px;
+  }
+
+  .inquiry-form-input {
+    padding: 6px 9px;
+    font-size: 12.5px;
+  }
+
+  .inquiry-toggle {
+    width: 100%;
+    max-width: none;
+  }
+
+  .inquiry-toggle-option {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .inquiry-form-checkboxes {
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    gap: 8px 14px;
+  }
+
+  .inquiry-form-checkbox-label {
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 108px;
+    max-height: 130px;
+  }
+}
+
+@media (min-width: 1280px) and (max-height: 980px) {
+  .inquiry-create-fox {
+    display: none;
+  }
+
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    padding: 10px 12px 12px;
+  }
+
+  .inquiry-form-grid,
+  .inquiry-business-details-field {
+    gap: 8px 12px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 88px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    width: 96%;
+    max-width: 1500px;
+    margin: 4px auto 12px;
+    padding: 12px 14px 14px;
+    border-radius: 16px;
+  }
+
+  .inquiry-create-layout {
+    gap: 10px;
+  }
+
+  .inquiry-create-fox {
+    flex: 0 0 110px;
+  }
+
+  .inquiry-create-fox-img {
+    max-width: 110px;
+  }
+
+  .inquiry-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+
+  .inquiry-form-grid .inquiry-form-compact-field {
+    grid-column: auto;
+  }
+
+  .inquiry-form-grid .inquiry-form-row3 {
+    grid-column: span 2;
+    grid-template-columns: 0.8fr 1.25fr 1fr;
+    gap: 8px 12px;
+  }
+
+  .inquiry-form-grid .inquiry-form-message-compact {
+    grid-column: span 2;
+  }
+
+  .inquiry-form-label {
+    gap: 3px;
+    font-size: 12px;
+  }
+
+  .inquiry-form-label-title {
+    font-size: 13px;
+  }
+
+  .inquiry-form-input {
+    padding: 6px 9px;
+    font-size: 12.5px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 82px;
+    max-height: 108px;
+  }
+
+  .inquiry-form-checkboxes {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 6px 12px;
+  }
+
+  .inquiry-form-checkbox-label {
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .inquiry-form-checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .inquiry-inline-toggle {
+    font-size: 12px;
+  }
+
+  .inquiry-toggle {
+    width: 100%;
+    max-width: none;
+  }
+
+  .inquiry-toggle-option {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  .inquiry-form-actions {
+    margin-top: 10px;
+    gap: 10px;
+  }
+}
+
+@media (min-width: 1280px) and (max-height: 980px) {
+  .inquiry-create-panel .dashboard-panel-body.inquiry-create-body {
+    padding: 10px 12px 12px;
+  }
+
+  .inquiry-create-layout {
+    gap: 8px;
+  }
+
+  .inquiry-create-fox {
+    flex-basis: 88px;
+  }
+
+  .inquiry-create-fox-img {
+    max-width: 88px;
+  }
+
+  .inquiry-form-grid {
+    gap: 7px 10px;
+  }
+
+  .inquiry-form-grid .inquiry-form-row3 {
+    gap: 7px 10px;
+  }
+
+  .inquiry-form-input {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+
+  textarea.inquiry-form-input {
+    min-height: 68px;
+  }
+
+  .inquiry-form-actions {
+    margin-top: 8px;
+  }
+}
+
 .inquiry-create-header {
   align-items: flex-start;
   justify-content: space-between;
@@ -585,6 +1706,59 @@
   outline: none;
   border-color: #7f5af0;
   box-shadow: 0 0 0 2px rgba(127, 90, 240, 0.2);
+}
+
+.inquiry-inline-toggle {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.inquiry-inline-toggle:hover {
+  color: #6d28d9;
+  text-decoration: underline;
+}
+
+.inquiry-inline-toggle:focus-visible {
+  outline: 2px solid rgba(124, 58, 237, 0.22);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.inquiry-address-field {
+  align-items: flex-start;
+}
+
+.inquiry-address2-wrap {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  overflow: hidden;
+  transition: grid-template-rows 0.22s ease, opacity 0.18s ease;
+}
+
+.inquiry-address2-inner {
+  min-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.18s ease, transform 0.22s ease;
+}
+
+.inquiry-address2-wrap.is-visible {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.inquiry-address2-wrap.is-visible .inquiry-address2-inner {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .inquiry-input-error {

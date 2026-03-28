@@ -11,20 +11,20 @@ Route::get('/', fn () => redirect()->route('login'));
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-Route::post('/password/forgot', [AuthController::class, 'requestPasswordResetFromLogin'])->name('password.forgot');
+Route::post('/password/forgot', [AuthController::class, 'handleLegacyPasswordPost'])->name('password.forgot');
 
-Route::get('/password/set', [AuthController::class, 'showSetPasswordForm'])->name('password.set.form');
+Route::get('/passkey/setup', [AuthController::class, 'showPasskeySetupForm'])->name('passkey.setup.form');
+Route::get('/password/set', [AuthController::class, 'showSetPasswordForm']);
 Route::post('/password/set', [AuthController::class, 'setPassword'])->name('password.set.submit');
-Route::get('/password/force-change', [AuthController::class, 'showForceChangePasswordForm'])->name('password.force-change.form');
-Route::post('/password/force-change', [AuthController::class, 'forceChangePassword'])->name('password.force-change.submit');
-Route::get('/password/reset/{userid}', [AuthController::class, 'showResetPasswordForm'])->name('password.reset.form');
-Route::post('/password/reset/{userid}', [AuthController::class, 'resetPassword'])->name('password.reset.submit');
+Route::get('/password/force-change', [AuthController::class, 'showLegacyPasswordPage'])->name('password.force-change.form');
+Route::post('/password/force-change', [AuthController::class, 'handleLegacyPasswordPost'])->name('password.force-change.submit');
+Route::get('/password/reset/{userid}', [AuthController::class, 'showLegacyPasswordPage'])->name('password.reset.form');
+Route::post('/password/reset/{userid}', [AuthController::class, 'handleLegacyPasswordPost'])->name('password.reset.submit');
 
 Route::get('/passkey/auth/options', [PasskeyController::class, 'authOptions'])->name('passkey.auth.options');
 Route::post('/passkey/auth/verify', [PasskeyController::class, 'authVerify'])->name('passkey.auth.verify');
 
 Route::middleware(['auth.sms'])->group(function () {
-    Route::get('/passkey/register', [PasskeyController::class, 'showRegisterForm'])->name('passkey.register.form');
     Route::post('/passkey/register/options', [PasskeyController::class, 'registerOptions'])->name('passkey.register.options');
     Route::post('/passkey/register/verify', [PasskeyController::class, 'registerVerify'])->name('passkey.register.verify');
 });
@@ -61,8 +61,8 @@ Route::middleware(['auth.sms', 'admin'])->prefix('admin')->name('admin.')->group
     Route::get('/history', [AdminController::class, 'history'])->name('history');
     Route::get('/maintain-users', [AdminController::class, 'maintainUsers'])->name('maintain-users');
     Route::post('/maintain-users', [AdminController::class, 'maintainUsersStore'])->name('maintain-users.store');
-    Route::post('/maintain-users/send-temp-passwords', [AdminController::class, 'maintainUsersSendTempPasswords'])->name('maintain-users.send-temp-passwords');
-    Route::post('/maintain-users/{userid}/send-temp-password', [AdminController::class, 'maintainUsersSendTempPassword'])->name('maintain-users.send-temp-password');
+    Route::post('/maintain-users/send-passkey-setup-links', [AdminController::class, 'maintainUsersSendPasskeySetupLinks'])->name('maintain-users.send-passkey-setup-links');
+    Route::post('/maintain-users/{userid}/send-passkey-setup-link', [AdminController::class, 'maintainUsersSendPasskeySetupLink'])->name('maintain-users.send-passkey-setup-link');
     Route::put('/maintain-users/{userid}', [AdminController::class, 'maintainUsersUpdate'])->name('maintain-users.update');
 });
 

@@ -91,18 +91,16 @@
     <td data-col="completiondate">{{ !empty($r->COMPLETED_AT) ? date('d/m/Y', strtotime($r->COMPLETED_AT)) : '-' }}</td>
     <td data-col="payoutsdate">{{ !empty($r->REWARDED_AT) ? date('d/m/Y', strtotime($r->REWARDED_AT)) : '-' }}</td>
     <td data-col="attachment">
-        @php $assignedAttachUrls = !empty($r->ASSIGNED_ATTACHMENT_URLS) && is_array($r->ASSIGNED_ATTACHMENT_URLS) ? $r->ASSIGNED_ATTACHMENT_URLS : []; @endphp
+        @php
+            $assignedAttachUrls = !empty($r->ASSIGNED_ATTACHMENT_URLS) && is_array($r->ASSIGNED_ATTACHMENT_URLS)
+                ? array_values(array_filter($r->ASSIGNED_ATTACHMENT_URLS, function ($url) {
+                    $normalized = is_string($url) ? trim($url) : '';
+                    return $normalized !== '' && !in_array(strtolower($normalized), ['-', 'null', 'undefined', '#'], true);
+                }))
+                : [];
+        @endphp
         @if(!empty($assignedAttachUrls))
-            <div class="payouts-attachment-list">
-                @foreach(array_slice($assignedAttachUrls, 0, 3) as $u)
-                    <a href="{{ $u }}" target="_blank" rel="noopener" class="payouts-attachment-link">
-                        <img src="{{ $u }}" alt="Attachment" class="payouts-attachment-thumb">
-                    </a>
-                @endforeach
-                @if(count($assignedAttachUrls) > 3)
-                    <span class="payouts-attachment-more">+{{ count($assignedAttachUrls) - 3 }}</span>
-                @endif
-            </div>
+            <a href="{{ $assignedAttachUrls[0] }}" target="_blank" rel="noopener" class="inquiries-btn inquiries-btn-secondary">Attachment</a>
         @else
             -
         @endif

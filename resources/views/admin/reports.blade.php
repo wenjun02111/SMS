@@ -3,6 +3,271 @@
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260324-9">
     <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260325-4">
+    <style>
+        .reports-page .dashboard-panels-two-column {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+            gap: 20px;
+            min-width: 0;
+        }
+
+        .reports-page .dashboard-panels-two-column > *,
+        .reports-page .reports-product-section {
+            min-width: 0;
+        }
+
+        .reports-page .reports-inquiry-section,
+        .reports-page .reports-status-section,
+        .reports-page .reports-product-section {
+            border: 1px solid #e8ecf5;
+            border-radius: 20px;
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .reports-page .reports-inquiry-section .dashboard-panel-header,
+        .reports-page .reports-status-section .dashboard-panel-header,
+        .reports-page .reports-product-section .dashboard-panel-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 20px 22px 12px;
+            border-bottom: none;
+        }
+
+        .reports-inquiry-heading,
+        .reports-status-heading,
+        .reports-product-heading {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .reports-page .reports-inquiry-heading .dashboard-panel-title,
+        .reports-page .reports-status-heading .dashboard-panel-title,
+        .reports-page .reports-product-heading .dashboard-panel-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.2;
+            color: #0f172a;
+            letter-spacing: -0.01em;
+        }
+
+        .reports-inquiry-subtitle,
+        .reports-status-subtitle,
+        .reports-product-subtitle {
+            font-size: 12px;
+            font-weight: 500;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        .reports-inquiry-meta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .reports-inquiry-chip,
+        .reports-product-scale-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 12px;
+            border-radius: 999px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: #475569;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        .reports-inquiry-chip-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #94a3b8;
+        }
+
+        .reports-inquiry-chip-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .reports-page .reports-inquiry-section .dashboard-panel-body,
+        .reports-page .reports-status-section .dashboard-panel-body,
+        .reports-page .reports-product-section .dashboard-panel-body {
+            padding: 0 22px 22px;
+        }
+
+        .dealer-reports-card,
+        .dealer-reports-status-card,
+        .reports-product-card {
+            border: 1px solid #eef2f8;
+            border-radius: 18px;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
+            padding: 14px 16px 12px;
+        }
+
+        .reports-page .reports-inquiry-section .dealer-reports-card {
+            padding: 12px 14px 6px;
+        }
+
+        .dealer-reports-chart-wrapper,
+        .reports-product-chart-wrapper {
+            position: relative;
+            width: 100%;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .reports-page .reports-inquiry-section .dealer-reports-chart-wrapper {
+            background: #ffffff;
+            border: 0;
+            border-radius: 0;
+            padding: 0 2px;
+        }
+
+        .dealer-reports-chart-wrapper canvas,
+        .reports-product-chart-wrapper canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .dealer-reports-chart-fallback,
+        .reports-product-chart-fallback {
+            display: none;
+            margin: 0;
+            font-size: 13px;
+            font-weight: 500;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .dealer-reports-chart-wrapper.is-error,
+        .reports-product-chart-wrapper.is-error {
+            height: auto !important;
+            min-height: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+        }
+
+        .dealer-reports-chart-wrapper.is-error canvas,
+        .reports-product-chart-wrapper.is-error canvas {
+            display: none;
+        }
+
+        .dealer-reports-chart-wrapper.is-error .dealer-reports-chart-fallback,
+        .reports-product-chart-wrapper.is-error .reports-product-chart-fallback {
+            display: block;
+            padding: 8px 0 4px;
+        }
+
+        .dealer-reports-empty,
+        .reports-product-empty {
+            margin: 0;
+            padding: 20px 8px;
+            font-size: 14px;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .reports-page .report-status-body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .reports-page .report-donut-wrapper {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .reports-product-scale {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .reports-product-scale-chip {
+            gap: 6px;
+            padding: 5px 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .reports-product-scale-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            flex-shrink: 0;
+        }
+
+        .reports-product-scale-dot--high {
+            background: #22c55e;
+        }
+
+        .reports-product-scale-dot--medium {
+            background: #f59e0b;
+        }
+
+        .reports-product-scale-dot--low {
+            background: #ef4444;
+        }
+
+        @media (max-width: 1200px) {
+            .reports-page .dashboard-panels-two-column {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .reports-page .reports-inquiry-section .dashboard-panel-header,
+            .reports-page .reports-status-section .dashboard-panel-header,
+            .reports-page .reports-product-section .dashboard-panel-header {
+                padding: 16px 16px 10px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .reports-page .reports-inquiry-section .dashboard-panel-body,
+            .reports-page .reports-status-section .dashboard-panel-body,
+            .reports-page .reports-product-section .dashboard-panel-body {
+                padding: 0 16px 16px;
+            }
+
+            .dealer-reports-card,
+            .dealer-reports-status-card,
+            .reports-product-card {
+                padding: 12px;
+                border-radius: 14px;
+            }
+
+            .reports-page .reports-inquiry-heading .dashboard-panel-title,
+            .reports-page .reports-status-heading .dashboard-panel-title,
+            .reports-page .reports-product-heading .dashboard-panel-title {
+                font-size: 16px;
+            }
+
+            .reports-page .reports-inquiry-meta {
+                justify-content: flex-start;
+            }
+        }
+    </style>
 @endpush
 @section('content')
 <div class="reports-page">
@@ -25,43 +290,6 @@
         </nav>
     </div>
 </header>
-<div class="reports-period-row">
-    <form method="get" class="reports-period-form reports-period-form-compact">
-        @php
-            $months = [
-                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
-                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
-                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
-            ];
-        @endphp
-        <select name="month" class="reports-period-select">
-            @foreach ($months as $m => $label)
-                <option value="{{ $m }}" {{ (int) ($selectedMonth ?? now()->format('n')) === (int) $m ? 'selected' : '' }}>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </select>
-        <select name="year" class="reports-period-select">
-            @foreach (($yearOptions ?? []) as $y)
-                <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>
-                    {{ $y }}
-                </option>
-            @endforeach
-        </select>
-        <label class="reports-period-check">
-            <input type="hidden" name="include_dealer" value="0">
-            <input type="checkbox" name="include_dealer" value="1" {{ !empty($includeDealer) ? 'checked' : '' }}>
-            Dealer
-        </label>
-        <label class="reports-period-check">
-            <input type="hidden" name="include_estream" value="0">
-            <input type="checkbox" name="include_estream" value="1" {{ !empty($includeEstream) ? 'checked' : '' }}>
-            E Stream
-        </label>
-        <button type="submit" class="reports-period-apply">Apply</button>
-    </form>
-</div>
-
 @php
     $totalLeads = array_sum($leadStatus);
     $totalPayouts = array_sum($payoutStatus);
@@ -72,25 +300,25 @@
         [
             'key' => 'unassigned',
             'label' => 'UNASSIGNED',
-            'value' => $unassignedLeads,
+            'value' => $metricUnassignedLeads,
             'link' => route('admin.inquiries'),
             'link_aria' => 'View unassigned inquiries'
         ],
-        ['key' => 'Pending', 'label' => 'PENDING', 'value' => $activityStatus['Pending'] ?? 0, 'dealer' => true],
-        ['key' => 'FollowUp', 'label' => 'FOLLOW-UP', 'value' => $activityStatus['FollowUp'] ?? 0, 'dealer' => true],
-        ['key' => 'Demo', 'label' => 'DEMO', 'value' => $activityStatus['Demo'] ?? 0, 'dealer' => true],
-        ['key' => 'Confirmed', 'label' => 'CONFIRMED', 'value' => $activityStatus['Confirmed'] ?? 0, 'dealer' => true],
+        ['key' => 'Pending', 'label' => 'PENDING', 'value' => $metricActivityStatus['Pending'] ?? 0, 'dealer' => true],
+        ['key' => 'FollowUp', 'label' => 'FOLLOW-UP', 'value' => $metricActivityStatus['FollowUp'] ?? 0, 'dealer' => true],
+        ['key' => 'Demo', 'label' => 'DEMO', 'value' => $metricActivityStatus['Demo'] ?? 0, 'dealer' => true],
+        ['key' => 'Confirmed', 'label' => 'CONFIRMED', 'value' => $metricActivityStatus['Confirmed'] ?? 0, 'dealer' => true],
         [
             'key' => 'Completed',
             'label' => 'COMPLETED',
-            'value' => $leadStatus['Closed'] ?? 0,
+            'value' => $metricLeadStatus['Closed'] ?? 0,
             'link' => route('admin.inquiries', ['tab' => 'all']),
             'link_aria' => 'View completed cases in all inquiries'
         ],
         [
             'key' => 'Rewarded',
             'label' => 'REWARDED',
-            'value' => $activityStatus['reward'] ?? 0,
+            'value' => $metricActivityStatus['reward'] ?? 0,
             'link' => route('admin.inquiries', ['tab' => 'all']),
             'link_aria' => 'View rewarded cases in all inquiries'
         ],
@@ -108,6 +336,20 @@
         ['label' => 'Rewarded', 'value' => (int) ($activityStatus['reward'] ?? 0), 'color' => '#15803d'],
     ];
     $totalStatus = max(array_sum(array_column($statusReportData, 'value')), 1);
+    $selectedDays = max((int) ($selectedDaysInMonth ?? now()->daysInMonth), 1);
+    $trendByDay = collect($inquiryTrend ?? [])->mapWithKeys(function ($item) {
+        return [
+            (int) ($item['day'] ?? 0) => (int) ($item['count'] ?? 0),
+        ];
+    })->all();
+    $adminInquiryTrendLabels = array_map(function ($day) {
+        return str_pad((string) $day, 2, '0', STR_PAD_LEFT);
+    }, range(1, $selectedDays));
+    $adminInquiryTrendData = array_map(function ($day) use ($trendByDay) {
+        return (int) ($trendByDay[$day] ?? 0);
+    }, range(1, $selectedDays));
+    $totalInquiry = array_sum($adminInquiryTrendData);
+    $hasInquiryTrendData = $totalInquiry > 0;
 @endphp
 
 <section class="dashboard-metrics-grid">
@@ -154,29 +396,77 @@
     @endforeach
 </section>
 
+<div class="reports-period-row">
+    <form method="get" class="reports-period-form reports-period-form-compact">
+        @php
+            $months = [
+                1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
+                5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August',
+                9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
+            ];
+        @endphp
+        <select name="month" class="reports-period-select">
+            @foreach ($months as $m => $label)
+                <option value="{{ $m }}" {{ (int) ($selectedMonth ?? now()->format('n')) === (int) $m ? 'selected' : '' }}>
+                    {{ $label }}
+                </option>
+            @endforeach
+        </select>
+        <select name="year" class="reports-period-select">
+            @foreach (($yearOptions ?? []) as $y)
+                <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>
+                    {{ $y }}
+                </option>
+            @endforeach
+        </select>
+        <label class="reports-period-check">
+            <input type="hidden" name="include_dealer" value="0">
+            <input type="checkbox" name="include_dealer" value="1" {{ !empty($includeDealer) ? 'checked' : '' }}>
+            Dealer
+        </label>
+        <label class="reports-period-check">
+            <input type="hidden" name="include_estream" value="0">
+            <input type="checkbox" name="include_estream" value="1" {{ !empty($includeEstream) ? 'checked' : '' }}>
+            E Stream
+        </label>
+        <button type="submit" class="reports-period-apply">Apply</button>
+    </form>
+</div>
+
 <section class="dashboard-panels-two-column">
-    <div class="dashboard-panel inquiry-chart-panel">
+    <section class="dashboard-panel reports-inquiry-section">
         <div class="dashboard-panel-header">
-            <div class="dashboard-panel-title" id="inquiryRangeText">Inquiries this month</div>
-            <div id="inquiryPercentBadge" class="flex items-center inquiry-trend-badge font-medium text-center inquiry-trend-same">
-                <svg class="inquiry-percent-arrow inquiry-percent-arrow-up" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v13m0-13 4 4m-4-4-4 4"/></svg>
-                <svg class="inquiry-percent-arrow inquiry-percent-arrow-down" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0-4 4m4-4 4 4"/></svg>
-                <span id="inquiryPercent" class="inquiry-percent">No change</span>
-                <span class="inquiry-percent-suffix">vs last month</span>
+            <div class="reports-inquiry-heading">
+                <div class="dashboard-panel-title">Inquiry Trends</div>
+                <div class="reports-inquiry-subtitle">Inquiries for {{ $selectedMonthName }} {{ $selectedYear }}</div>
+            </div>
+            <div class="reports-inquiry-meta">
+                <span class="reports-inquiry-chip">
+                    <span class="reports-inquiry-chip-label">Total</span>
+                    <span class="reports-inquiry-chip-value">{{ number_format($totalInquiry) }}</span>
+                </span>
             </div>
         </div>
         <div class="dashboard-panel-body">
-            @if (count($inquiryTrend) === 0)
-                <p class="text-muted">No leads created this month yet.</p>
-            @else
-                <div id="area-chart"></div>
-            @endif
+            <div class="dealer-reports-card">
+                @if (!$hasInquiryTrendData)
+                    <p class="dealer-reports-empty">No leads created in this period yet.</p>
+                @else
+                    <div class="dealer-reports-chart-wrapper" style="height: 336px;">
+                        <p class="dealer-reports-chart-fallback">Unable to load inquiry trend chart.</p>
+                        <canvas id="adminInquiryTrendChart"></canvas>
+                    </div>
+                @endif
+            </div>
         </div>
-    </div>
+    </section>
 
-    <div class="dashboard-panel">
+    <section class="dashboard-panel reports-status-section">
         <div class="dashboard-panel-header">
-            <div class="dashboard-panel-title">Status Report</div>
+            <div class="reports-status-heading">
+                <div class="dashboard-panel-title">Status Report</div>
+                <div class="reports-status-subtitle">Current status distribution for {{ $selectedMonthName }} {{ $selectedYear }}</div>
+            </div>
         </div>
         <div class="dashboard-panel-body report-status-body">
             @php
@@ -199,12 +489,14 @@
                     return $s['color'] . ' ' . $s['from'] . '% ' . $s['to'] . '%';
                 })->implode(', ');
             @endphp
-            <div class="report-donut-wrapper">
-                <div class="report-donut"
-                     style="background: conic-gradient({{ $gradientParts ?: '#e5e7eb 0 100%' }});">
-                    <div class="report-donut-center">
-                        <div class="report-donut-total">{{ array_sum(array_column($statusReportData, 'value')) }}</div>
-                        <div class="report-donut-label">Activities</div>
+            <div class="dealer-reports-status-card">
+                <div class="report-donut-wrapper">
+                    <div class="report-donut"
+                         style="background: conic-gradient({{ $gradientParts ?: '#e5e7eb 0 100%' }});">
+                        <div class="report-donut-center">
+                            <div class="report-donut-total">{{ array_sum(array_column($statusReportData, 'value')) }}</div>
+                            <div class="report-donut-label">Activities</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -219,30 +511,78 @@
                 @endforeach
             </ul>
         </div>
-    </div>
+    </section>
 </section>
+
+@php
+    $productConversionDisplay = collect($productConversion ?? [])
+        ->map(function ($item) {
+            return [
+                'label' => (string) ($item['label'] ?? ''),
+                'count' => (int) ($item['count'] ?? 0),
+            ];
+        })
+        ->sort(function ($a, $b) {
+            $aIsOthers = strtoupper(trim((string) ($a['label'] ?? ''))) === 'OTHERS';
+            $bIsOthers = strtoupper(trim((string) ($b['label'] ?? ''))) === 'OTHERS';
+
+            if ($aIsOthers && !$bIsOthers) {
+                return 1;
+            }
+
+            if (!$aIsOthers && $bIsOthers) {
+                return -1;
+            }
+
+            $countCompare = ($b['count'] ?? 0) <=> ($a['count'] ?? 0);
+            if ($countCompare !== 0) {
+                return $countCompare;
+            }
+
+            return strcasecmp((string) ($a['label'] ?? ''), (string) ($b['label'] ?? ''));
+        })
+        ->values();
+@endphp
 
 <section class="dashboard-panel dashboard-table-panel reports-product-section">
     <div class="dashboard-panel-header">
-        <div>
+        <div class="reports-product-heading">
             <div class="dashboard-panel-title">Product Conversion Rate</div>
+            <div class="reports-product-subtitle">Closed-case conversions by product for {{ $selectedMonthName }} {{ $selectedYear }}</div>
+        </div>
+        <div class="reports-product-scale" aria-hidden="true">
+            <span class="reports-product-scale-chip">
+                <span class="reports-product-scale-dot reports-product-scale-dot--high"></span>
+                High
+            </span>
+            <span class="reports-product-scale-chip">
+                <span class="reports-product-scale-dot reports-product-scale-dot--medium"></span>
+                Medium
+            </span>
+            <span class="reports-product-scale-chip">
+                <span class="reports-product-scale-dot reports-product-scale-dot--low"></span>
+                Low
+            </span>
         </div>
     </div>
     <div class="dashboard-panel-body">
-        @if (count($productConversion) === 0)
-            <p class="text-muted">No closed cases this month yet.</p>
+        <div class="reports-product-card">
+        @if ($productConversionDisplay->isEmpty())
+            <p class="reports-product-empty">No closed cases this month yet.</p>
         @else
             @php
-                $dealerCount = count($productConversion);
-                $barHeightPx = 32;
+                $itemCount = $productConversionDisplay->count();
+                $barHeightPx = 20;
                 $gapPx = 10;
-                $paddingPx = 60;
-                $chartHeightPx = max(140, $dealerCount * ($barHeightPx + $gapPx) + $paddingPx);
+                $paddingPx = 44;
+                $chartHeightPx = max(168, $itemCount * ($barHeightPx + $gapPx) + $paddingPx);
             @endphp
             <div class="reports-product-chart-wrapper" style="height: {{ $chartHeightPx }}px;">
+                <p class="reports-product-chart-fallback">Unable to load product conversion chart.</p>
                 <canvas id="productConversionChart"></canvas>
             </div>
         @endif
+        </div>
     </div>
 </section>
 </div>
@@ -251,7 +591,6 @@
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             // Title dropdown (light purple)
@@ -293,234 +632,457 @@
                 });
             }
 
-            // Inquiry Trends area chart
-            const inquiryTrendData = @json($inquiryTrend);
-            const inquiryTrendPercentChange = @json($inquiryTrendPercentChange ?? 0);
-            const monthName = @json($selectedMonthName ?? now()->format('F'));
-            const selectedYear = @json($selectedYear ?? now()->format('Y'));
-            const daysInMonth = @json($selectedDaysInMonth ?? now()->daysInMonth);
-            const currentDay = @json($selectedDaysInMonth ?? (int) now()->daysInMonth);
-
-            const trendByDay = {};
-            inquiryTrendData.forEach(function(p) { trendByDay[p.day] = p.count; });
-
-            const categories = [];
-            const seriesData = [];
-            for (let d = 1; d <= daysInMonth; d++) {
-                categories.push((d < 10 ? '0' : '') + d + ' ' + monthName);
-                seriesData.push(trendByDay[d] || 0);
-            }
-            const monthTotal = seriesData.reduce((acc, v) => acc + (v || 0), 0);
-
-            const getBrandColor = function() {
-                const computedStyle = getComputedStyle(document.documentElement);
-                return computedStyle.getPropertyValue('--color-fg-brand').trim() || "#1447E6";
-            };
-            const brandColor = '#7f5af0';
-            const toRgba = function(hex, alpha) {
-                if (!hex) return null;
-                const h = hex.replace('#', '').trim();
-                if (!/^[0-9a-fA-F]{3,6}$/.test(h)) return null;
-                const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
-                if (full.length !== 6) return null;
-                const r = parseInt(full.substring(0, 2), 16);
-                const g = parseInt(full.substring(2, 4), 16);
-                const b = parseInt(full.substring(4, 6), 16);
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-            };
-            const columnColor = toRgba(brandColor, 0.32) || brandColor;
-
-            function buildChartOptions(cats, data) {
-                return {
-                    chart: {
-                        height: "100%",
-                        maxWidth: "100%",
-                        type: "line",
-                        fontFamily: "Inter, sans-serif",
-                        dropShadow: { enabled: false },
-                        toolbar: { show: false },
-                        zoom: { enabled: false },
-                    },
-                    tooltip: {
-                        enabled: true,
-                        shared: true,
-                        intersect: false,
-                        y: {
-                            formatter: function (val) { return (val || 0) + ' inquiries'; }
-                        }
-                    },
-                    plotOptions: {
-                        bar: {
-                            columnWidth: "55%",
-                            borderRadius: 6,
-                        }
-                    },
-                    fill: { opacity: [0.5, 1] },
-                    dataLabels: { enabled: false },
-                    stroke: { width: [0, 2], curve: 'smooth' },
-                    markers: { size: [0, 3], hover: { size: 4 } },
-                    grid: {
-                        show: true,
-                        borderColor: 'rgba(148, 163, 184, 0.25)',
-                        strokeDashArray: 4,
-                        padding: { left: 6, right: 6, top: 0, bottom: 0 }
-                    },
-                    series: [
-                        { name: "Inquiries", type: "column", data: data },
-                        { name: "Trend", type: "line", data: data },
-                    ],
-                    colors: [columnColor, brandColor],
-                    xaxis: {
-                        categories: cats,
-                        tickAmount: Math.min(8, cats.length),
-                        labels: {
-                            show: true,
-                            rotate: -35,
-                            style: { colors: '#94a3b8', fontSize: '10px' },
-                        },
-                        axisBorder: { show: true, color: 'rgba(148, 163, 184, 0.35)' },
-                        axisTicks: { show: true, color: 'rgba(148, 163, 184, 0.35)' },
-                    },
-                    yaxis: {
-                        show: true,
-                        labels: {
-                            style: { colors: '#94a3b8', fontSize: '11px' },
-                            formatter: function (val) { return Math.round(val); }
-                        }
-                    },
-                };
-            }
-
-            let areaChart = null;
-            // days > 0 => rolling window ending today; days === 0 => full month (all daysInMonth)
-            function getFilteredData(days) {
-                let startDay = 1;
-                let endDay = days > 0 ? currentDay : daysInMonth;
-                if (days > 0) {
-                    startDay = Math.max(1, currentDay - days + 1);
+            const showChartFallback = function (wrapper, fallback, message) {
+                if (wrapper) {
+                    wrapper.classList.add('is-error');
                 }
-                const startIdx = startDay - 1;
-                const endIdx = endDay;
-                return {
-                    cats: categories.slice(startIdx, endIdx),
-                    data: seriesData.slice(startIdx, endIdx)
-                };
-            }
-            function formatTotal(n) {
-                if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-                return String(n);
-            }
-            function updateInquiryHeader(days) {
-                const elRange = document.getElementById('inquiryRangeText');
-                const elPercent = document.getElementById('inquiryPercent');
-                const elBadge = document.getElementById('inquiryPercentBadge');
-                if (!elRange) return;
-
-                const filtered = getFilteredData(days);
-                const total = filtered.data.reduce((acc, v) => acc + (v || 0), 0);
-                elRange.textContent = days > 0 ? `Inquiries last ${days} days` : `Inquiries in ${monthName} ${selectedYear}`;
-
-                if (elPercent && elBadge) {
-                    const diffPct = Number(inquiryTrendPercentChange) || 0;
-                    elBadge.classList.remove('inquiry-trend-up', 'inquiry-trend-down', 'inquiry-trend-same');
-                    if (diffPct > 0) {
-                        elBadge.classList.add('inquiry-trend-up');
-                        elPercent.textContent = '+' + Math.round(diffPct) + '%';
-                    } else if (diffPct < 0) {
-                        elBadge.classList.add('inquiry-trend-down');
-                        elPercent.textContent = Math.round(diffPct) + '%';
-                    } else {
-                        elBadge.classList.add('inquiry-trend-same');
-                        elPercent.textContent = 'No change';
-                    }
-                    elBadge.title = 'Vs last month';
+                if (fallback) {
+                    fallback.textContent = message;
                 }
-            }
-            if (document.getElementById("area-chart") && typeof ApexCharts !== 'undefined') {
-                const initial = getFilteredData(0);
-                areaChart = new ApexCharts(document.getElementById("area-chart"), buildChartOptions(initial.cats, initial.data));
-                areaChart.render();
-                updateInquiryHeader(0);
-            }
+            };
 
-            // Product Conversion bar chart
+            const inquiryCanvas = document.getElementById('adminInquiryTrendChart');
+            const inquiryWrapper = inquiryCanvas
+                ? inquiryCanvas.closest('.dealer-reports-chart-wrapper')
+                : document.querySelector('.dealer-reports-chart-wrapper');
+            const inquiryFallback = inquiryWrapper
+                ? inquiryWrapper.querySelector('.dealer-reports-chart-fallback')
+                : null;
+
             const el = document.getElementById('productConversionChart');
+            const productChartWrapper = el
+                ? el.closest('.reports-product-chart-wrapper')
+                : document.querySelector('.reports-product-chart-wrapper');
+            const productChartFallback = productChartWrapper
+                ? productChartWrapper.querySelector('.reports-product-chart-fallback')
+                : null;
+
+            if (typeof Chart === 'undefined') {
+                showChartFallback(inquiryWrapper, inquiryFallback, 'Inquiry trend chart could not be loaded right now.');
+                showChartFallback(productChartWrapper, productChartFallback, 'Product conversion chart could not be loaded right now.');
+                return;
+            }
+
+            if (inquiryCanvas) {
+                try {
+                    const rawInquiryLabels = @json($adminInquiryTrendLabels ?? []);
+                    const inquiryValues = @json($adminInquiryTrendData ?? []);
+                    const reportPeriod = 'month';
+                    const currentMonthName = @json($selectedMonthName ?? now()->format('F'));
+                    const brandColor = '#7f5af0';
+                    const columnColor = 'rgba(127, 90, 240, 0.32)';
+                    const gridColor = 'rgba(148, 163, 184, 0.25)';
+                    const axisColor = 'rgba(148, 163, 184, 0.28)';
+                    const inquiryLabels = rawInquiryLabels.map(function (label) {
+                        return String(label || '').trim();
+                    });
+                    const tooltipLabels = rawInquiryLabels.map(function (label) {
+                        const normalized = String(label || '').trim();
+                        if (reportPeriod === 'month' && normalized && /^\d+$/.test(normalized)) {
+                            return normalized + ' ' + currentMonthName;
+                        }
+                        return normalized;
+                    });
+                    const showAllDayTicks = reportPeriod === 'month';
+                    const maxTickCount = inquiryLabels.length > 24 ? 11 : (inquiryLabels.length > 14 ? 9 : (inquiryLabels.length > 7 ? 7 : inquiryLabels.length));
+                    const tickStep = inquiryLabels.length > 24 ? 3 : (inquiryLabels.length > 14 ? 2 : 1);
+                    const maxInquiryValue = inquiryValues.length ? Math.max.apply(null, inquiryValues) : 0;
+
+                    function clearInquiryHover(chart) {
+                        chart.setActiveElements([]);
+                        if (chart.tooltip) {
+                            chart.tooltip.setActiveElements([], { x: 0, y: 0 });
+                        }
+                    }
+
+                    function getChartEventPosition(chart, event) {
+                        if (!event) {
+                            return null;
+                        }
+
+                        let x = typeof event.x === 'number' ? event.x : null;
+                        let y = typeof event.y === 'number' ? event.y : null;
+                        const nativeEvent = event.native || null;
+                        const canvas = chart.canvas;
+                        const canvasRect = canvas && typeof canvas.getBoundingClientRect === 'function'
+                            ? canvas.getBoundingClientRect()
+                            : null;
+
+                        if (nativeEvent && canvasRect && canvasRect.width && canvasRect.height) {
+                            const touch = nativeEvent.touches && nativeEvent.touches.length ? nativeEvent.touches[0] : null;
+                            const clientX = touch
+                                ? touch.clientX
+                                : (typeof nativeEvent.clientX === 'number' ? nativeEvent.clientX : null);
+                            const clientY = touch
+                                ? touch.clientY
+                                : (typeof nativeEvent.clientY === 'number' ? nativeEvent.clientY : null);
+
+                            if (typeof clientX === 'number' && typeof clientY === 'number') {
+                                x = ((clientX - canvasRect.left) / canvasRect.width) * chart.width;
+                                y = ((clientY - canvasRect.top) / canvasRect.height) * chart.height;
+                            }
+                        }
+
+                        if (typeof x !== 'number' || typeof y !== 'number') {
+                            return null;
+                        }
+
+                        return { x: x, y: y };
+                    }
+
+                    function getNearestDateIndex(chart, x) {
+                        const labels = chart.data.labels || [];
+                        if (!labels.length) {
+                            return null;
+                        }
+
+                        const lineMeta = chart.getDatasetMeta(1);
+                        const barMeta = chart.getDatasetMeta(0);
+                        const points = lineMeta && Array.isArray(lineMeta.data) && lineMeta.data.length === labels.length
+                            ? lineMeta.data
+                            : (barMeta && Array.isArray(barMeta.data) ? barMeta.data : []);
+
+                        if (!points.length) {
+                            return null;
+                        }
+
+                        let nearestIndex = 0;
+                        let smallestDistance = Infinity;
+                        for (let i = 0; i < points.length; i++) {
+                            const point = points[i];
+                            const pointX = point && typeof point.x === 'number' ? point.x : null;
+                            if (pointX === null) {
+                                continue;
+                            }
+                            const distance = Math.abs(x - pointX);
+                            if (distance < smallestDistance) {
+                                smallestDistance = distance;
+                                nearestIndex = i;
+                            }
+                        }
+
+                        return nearestIndex;
+                    }
+
+                    const exactDateHover = {
+                        id: 'adminInquiryExactDateHover',
+                        afterEvent: function (chart, args) {
+                            const event = args.event;
+                            const chartArea = chart.chartArea;
+                            if (!event || !chartArea) {
+                                return;
+                            }
+
+                            if (event.type === 'mouseout') {
+                                clearInquiryHover(chart);
+                                args.changed = true;
+                                return;
+                            }
+
+                            if (event.type !== 'mousemove' && event.type !== 'click' && event.type !== 'touchmove' && event.type !== 'touchstart') {
+                                return;
+                            }
+
+                            const position = getChartEventPosition(chart, event);
+                            if (!position) {
+                                clearInquiryHover(chart);
+                                args.changed = true;
+                                return;
+                            }
+
+                            if (position.x < chartArea.left || position.x > chartArea.right || position.y < chartArea.top || position.y > chartArea.bottom) {
+                                clearInquiryHover(chart);
+                                args.changed = true;
+                                return;
+                            }
+
+                            const nearestIndex = getNearestDateIndex(chart, position.x);
+                            if (nearestIndex === null) {
+                                clearInquiryHover(chart);
+                                args.changed = true;
+                                return;
+                            }
+
+                            const activeElements = chart.data.datasets.map(function (dataset, datasetIndex) {
+                                return { datasetIndex: datasetIndex, index: nearestIndex };
+                            });
+                            const anchorX = chart.scales.x.getPixelForTick(nearestIndex);
+                            const anchorY = chart.scales.y.getPixelForValue(Number(inquiryValues[nearestIndex] || 0));
+
+                            chart.setActiveElements(activeElements);
+                            if (chart.tooltip) {
+                                chart.tooltip.setActiveElements(activeElements, { x: anchorX, y: anchorY });
+                            }
+                            args.changed = true;
+                        }
+                    };
+
+                    const activeDateGuide = {
+                        id: 'adminInquiryHoverGuide',
+                        afterDatasetsDraw: function (chart) {
+                            const tooltip = chart.tooltip;
+                            if (!tooltip || tooltip.opacity === 0 || !tooltip.dataPoints || !tooltip.dataPoints.length) {
+                                return;
+                            }
+
+                            const activePoint = tooltip.dataPoints[0] && tooltip.dataPoints[0].element ? tooltip.dataPoints[0].element : null;
+                            if (!activePoint) {
+                                return;
+                            }
+
+                            const ctx = chart.ctx;
+                            const chartArea = chart.chartArea;
+                            ctx.save();
+                            ctx.beginPath();
+                            ctx.setLineDash([4, 4]);
+                            ctx.lineWidth = 1;
+                            ctx.strokeStyle = 'rgba(148, 163, 184, 0.5)';
+                            ctx.moveTo(activePoint.x, chartArea.top);
+                            ctx.lineTo(activePoint.x, chartArea.bottom);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    };
+
+                    new Chart(inquiryCanvas.getContext('2d'), {
+                        plugins: [exactDateHover, activeDateGuide],
+                        data: {
+                            labels: inquiryLabels,
+                            datasets: [
+                                {
+                                    type: 'bar',
+                                    label: 'Inquiries',
+                                    data: inquiryValues,
+                                    backgroundColor: columnColor,
+                                    borderColor: 'rgba(127, 90, 240, 0.18)',
+                                    borderWidth: 0,
+                                    borderRadius: 4,
+                                    borderSkipped: false,
+                                    barPercentage: 0.34,
+                                    categoryPercentage: 0.78,
+                                    maxBarThickness: 14,
+                                    pointStyle: 'circle'
+                                },
+                                {
+                                    type: 'line',
+                                    label: 'Trend',
+                                    data: inquiryValues,
+                                    borderColor: brandColor,
+                                    backgroundColor: brandColor,
+                                    borderWidth: 2.25,
+                                    pointBackgroundColor: brandColor,
+                                    pointBorderColor: brandColor,
+                                    pointBorderWidth: 0,
+                                    pointRadius: 0,
+                                    pointHoverRadius: 4,
+                                    pointHitRadius: 0,
+                                    pointStyle: 'circle',
+                                    cubicInterpolationMode: 'monotone',
+                                    tension: 0.42,
+                                    fill: false
+                                }
+                            ]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            responsive: true,
+                            interaction: {
+                                mode: 'index',
+                                axis: 'x',
+                                intersect: false
+                            },
+                            animation: {
+                                duration: 260,
+                                easing: 'easeOutCubic'
+                            },
+                            layout: {
+                                padding: {
+                                    top: 4,
+                                    bottom: 4
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    align: 'center',
+                                    labels: {
+                                        usePointStyle: true,
+                                        pointStyle: 'circle',
+                                        boxWidth: 9,
+                                        boxHeight: 9,
+                                        padding: 18,
+                                        color: '#334155',
+                                        font: {
+                                            size: 12,
+                                            weight: '500'
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    displayColors: true,
+                                    usePointStyle: true,
+                                    backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                                    titleColor: '#ffffff',
+                                    bodyColor: '#ffffff',
+                                    padding: 12,
+                                    cornerRadius: 10,
+                                    callbacks: {
+                                        title: function (items) {
+                                            if (!items || !items.length) {
+                                                return '';
+                                            }
+                                            const item = items[0];
+                                            return tooltipLabels[item.dataIndex] || item.label || '';
+                                        },
+                                        label: function (context) {
+                                            const value = typeof context.parsed.y === 'number' ? context.parsed.y : 0;
+                                            return context.dataset.label + ': ' + Math.round(value);
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: {
+                                        display: false,
+                                        drawTicks: true,
+                                        tickLength: 4,
+                                        color: axisColor
+                                    },
+                                    border: {
+                                        display: true,
+                                        color: axisColor
+                                    },
+                                    ticks: {
+                                        color: '#8b95b5',
+                                        padding: 4,
+                                        font: {
+                                            size: showAllDayTicks ? 8 : (inquiryLabels.length > 10 ? 10 : 11),
+                                            weight: '500'
+                                        },
+                                        autoSkip: !showAllDayTicks,
+                                        maxTicksLimit: showAllDayTicks ? inquiryLabels.length : maxTickCount,
+                                        callback: function (value, index) {
+                                            const label = this.getLabelForValue(value);
+                                            if (showAllDayTicks) {
+                                                return label;
+                                            }
+                                            if (inquiryLabels.length <= maxTickCount) {
+                                                return label;
+                                            }
+                                            if (index === 0 || index === inquiryLabels.length - 1 || index % tickStep === 0) {
+                                                return label;
+                                            }
+                                            return '';
+                                        },
+                                        maxRotation: showAllDayTicks ? 50 : (inquiryLabels.length > 7 ? 35 : 0),
+                                        minRotation: showAllDayTicks ? 50 : (inquiryLabels.length > 7 ? 35 : 0)
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    suggestedMax: maxInquiryValue > 0 ? Math.max(maxInquiryValue + 1, Math.ceil(maxInquiryValue * 1.3)) : 1,
+                                    grid: {
+                                        color: gridColor,
+                                        borderDash: [4, 4],
+                                        drawBorder: false,
+                                        drawTicks: false
+                                    },
+                                    border: {
+                                        display: false
+                                    },
+                                    ticks: {
+                                        color: '#8b95b5',
+                                        padding: 6,
+                                        font: {
+                                            size: 10,
+                                            weight: '500'
+                                        },
+                                        stepSize: maxInquiryValue <= 6 ? 1 : undefined,
+                                        callback: function (value) {
+                                            return Math.round(value);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    if (inquiryWrapper) {
+                        inquiryWrapper.classList.remove('is-error');
+                    }
+                } catch (error) {
+                    console.error('Admin inquiry trend chart failed to render.', error);
+                    showChartFallback(inquiryWrapper, inquiryFallback, 'Unable to render inquiry trend chart.');
+                }
+            }
+
             if (!el) return;
 
-            const labels = @json(array_column($productConversion, 'label'));
-            const dataValues = @json(array_column($productConversion, 'count'));
+            const rawProducts = @json($productConversionDisplay->values());
+            const products = rawProducts
+                .map(function (item) {
+                    return {
+                        label: String(item.label || ''),
+                        count: Number(item.count || 0),
+                    };
+                })
+                .sort(function (a, b) {
+                    const aIsOthers = a.label.trim().toUpperCase() === 'OTHERS';
+                    const bIsOthers = b.label.trim().toUpperCase() === 'OTHERS';
+                    if (aIsOthers && !bIsOthers) return 1;
+                    if (!aIsOthers && bIsOthers) return -1;
+                    if (b.count !== a.count) return b.count - a.count;
+                    return a.label.localeCompare(b.label);
+                });
 
-            const productColorMap = {
-                'SQL ACCOUNT': '#662d91',
-                'SQL PAYROLL': '#cd2027',
-                'SQL PRODUCTION': '#662d91',
-                'MOBILE SALES': '#662d91',
-                'SQL ECOMMERCE': 'orange',
-                'SQL EBI WELLNESS POS': '#8cc63f',
-                'SQL X SUDUAI': '#111827',
-                'SQL X-STORE': 'orange',
-                'SQL VISION': '#c4b5fd',
-                'SQL HRMS': '#cd2027',
-                'OTHERS': '#64748b',
-            };
-            const getProductColor = (label) => {
-                const key = String(label || '').trim().toUpperCase();
-                return productColorMap[key] || '#64748b';
-            };
-            const barColors = labels.map(l => getProductColor(l));
+            const labels = products.map(function (item) { return item.label; });
+            const dataValues = products.map(function (item) { return item.count; });
+            const totalValue = dataValues.reduce(function (sum, value) { return sum + value; }, 0);
+            const maxValue = dataValues.length ? Math.max.apply(null, dataValues) : 0;
 
-            const yLabelBackgroundPlugin = {
-                id: 'yLabelBackground',
-                beforeDraw(chart, args, opts) {
-                    const yScale = chart.scales?.y;
-                    const labels = chart.data?.labels || [];
-                    if (!yScale || labels.length === 0) return;
+            const getPerformanceTone = function (value) {
+                const ratio = maxValue > 0 ? value / maxValue : 0;
+                if (ratio >= 0.67) {
+                    return { level: 'High', background: '#22c55e', border: '#16a34a' };
+                }
+                if (ratio >= 0.34) {
+                    return { level: 'Medium', background: '#f59e0b', border: '#d97706' };
+                }
+                return { level: 'Low', background: '#ef4444', border: '#dc2626' };
+            };
+
+            const toneMap = dataValues.map(function (value) {
+                return getPerformanceTone(value);
+            });
+            const barColors = toneMap.map(function (tone) { return tone.background; });
+            const borderColors = toneMap.map(function (tone) { return tone.border; });
+            const axisMax = maxValue > 0 ? Math.max(maxValue + 1, Math.ceil(maxValue * 1.35)) : 1;
+
+            const endValueLabels = {
+                id: 'endValueLabels',
+                afterDatasetsDraw(chart) {
+                    const meta = chart.getDatasetMeta(0);
+                    if (!meta || !meta.data || !meta.data.length) return;
+
                     const ctx = chart.ctx;
-                    const tickPadding = yScale.options?.ticks?.padding ?? 0;
-                    const toFont = (Chart.helpers && Chart.helpers.toFont)
-                        ? Chart.helpers.toFont
-                        : (fontSpec) => {
-                            const size = fontSpec?.size || 12;
-                            const family = fontSpec?.family || 'sans-serif';
-                            return { string: `${size}px ${family}`, lineHeight: fontSpec?.lineHeight || size };
-                        };
-                    const font = toFont(yScale.options?.ticks?.font);
-
+                    const chartArea = chart.chartArea;
                     ctx.save();
-                    ctx.font = font.string;
+                    ctx.font = '600 12px "Public Sans", sans-serif';
+                    ctx.fillStyle = '#475569';
                     ctx.textBaseline = 'middle';
-                    const padX = opts?.paddingX ?? 6;
-                    const padY = opts?.paddingY ?? 3;
-                    const alpha = opts?.alpha ?? 0.2;
-                    const xRight = yScale.right - tickPadding;
 
-                    labels.forEach((label, i) => {
-                        const y = yScale.getPixelForTick(i);
-                        if (!Number.isFinite(y)) return;
-                        const text = String(label);
+                    meta.data.forEach(function (bar, index) {
+                        const value = dataValues[index] || 0;
+                        const pct = totalValue > 0 ? Math.round((value / totalValue) * 100) : 0;
+                        const text = value + ' (' + pct + '%)';
                         const textWidth = ctx.measureText(text).width;
-                        const textHeight = font.lineHeight || 12;
-                        const w = textWidth + padX * 2;
-                        const h = textHeight + padY * 2;
-                        const x = xRight - w;
-                        const yTop = y - h / 2;
-                        const r = Math.min(6, h / 2);
-                        const color = barColors[i] || '#e5e7eb';
-
-                        ctx.globalAlpha = alpha;
-                        ctx.fillStyle = color;
-                        ctx.beginPath();
-                        ctx.moveTo(x + r, yTop);
-                        ctx.lineTo(x + w - r, yTop);
-                        ctx.quadraticCurveTo(x + w, yTop, x + w, yTop + r);
-                        ctx.lineTo(x + w, yTop + h - r);
-                        ctx.quadraticCurveTo(x + w, yTop + h, x + w - r, yTop + h);
-                        ctx.lineTo(x + r, yTop + h);
-                        ctx.quadraticCurveTo(x, yTop + h, x, yTop + h - r);
-                        ctx.lineTo(x, yTop + r);
-                        ctx.quadraticCurveTo(x, yTop, x + r, yTop);
-                        ctx.closePath();
-                        ctx.fill();
+                        let x = bar.x + 10;
+                        if (x + textWidth > chartArea.right - 4) {
+                            x = chartArea.right - textWidth - 4;
+                        }
+                        ctx.fillText(text, x, bar.y);
                     });
 
                     ctx.restore();
@@ -533,42 +1095,63 @@
                     axis: 'y',
                     label: 'Product conversions',
                     data: dataValues,
-                    backgroundColor: (ctx) => barColors[ctx.dataIndex] || '#64748b',
-                    borderColor: (ctx) => barColors[ctx.dataIndex] || '#64748b',
+                    backgroundColor: (ctx) => barColors[ctx.dataIndex] || '#94a3b8',
+                    borderColor: (ctx) => borderColors[ctx.dataIndex] || '#64748b',
                     borderWidth: 1,
-                    borderRadius: 999,
-                    barThickness: 30,
+                    borderSkipped: false,
+                    borderRadius: 8,
+                    barThickness: 18,
+                    maxBarThickness: 20,
+                    categoryPercentage: 0.78,
+                    barPercentage: 0.82,
+                    hoverBackgroundColor: (ctx) => borderColors[ctx.dataIndex] || '#475569',
                 }]
             };
 
             const config = {
                 type: 'bar',
                 data: data,
+                plugins: [endValueLabels],
                 options: {
                     indexAxis: 'y',
                     maintainAspectRatio: false,
                     responsive: true,
+                    animation: {
+                        duration: 260,
+                        easing: 'easeOutCubic'
+                    },
+                    layout: {
+                        padding: {
+                            top: 4,
+                            right: 72,
+                            bottom: 0,
+                            left: 6,
+                        }
+                    },
                     plugins: {
-                        yLabelBackground: {
-                            colors: barColors,
-                            alpha: 0.22,
-                            paddingX: 6,
-                            paddingY: 3,
-                        },
                         legend: {
                             display: false,
                         },
                         tooltip: {
                             displayColors: false,
-                            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                            backgroundColor: 'rgba(15, 23, 42, 0.94)',
                             titleColor: '#fff',
                             bodyColor: '#fff',
-                            padding: 10,
+                            padding: 12,
                             cornerRadius: 10,
                             callbacks: {
+                                title: function(items) {
+                                    return items[0] && items[0].label ? items[0].label : 'Product';
+                                },
                                 label: function(ctx) {
+                                    const index = ctx.dataIndex;
                                     const val = ctx.parsed && typeof ctx.parsed.x === 'number' ? Math.round(ctx.parsed.x) : 0;
-                                    return 'Count: ' + val;
+                                    const pct = totalValue > 0 ? ((val / totalValue) * 100).toFixed(1) : '0.0';
+                                    return 'Conversions: ' + val + ' (' + pct + '%)';
+                                },
+                                afterLabel: function(ctx) {
+                                    const tone = toneMap[ctx.dataIndex];
+                                    return tone ? 'Performance: ' + tone.level : '';
                                 }
                             }
                         }
@@ -576,13 +1159,23 @@
                     scales: {
                         x: {
                             beginAtZero: true,
+                            max: axisMax,
                             grid: {
-                                color: 'rgba(148, 163, 184, 0.20)',
+                                color: 'rgba(148, 163, 184, 0.10)',
                                 drawBorder: false,
+                                drawTicks: false,
+                            },
+                            border: {
+                                display: false,
                             },
                             ticks: {
-                                color: '#64748b',
-                                stepSize: 1,
+                                color: '#94a3b8',
+                                font: {
+                                    size: 11,
+                                    weight: '600',
+                                },
+                                padding: 8,
+                                stepSize: maxValue <= 10 ? 1 : undefined,
                                 callback: function(v) { return Math.round(v); }
                             }
                         },
@@ -590,16 +1183,31 @@
                             grid: {
                                 display: false,
                             },
+                            border: {
+                                display: false,
+                            },
                             ticks: {
-                                padding: 6,
+                                padding: 12,
                                 color: '#0f172a',
+                                font: {
+                                    size: 12,
+                                    weight: '600',
+                                },
                             },
                         },
                     },
                 },
             };
 
-            new Chart(el.getContext('2d'), config);
+            try {
+                new Chart(el.getContext('2d'), config);
+                if (productChartWrapper) {
+                    productChartWrapper.classList.remove('is-error');
+                }
+            } catch (error) {
+                console.error('Product conversion chart failed to render.', error);
+                showChartFallback(productChartWrapper, productChartFallback, 'Unable to render product conversion chart.');
+            }
         });
     </script>
 @endpush

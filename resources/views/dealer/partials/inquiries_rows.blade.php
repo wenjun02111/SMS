@@ -1,7 +1,10 @@
 @forelse($leads as $r)
     @php
         $productIds = [];
-        $attachmentUrls = is_array($r->ATTACHMENT_URLS ?? null) ? $r->ATTACHMENT_URLS : [];
+        $attachmentUrls = is_array($r->ATTACHMENT_URLS ?? null) ? array_values(array_filter($r->ATTACHMENT_URLS, function ($url) {
+            $normalized = is_string($url) ? trim($url) : '';
+            return $normalized !== '' && !in_array(strtolower($normalized), ['-', 'null', 'undefined', '#'], true);
+        })) : [];
         if (isset($r->PRODUCTID) && $r->PRODUCTID !== '' && $r->PRODUCTID !== null) {
             $ids = is_numeric($r->PRODUCTID) ? [(int) $r->PRODUCTID] : array_map('intval', array_filter(explode(',', (string) $r->PRODUCTID)));
             foreach ($ids as $id) {

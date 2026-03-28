@@ -4,16 +4,23 @@
   --color-fg-brand: #8b5cf6;
 }
 .reports-page {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   background: #f7f7ff;
   font-size: 115%;
+  min-height: 0;
   min-width: 0;
+  overflow-y: auto;
   overflow-x: hidden;
+  padding-right: 4px;
   text-align: left;
 }
 
 /* Single layout wrapper: uniform gap for 8 cards, Status Report, Product Conversion */
 .reports-page-layout {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: clamp(12px, 1.4vw, 20px);
   padding: 0px 28px 24px 24px;

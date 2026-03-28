@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\Concerns\ResolvesConsoleRedirects;
+use App\Http\Controllers\Concerns\UsesSetupLinkStore;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Routing\Controller;
-use Illuminate\View\View;
-use lbuchs\WebAuthn\WebAuthn;
 use lbuchs\WebAuthn\Binary\ByteBuffer;
+use lbuchs\WebAuthn\WebAuthn;
 
 class PasskeyController extends Controller
 {
+    use ResolvesConsoleRedirects;
+    use UsesSetupLinkStore;
+
     /**
      * Resolve rpId for WebAuthn. Localhost is normalized for development compatibility.
      */
@@ -36,16 +40,7 @@ class PasskeyController extends Controller
     }
 
     /**
-     * Show the "Add passkey" page (only for logged-in users who signed in with email/password).
-     */
-    public function showRegisterForm(): View
-    {
-        return view('auth.register-passkey');
-    }
-
-    /**
-     * Get registration options. Requires user to be logged in (email/password first);
-     * uses session email so passkey can only be registered after first login.
+     * Get registration options for the currently signed-in user.
      */
     public function registerOptions(Request $request): JsonResponse
     {
@@ -225,9 +220,28 @@ class PasskeyController extends Controller
             ]);
         }
 
-        $request->session()->forget(['passkey_challenge', 'passkey_register_user_id', 'passkey_register_email']);
+        $redirect = null;
+        $setupTokenUserId = trim((string) $request->session()->get('passkey_setup_token_user_id', ''));
+        $setupRequired = (bool) $request->session()->get('passkey_setup_required', false);
+        if ($setupRequired && $setupTokenUserId !== '' && hash_equals($setupTokenUserId, (string) $userId)) {
+            DB::update('UPDATE "USERS" SET "LASTLOGIN" = CURRENT_TIMESTAMP WHERE "USERID" = ?', [$userId]);
+            $this->setupLinkStore()->forgetSetupToken($setupTokenUserId);
+            $redirect = $this->dashboardPathForRole($request, (string) $request->session()->get('user_role', 'dealer'));
+        }
 
-        return response()->json(['success' => true, 'message' => 'Passkey registered successfully.']);
+        $request->session()->forget([
+            'passkey_challenge',
+            'passkey_register_user_id',
+            'passkey_register_email',
+            'passkey_setup_required',
+            'passkey_setup_token_user_id',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Passkey registered successfully.',
+            'redirect' => $redirect,
+        ]);
     }
 
     /**
@@ -372,16 +386,15 @@ class PasskeyController extends Controller
         $request->session()->put('user_id', $user->USERID);
         $request->session()->put('user_email', $user->EMAIL);
         $request->session()->put('user_alias', $user->ALIAS ?? '');
-        $request->session()->put('user_role', $user->SYSTEMROLE === 'Admin' ? 'admin' : 'dealer');
+        $role = $this->systemRoleToSessionRole((string) ($user->SYSTEMROLE ?? ''));
+        $request->session()->put('user_role', $role);
+        $request->session()->forget([
+            'passkey_setup_required',
+            'passkey_setup_token_user_id',
+            'show_register_passkey',
+        ]);
 
-        $redirect = $user->SYSTEMROLE === 'Admin' ? '/admin/dashboard' : '/dealer/dashboard';
-        if ($user->SYSTEMROLE !== 'Admin') {
-            $intended = $request->session()->get('url.intended');
-            if ($intended && str_starts_with(parse_url($intended, PHP_URL_PATH) ?: '', '/dealer/')) {
-                $redirect = $intended;
-                $request->session()->forget('url.intended');
-            }
-        }
+        $redirect = $this->dashboardPathForRole($request, $role);
 
         return response()->json(['success' => true, 'redirect' => $redirect]);
     }

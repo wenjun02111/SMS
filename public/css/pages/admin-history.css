@@ -39,10 +39,79 @@
 
 .history-toolbar {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.history-date-filter-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.history-date-range-field,
+.history-date-input-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4c1d95;
+}
+
+.history-date-range-select,
+.history-date-input-field input[type="date"] {
+  min-height: 39px;
+  padding: 8px 12px;
+  border: 1px solid #d8c7ff;
+  border-radius: 12px;
+  background: #fff;
+  color: #3b2f63;
+  font-size: 13px;
+  box-sizing: border-box;
+}
+
+.history-date-range-select {
+  min-width: 150px;
+}
+
+.history-custom-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.history-custom-range[hidden] {
+  display: none;
+}
+
+.history-apply-btn {
+  min-width: 86px;
+}
+
+.history-date-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.history-date-summary strong {
+  color: #4c1d95;
+}
+
+.history-toolbar-actions {
+  display: inline-flex;
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
@@ -101,11 +170,47 @@
 
 @media (max-width: 768px) {
   .history-toolbar {
-    align-items: center;
-    justify-content: flex-end;
+    align-items: stretch;
+  }
+
+  .history-date-filter-form,
+  .history-toolbar-actions {
+    width: 100%;
+  }
+
+  .history-date-filter-form {
+    align-items: stretch;
+  }
+
+  .history-date-range-field,
+  .history-custom-range,
+  .history-date-summary {
+    width: 100%;
+  }
+
+  .history-date-range-field,
+  .history-date-input-field {
+    justify-content: space-between;
+  }
+
+  .history-date-range-select,
+  .history-date-input-field input[type="date"] {
+    width: 100%;
+  }
+
+  .history-custom-range {
+    align-items: stretch;
+  }
+
+  .history-apply-btn {
+    width: 100%;
   }
 
   .history-checkbox-filter {
     width: auto;
+  }
+
+  .history-toolbar-actions {
+    justify-content: flex-end;
   }
 }

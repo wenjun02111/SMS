@@ -27,7 +27,9 @@
                 >{{ $buttonLabel }}</a>
             </p>
             <p>{{ $expiryLine }}</p>
-            <p>{{ $ignoreLine }}</p>
+            @if (!empty($ignoreLine))
+                <p>{{ $ignoreLine }}</p>
+            @endif
             <p>Thank you.<br>{{ $systemName }}</p>
         </div>
     </div>

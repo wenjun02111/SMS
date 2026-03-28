@@ -10,6 +10,7 @@
     <link rel="apple-touch-icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260326-03">
+    <script src="{{ asset('js/passkey-registration.js') }}"></script>
     <script>
         // Apply sidebar state ASAP (prevents flicker on page navigation)
         (function () {
@@ -76,6 +77,7 @@
                             @if(session('user_alias'))
                                 <div class="dashboard-profile-alias">{{ strtoupper(session('user_alias')) }}</div>
                             @endif
+                            <button type="button" class="dashboard-profile-passkey-link" id="profileRegisterPasskeyBtn">Register passkey</button>
                             <form action="{{ route('logout') }}" method="POST" class="dashboard-profile-signout-form">
                                 @csrf
                                 <button type="submit" class="dashboard-profile-signout-btn">Sign out</button>
@@ -93,18 +95,26 @@
             <div class="login-message login-success" style="margin:16px;" data-flash-message="1">{{ session('success') }}</div>
         @endif
 
-        @if (session('show_passkey_prompt'))
-        <div class="passkey-prompt-overlay" id="passkeyPromptOverlay" role="dialog" aria-modal="true" aria-labelledby="passkeyPromptTitle">
-            <div class="passkey-prompt-window">
-                <h2 class="passkey-prompt-title" id="passkeyPromptTitle">Register a passkey?</h2>
-                <p class="passkey-prompt-text">You can register a passkey to sign in quickly next time without entering your password.</p>
-                <div class="passkey-prompt-actions">
-                    <a href="{{ route('passkey.register.form') }}" class="login-primary-btn passkey-prompt-btn">Register passkey</a>
-                    <button type="button" class="passkey-prompt-skip" id="passkeyPromptSkip">Not now</button>
+        <div class="dashboard-passkey-quick-modal" id="profilePasskeyQuickModal" hidden>
+            <div class="dashboard-passkey-quick-card" role="dialog" aria-modal="true" aria-labelledby="profilePasskeyQuickTitle">
+                <button type="button" class="dashboard-passkey-quick-close" id="profilePasskeyQuickClose" aria-label="Close">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                </button>
+                <h3 class="dashboard-passkey-quick-title" id="profilePasskeyQuickTitle">Register passkey</h3>
+                <p class="dashboard-passkey-quick-subtitle">Choose where to save your new passkey.</p>
+                <div class="dashboard-passkey-quick-actions">
+                    <button type="button" class="login-primary-btn" id="profilePasskeyDeviceBtn" style="margin-top: 0;">
+                        <i class="bi bi-laptop" aria-hidden="true"></i>
+                        <span>Register On This Device</span>
+                    </button>
+                    <button type="button" class="login-passkey-btn" id="profilePasskeyPhoneBtn">
+                        <i class="bi bi-phone" aria-hidden="true"></i>
+                        <span>Use Phone / Scan QR</span>
+                    </button>
                 </div>
+                <div class="dashboard-passkey-quick-status" id="profilePasskeyQuickStatus" hidden></div>
             </div>
         </div>
-        @endif
 
         <div class="dashboard-main-body">
             @yield('content')
@@ -137,6 +147,130 @@
 
     var trigger = document.getElementById('profileDropdownTrigger');
     var menu = document.getElementById('profileDropdownMenu');
+    var passkeyTrigger = document.getElementById('profileRegisterPasskeyBtn');
+    var passkeyModal = document.getElementById('profilePasskeyQuickModal');
+    var passkeyCloseBtn = document.getElementById('profilePasskeyQuickClose');
+    var passkeyDeviceBtn = document.getElementById('profilePasskeyDeviceBtn');
+    var passkeyPhoneBtn = document.getElementById('profilePasskeyPhoneBtn');
+    var passkeyStatus = document.getElementById('profilePasskeyQuickStatus');
+    var passkeyUtils = window.SQLSMSPasskey;
+
+    function hideProfileMenu() {
+        if (!menu || !trigger) return;
+        menu.hidden = true;
+        trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function showFlashMessage(type, message) {
+        var mainBody = document.querySelector('.dashboard-main-body');
+        var host = document.querySelector('.dashboard-main');
+        if (!mainBody || !host) {
+            alert(message);
+            return;
+        }
+
+        var flash = document.createElement('div');
+        flash.className = 'login-message ' + (type === 'error' ? 'login-error' : 'login-success');
+        flash.style.margin = '16px';
+        flash.textContent = message;
+        host.insertBefore(flash, mainBody);
+
+        setTimeout(function() {
+            flash.style.transition = 'opacity 200ms ease';
+            flash.style.opacity = '0';
+            setTimeout(function() {
+                if (flash.parentNode) {
+                    flash.parentNode.removeChild(flash);
+                }
+            }, 250);
+        }, 3000);
+    }
+
+    function setPasskeyModalOpen(open) {
+        if (!passkeyModal) return;
+        passkeyModal.hidden = !open;
+        document.body.classList.toggle('dashboard-passkey-modal-open', !!open);
+        if (!open) {
+            setPasskeyStatus('', '');
+            setPasskeyButtonsDisabled(false);
+        }
+    }
+
+    function setPasskeyButtonsDisabled(disabled) {
+        [passkeyDeviceBtn, passkeyPhoneBtn].forEach(function(button) {
+            if (button) button.disabled = !!disabled;
+        });
+    }
+
+    function setPasskeyStatus(type, message) {
+        if (!passkeyStatus) return;
+        passkeyStatus.hidden = !message;
+        passkeyStatus.className = 'dashboard-passkey-quick-status';
+        if (!message) {
+            passkeyStatus.textContent = '';
+            return;
+        }
+        passkeyStatus.classList.add('login-message', type === 'error' ? 'login-error' : 'login-success');
+        passkeyStatus.textContent = message;
+    }
+
+    function getCsrfToken() {
+        var meta = document.querySelector('meta[name="csrf-token"]');
+        return meta ? meta.getAttribute('content') : '';
+    }
+
+    function passkeyErrorMessage(err) {
+        if (err && err.cancelled) {
+            return '';
+        }
+        if (err && err.name === 'NotAllowedError') {
+            return 'Passkey registration was cancelled.';
+        }
+        if (err && err.message) {
+            return err.message;
+        }
+        return 'Passkey registration failed.';
+    }
+
+    function startProfilePasskeyRegistration(preference) {
+        if (!window.PublicKeyCredential || !passkeyUtils) {
+            setPasskeyStatus('error', 'Passkeys are not supported in this browser.');
+            return;
+        }
+
+        setPasskeyStatus('', '');
+        setPasskeyButtonsDisabled(true);
+
+        var nickname = preference === 'phone' ? 'Phone passkey' : 'This device';
+
+        passkeyUtils.register({
+            preference: preference,
+            optionsUrl: '{{ route("passkey.register.options") }}',
+            verifyUrl: '{{ route("passkey.register.verify") }}',
+            csrfToken: getCsrfToken(),
+            getNickname: function () {
+                return nickname;
+            }
+        })
+        .then(function(result) {
+            setPasskeyModalOpen(false);
+
+            if (result && result.redirect) {
+                window.location.href = result.redirect;
+                return;
+            }
+
+            showFlashMessage('success', 'Passkey registered successfully.');
+        })
+        .catch(function(err) {
+            setPasskeyButtonsDisabled(false);
+            var message = passkeyErrorMessage(err);
+            if (message) {
+                setPasskeyStatus('error', message);
+            }
+        });
+    }
+
     if (trigger && menu) {
         function toggle() {
             var open = !menu.hidden;
@@ -149,18 +283,51 @@
             toggle();
         });
         document.addEventListener('click', function() {
-            if (!menu.hidden) { menu.hidden = true; trigger.setAttribute('aria-expanded', 'false'); }
+            hideProfileMenu();
         });
         menu.addEventListener('click', function(e) { e.stopPropagation(); });
     }
-    var overlay = document.getElementById('passkeyPromptOverlay');
-    var skipBtn = document.getElementById('passkeyPromptSkip');
-    if (overlay && skipBtn) {
-        skipBtn.addEventListener('click', function() { overlay.remove(); });
-        overlay.addEventListener('click', function(e) {
-            if (e.target === overlay) overlay.remove();
+
+    if (passkeyTrigger) {
+        passkeyTrigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            hideProfileMenu();
+            setPasskeyModalOpen(true);
         });
     }
+
+    if (passkeyCloseBtn) {
+        passkeyCloseBtn.addEventListener('click', function() {
+            setPasskeyModalOpen(false);
+        });
+    }
+
+    if (passkeyModal) {
+        passkeyModal.addEventListener('click', function(e) {
+            if (e.target === passkeyModal) {
+                setPasskeyModalOpen(false);
+            }
+        });
+    }
+
+    if (passkeyDeviceBtn) {
+        passkeyDeviceBtn.addEventListener('click', function() {
+            startProfilePasskeyRegistration('device');
+        });
+    }
+
+    if (passkeyPhoneBtn) {
+        passkeyPhoneBtn.addEventListener('click', function() {
+            startProfilePasskeyRegistration('phone');
+        });
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && passkeyModal && !passkeyModal.hidden) {
+            setPasskeyModalOpen(false);
+        }
+    });
 
     // Dealer notifications dropdown (bell) - LocalStorage Version
     var nTrigger = document.getElementById('dealerNotificationsTrigger');
@@ -598,19 +765,101 @@
         });
     })();
 
-    // Strict client-side idle timeout: redirect to login after SESSION_LIFETIME minutes
-    // This handles the "no requests made" case where server can't enforce timeout.
+    // Shared idle handling:
+    // 1) refresh the current page every 1 minute if there has been no user activity
+    // 2) still enforce client-side logout after the configured session lifetime
     var isLoggedIn = {{ session()->has('user_role') ? 'true' : 'false' }};
     if (isLoggedIn) {
         var lifetimeMinutes = {{ (int) config('session.lifetime', 120) }};
         var maxIdleMs = Math.max(1, lifetimeMinutes) * 60 * 1000;
-        var lastActivity = Date.now();
-        function bump() { lastActivity = Date.now(); }
+        var autoRefreshMs = 1 * 60 * 1000;
+        var storagePrefix = 'dashboard-idle.{{ session()->getId() }}.';
+        var activityKey = storagePrefix + 'last-activity';
+        var idleRefreshKey = storagePrefix + 'last-refresh';
+        var refreshTimer = null;
+
+        function readStoredTime(key) {
+            try {
+                var raw = sessionStorage.getItem(key);
+                var value = parseInt(raw, 10);
+                return Number.isFinite(value) && value > 0 ? value : 0;
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        function writeStoredTime(key, value) {
+            try {
+                sessionStorage.setItem(key, String(value));
+            } catch (e) {}
+        }
+
+        function removeStoredTime(key) {
+            try {
+                sessionStorage.removeItem(key);
+            } catch (e) {}
+        }
+
+        var lastActivity = readStoredTime(activityKey) || Date.now();
+        writeStoredTime(activityKey, lastActivity);
+
+        function getLastIdleRefresh() {
+            return readStoredTime(idleRefreshKey);
+        }
+
+        function getRefreshReferenceTime() {
+            return Math.max(lastActivity, getLastIdleRefresh());
+        }
+
+        function clearRefreshTimer() {
+            if (refreshTimer) {
+                window.clearTimeout(refreshTimer);
+                refreshTimer = null;
+            }
+        }
+
+        function scheduleIdleRefresh() {
+            clearRefreshTimer();
+            var elapsed = Date.now() - getRefreshReferenceTime();
+            var waitMs = Math.max(1000, autoRefreshMs - elapsed);
+            refreshTimer = window.setTimeout(function() {
+                var idleSinceRefreshPoint = Date.now() - getRefreshReferenceTime();
+                if (idleSinceRefreshPoint >= autoRefreshMs) {
+                    writeStoredTime(idleRefreshKey, Date.now());
+                    window.location.reload();
+                    return;
+                }
+                scheduleIdleRefresh();
+            }, waitMs);
+        }
+
+        function bump() {
+            lastActivity = Date.now();
+            writeStoredTime(activityKey, lastActivity);
+            removeStoredTime(idleRefreshKey);
+            scheduleIdleRefresh();
+        }
+
         ['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(function(evt) {
             document.addEventListener(evt, bump, { passive: true });
         });
+
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                scheduleIdleRefresh();
+            }
+        });
+
+        scheduleIdleRefresh();
+
         setInterval(function() {
+            var storedActivity = readStoredTime(activityKey);
+            if (storedActivity > 0) {
+                lastActivity = storedActivity;
+            }
+
             if ((Date.now() - lastActivity) > maxIdleMs) {
+                clearRefreshTimer();
                 // Best-effort logout, then go to login.
                 var token = (document.querySelector('meta[name="csrf-token"]') || {}).content;
                 if (token) {
