@@ -534,6 +534,10 @@ body {
   transition: opacity 0.45s ease, visibility 0.45s ease;
 }
 
+.login-splash[hidden] {
+  display: none !important;
+}
+
 .login-splash.is-iris-out {
   opacity: 0;
 }

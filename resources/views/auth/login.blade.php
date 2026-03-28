@@ -11,17 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260328-03">
     <script src="{{ asset('js/passkey-registration.js') }}"></script>
-    <script>
-        (function () {
-            try {
-                if (window.sessionStorage && window.sessionStorage.getItem('loginSplashShown') === '1') {
-                    document.documentElement.classList.add('login-splash-skip');
-                }
-            } catch (e) {}
-        })();
-    </script>
 </head>
 <body>
 <div class="login-root{{ !empty($show_register_passkey) ? ' login-root-passkey-setup' : '' }}">
@@ -150,6 +141,14 @@
 
 <script>
 (function () {
+    var loginSplash = document.getElementById('loginSplash');
+    if (loginSplash) {
+        window.setTimeout(function () {
+            loginSplash.hidden = true;
+            loginSplash.setAttribute('aria-hidden', 'true');
+        }, 2000);
+    }
+
     var registerPasskeyCountdown = document.getElementById('registerPasskeyCountdown');
     var skipToDashboardLink = document.getElementById('skipToDashboardLink');
     var registerPasskeyCountdownTimer = null;
@@ -182,57 +181,6 @@
 
     if (skipToDashboardLink) {
         skipToDashboardLink.addEventListener('click', stopRegisterPasskeyCountdown);
-    }
-
-    var loginSplash = document.getElementById('loginSplash');
-    var loginSplashPanel = document.getElementById('loginSplashPanel');
-    var loginCard = document.querySelector('.login-main-layout .login-card');
-
-    function syncLoginSplashSize() {
-        if (!loginSplashPanel || !loginCard) {
-            return;
-        }
-
-        var rect = loginCard.getBoundingClientRect();
-        if (!rect.width || !rect.height) {
-            return;
-        }
-
-        loginSplashPanel.style.width = Math.round(rect.width) + 'px';
-        loginSplashPanel.style.maxWidth = Math.round(rect.width) + 'px';
-        loginSplashPanel.style.height = Math.round(rect.height) + 'px';
-        loginSplashPanel.style.minHeight = Math.round(rect.height) + 'px';
-    }
-
-    syncLoginSplashSize();
-    window.requestAnimationFrame(syncLoginSplashSize);
-    window.addEventListener('resize', syncLoginSplashSize);
-    window.addEventListener('load', syncLoginSplashSize);
-
-    if (loginSplash) {
-        var skipSplash = false;
-
-        try {
-            skipSplash = window.sessionStorage && window.sessionStorage.getItem('loginSplashShown') === '1';
-        } catch (e) {}
-
-        if (skipSplash) {
-            loginSplash.classList.add('is-hidden');
-            loginSplash.setAttribute('aria-hidden', 'true');
-        } else {
-            window.setTimeout(function () {
-                loginSplash.classList.add('is-iris-out');
-                window.setTimeout(function () {
-                    loginSplash.classList.add('is-hidden');
-                    loginSplash.setAttribute('aria-hidden', 'true');
-                    try {
-                        if (window.sessionStorage) {
-                            window.sessionStorage.setItem('loginSplashShown', '1');
-                        }
-                    } catch (e) {}
-                }, 500);
-            }, 2000);
-        }
     }
 
     var passkeyUtils = window.SQLSMSPasskey;
