@@ -100,6 +100,58 @@
             color: #0f172a;
         }
 
+        .admin-inquiry-trend-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 18px;
+            padding: 10px 0 4px;
+        }
+
+        .admin-inquiry-trend-legend-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.16s ease, color 0.16s ease;
+        }
+
+        .admin-inquiry-trend-legend-button:hover {
+            color: #0f172a;
+        }
+
+        .admin-inquiry-trend-legend-button.is-hidden {
+            opacity: 0.45;
+        }
+
+        .admin-inquiry-trend-legend-button:focus-visible {
+            outline: 2px solid rgba(127, 90, 240, 0.22);
+            outline-offset: 4px;
+            border-radius: 999px;
+        }
+
+        .admin-inquiry-trend-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            flex-shrink: 0;
+        }
+
+        .admin-inquiry-trend-legend-dot--inquiries {
+            background: rgba(127, 90, 240, 0.32);
+        }
+
+        .admin-inquiry-trend-legend-dot--trend {
+            background: #7f5af0;
+        }
+
         .reports-page .reports-inquiry-section .dashboard-panel-body,
         .reports-page .reports-status-section .dashboard-panel-body,
         .reports-page .reports-product-section .dashboard-panel-body {
@@ -456,6 +508,22 @@
                         <p class="dealer-reports-chart-fallback">Unable to load inquiry trend chart.</p>
                         <canvas id="adminInquiryTrendChart"></canvas>
                     </div>
+                    <div class="admin-inquiry-trend-legend" id="adminInquiryTrendLegend">
+                        <button type="button"
+                                class="admin-inquiry-trend-legend-button"
+                                data-dataset-index="0"
+                                aria-pressed="true">
+                            <span class="admin-inquiry-trend-legend-dot admin-inquiry-trend-legend-dot--inquiries"></span>
+                            <span>Inquiries</span>
+                        </button>
+                        <button type="button"
+                                class="admin-inquiry-trend-legend-button"
+                                data-dataset-index="1"
+                                aria-pressed="true">
+                            <span class="admin-inquiry-trend-legend-dot admin-inquiry-trend-legend-dot--trend"></span>
+                            <span>Trend</span>
+                        </button>
+                    </div>
                 @endif
             </div>
         </div>
@@ -648,6 +716,7 @@
             const inquiryFallback = inquiryWrapper
                 ? inquiryWrapper.querySelector('.dealer-reports-chart-fallback')
                 : null;
+            const inquiryLegend = document.getElementById('adminInquiryTrendLegend');
 
             const el = document.getElementById('productConversionChart');
             const productChartWrapper = el
@@ -803,9 +872,18 @@
                                 return;
                             }
 
-                            const activeElements = chart.data.datasets.map(function (dataset, datasetIndex) {
-                                return { datasetIndex: datasetIndex, index: nearestIndex };
-                            });
+                            const activeElements = chart.data.datasets.reduce(function (elements, dataset, datasetIndex) {
+                                if (chart.isDatasetVisible(datasetIndex)) {
+                                    elements.push({ datasetIndex: datasetIndex, index: nearestIndex });
+                                }
+                                return elements;
+                            }, []);
+
+                            if (!activeElements.length) {
+                                clearInquiryHover(chart);
+                                args.changed = true;
+                                return;
+                            }
                             const anchorX = chart.scales.x.getPixelForTick(nearestIndex);
                             const anchorY = chart.scales.y.getPixelForValue(Number(inquiryValues[nearestIndex] || 0));
 
@@ -844,7 +922,7 @@
                         }
                     };
 
-                    new Chart(inquiryCanvas.getContext('2d'), {
+                    const inquiryChart = new Chart(inquiryCanvas.getContext('2d'), {
                         plugins: [exactDateHover, activeDateGuide],
                         data: {
                             labels: inquiryLabels,
@@ -903,21 +981,7 @@
                             },
                             plugins: {
                                 legend: {
-                                    display: true,
-                                    position: 'bottom',
-                                    align: 'center',
-                                    labels: {
-                                        usePointStyle: true,
-                                        pointStyle: 'circle',
-                                        boxWidth: 9,
-                                        boxHeight: 9,
-                                        padding: 18,
-                                        color: '#334155',
-                                        font: {
-                                            size: 12,
-                                            weight: '500'
-                                        }
-                                    }
+                                    display: false
                                 },
                                 tooltip: {
                                     displayColors: true,
@@ -1008,6 +1072,31 @@
                             }
                         }
                     });
+
+                    if (inquiryLegend) {
+                        const legendButtons = Array.from(inquiryLegend.querySelectorAll('[data-dataset-index]'));
+
+                        const syncInquiryLegend = function () {
+                            legendButtons.forEach(function (button) {
+                                const datasetIndex = Number(button.getAttribute('data-dataset-index'));
+                                const isVisible = inquiryChart.isDatasetVisible(datasetIndex);
+                                button.classList.toggle('is-hidden', !isVisible);
+                                button.setAttribute('aria-pressed', isVisible ? 'true' : 'false');
+                            });
+                        };
+
+                        legendButtons.forEach(function (button) {
+                            button.addEventListener('click', function () {
+                                const datasetIndex = Number(button.getAttribute('data-dataset-index'));
+                                inquiryChart.setDatasetVisibility(datasetIndex, !inquiryChart.isDatasetVisible(datasetIndex));
+                                clearInquiryHover(inquiryChart);
+                                inquiryChart.update();
+                                syncInquiryLegend();
+                            });
+                        });
+
+                        syncInquiryLegend();
+                    }
 
                     if (inquiryWrapper) {
                         inquiryWrapper.classList.remove('is-error');
