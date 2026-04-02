@@ -10,11 +10,9 @@ use App\Mail\UserPasskeySetupLink;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Carbon\Carbon;
@@ -3370,10 +3368,27 @@ class AdminController extends Controller
         }
     }
 
-    public function maintainUsers(Request $request): View|RedirectResponse|JsonResponse
+    private function ensureMaintainUsersAccess(Request $request): ?RedirectResponse
     {
         if (strtolower((string) $request->session()->get('user_role')) === 'manager') {
             return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access Maintain Users.');
+        }
+
+        return null;
+    }
+
+    private function loadMaintainUserPasskeyTarget(string $userid): ?object
+    {
+        return DB::selectOne(
+            'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
+            [$userid]
+        );
+    }
+
+    public function maintainUsers(Request $request): View|RedirectResponse|JsonResponse
+    {
+        if ($denied = $this->ensureMaintainUsersAccess($request)) {
+            return $denied;
         }
 
         $roleFilter = strtoupper(trim((string) $request->query('role', '')));
@@ -3480,8 +3495,8 @@ class AdminController extends Controller
 
     public function maintainUsersStore(Request $request): RedirectResponse
     {
-        if (strtolower((string) $request->session()->get('user_role')) === 'manager') {
-            return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access Maintain Users.');
+        if ($denied = $this->ensureMaintainUsersAccess($request)) {
+            return $denied;
         }
 
         $validated = $request->validate([
@@ -3554,10 +3569,7 @@ class AdminController extends Controller
         $createAction = trim((string) $request->input('CREATE_ACTION', 'create'));
         if ($createAction === 'create_email' && $createdUser && trim((string) ($createdUser->USERID ?? '')) !== '') {
             try {
-                $newUser = DB::selectOne(
-                    'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
-                    [(string) $createdUser->USERID]
-                );
+                $newUser = $this->loadMaintainUserPasskeyTarget((string) $createdUser->USERID);
 
                 if (!$newUser || !$this->sendMaintainUserPasskeySetupLink($newUser)) {
                     return redirect()->route('admin.maintain-users')->with('error', 'User created, but failed to send passkey setup link email.');
@@ -3575,8 +3587,8 @@ class AdminController extends Controller
 
     public function maintainUsersUpdate(Request $request, string $userid): RedirectResponse
     {
-        if (strtolower((string) $request->session()->get('user_role')) === 'manager') {
-            return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access Maintain Users.');
+        if ($denied = $this->ensureMaintainUsersAccess($request)) {
+            return $denied;
         }
 
         $existing = DB::selectOne('SELECT "USERID","SYSTEMROLE" FROM "USERS" WHERE "USERID" = ?', [$userid]);
@@ -3690,10 +3702,7 @@ class AdminController extends Controller
         $passkeySetupLinkSent = false;
         if ($sendPasskeySetupLink) {
             try {
-                $updatedUser = DB::selectOne(
-                    'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
-                    [$userid]
-                );
+                $updatedUser = $this->loadMaintainUserPasskeyTarget($userid);
                 if (!$updatedUser || trim((string) ($updatedUser->EMAIL ?? '')) === '') {
                     return redirect()->route('admin.maintain-users')->with('error', 'User updated, but passkey setup link could not be sent because the account is missing email data.');
                 }
@@ -3718,14 +3727,11 @@ class AdminController extends Controller
 
     public function maintainUsersSendPasskeySetupLink(Request $request, string $userid): RedirectResponse
     {
-        if (strtolower((string) $request->session()->get('user_role')) === 'manager') {
-            return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access Maintain Users.');
+        if ($denied = $this->ensureMaintainUsersAccess($request)) {
+            return $denied;
         }
 
-        $user = DB::selectOne(
-            'SELECT "USERID","EMAIL","ALIAS","COMPANY","LASTLOGIN","ISACTIVE" FROM "USERS" WHERE "USERID" = ?',
-            [$userid]
-        );
+        $user = $this->loadMaintainUserPasskeyTarget($userid);
 
         if (!$user) {
             return redirect()->route('admin.maintain-users')->with('error', 'User not found.');
@@ -3747,8 +3753,8 @@ class AdminController extends Controller
 
     public function maintainUsersSendPasskeySetupLinks(Request $request): RedirectResponse
     {
-        if (strtolower((string) $request->session()->get('user_role')) === 'manager') {
-            return redirect()->route('admin.dashboard')->with('error', 'You do not have permission to access Maintain Users.');
+        if ($denied = $this->ensureMaintainUsersAccess($request)) {
+            return $denied;
         }
 
         $selectedUserIds = array_values(array_unique(array_map(
