@@ -9,7 +9,7 @@
     <link rel="shortcut icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="apple-touch-icon" href="{{ asset('sql-logo.png') }}?v=20260318">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260402-04">
+<link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260403-02">
     <script src="{{ asset('js/passkey-registration.js') }}"></script>
     <script>
         // Apply sidebar state ASAP (prevents flicker on page navigation)

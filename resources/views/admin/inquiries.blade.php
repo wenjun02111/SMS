@@ -7,9 +7,9 @@
 @php
     $assignUndo = session('assign_undo');
     $assignEmailPending = session('assign_email_pending');
-    $incomingStatusFilterOptions = ['Open'];
+    $incomingStatusFilterOptions = ['Created'];
     $assignedStatusFilterOptions = ['Followup', 'Demo', 'Confirmed', 'Completed', 'Rewarded', 'Failed'];
-    $allStatusFilterOptions = ['Open', 'Pending', 'Followup', 'Demo', 'Confirmed', 'Completed', 'Rewarded', 'Failed'];
+    $allStatusFilterOptions = ['Created', 'Pending', 'Followup', 'Demo', 'Confirmed', 'Completed', 'Rewarded', 'Failed'];
     $allInquiryCount = (int) ($allTotal ?? count($allRows ?? []));
 @endphp
 <div class="inquiries-page-wrap">
@@ -17,7 +17,8 @@
 <div id="assignUndoToast" class="assign-undo-toast assign-undo-toast-hidden"
      data-lead-id="{{ $assignUndo['lead_id'] ?? '' }}"
      data-prev-assigned-to="{{ $assignUndo['prev_assigned_to'] ?? '' }}"
-     data-new-assigned-to="{{ $assignUndo['new_assigned_to'] ?? '' }}">
+     data-new-assigned-to="{{ $assignUndo['new_assigned_to'] ?? '' }}"
+     data-prev-lastmodified="{{ $assignUndo['prev_lastmodified'] ?? '' }}">
     <span class="assign-undo-message">
         Lead #SQL-{{ $assignUndo['lead_id'] ?? '' }} assigned.
     </span>
@@ -28,6 +29,7 @@
     @csrf
     <input type="hidden" name="LEADID" id="assignUndoLeadId">
     <input type="hidden" name="PREV_ASSIGNED_TO" id="assignUndoPrevAssigned">
+    <input type="hidden" name="PREV_LASTMODIFIED" id="assignUndoPrevLastModified">
 </form>
 @endif
 
@@ -199,8 +201,9 @@
                     <td data-col="referralcode">{{ $r->REFERRALCODE ?? '—' }}</td>
                     @php
                         $rawStatus = strtoupper(trim((string)($r->CURRENTSTATUS ?? '')));
+                        $statusDisplay = $rawStatus === 'OPEN' ? 'CREATED' : ($rawStatus !== '' ? $rawStatus : 'PENDING');
                         $statusClass = 'inquiries-status-new';
-                        switch ($rawStatus) {
+                        switch ($statusDisplay) {
                             case 'CREATED':    $statusClass = 'inquiries-status-created'; break;
                             case 'PENDING':    $statusClass = 'inquiries-status-pending'; break;
                             case 'FOLLOWUP':   $statusClass = 'inquiries-status-followup'; break;
@@ -217,7 +220,7 @@
                             default:           $statusClass = 'inquiries-status-new'; break;
                         }
                     @endphp
-                    <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $rawStatus !== '' ? $rawStatus : 'PENDING' }}</span></td>
+                    <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $statusDisplay }}</span></td>
                     <td class="inquiries-col-action inquiries-action-cell">
                         @php
                             $acompany = trim((string)($r->COMPANYNAME ?? ''));
@@ -636,8 +639,58 @@
                                 <th><span class="inquiries-filter-wrap"><input type="text" class="inquiries-assign-filter" data-col="city"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                                 <th><span class="inquiries-filter-wrap"><input type="text" class="inquiries-assign-filter" data-col="email"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                                 <th><span class="inquiries-filter-wrap"><input type="text" class="inquiries-assign-filter" data-col="active"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                                <th><span class="inquiries-filter-wrap"><input type="text" class="inquiries-assign-filter" data-col="totallead"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
-                                <th><span class="inquiries-filter-wrap"><input type="text" class="inquiries-assign-filter" data-col="totalclosed"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
+                                <th>
+                                    <span class="inquiries-filter-wrap dealer-operator-search-wrap">
+                                        <span class="dealer-operator-search-box">
+                                            <button
+                                                type="button"
+                                                class="dealer-operator-btn"
+                                                data-col="totallead"
+                                                data-op="="
+                                                aria-haspopup="true"
+                                                aria-expanded="false"
+                                                title="Filter operator"
+                                            >
+                                                =
+                                            </button>
+                                            <div class="dealer-operator-dropdown" hidden>
+                                                <button type="button" data-op="=">= Equals</button>
+                                                <button type="button" data-op="!=">!= Does not equal</button>
+                                                <button type="button" data-op="<">&lt; Less than</button>
+                                                <button type="button" data-op="<=">&lt;= Less than or equal to</button>
+                                                <button type="button" data-op=">">&gt; Greater than</button>
+                                                <button type="button" data-op=">=">&gt;= Greater than or equal to</button>
+                                            </div>
+                                            <input type="text" class="inquiries-assign-filter" data-col="totallead" placeholder="0">
+                                        </span>
+                                    </span>
+                                </th>
+                                <th>
+                                    <span class="inquiries-filter-wrap dealer-operator-search-wrap">
+                                        <span class="dealer-operator-search-box">
+                                            <button
+                                                type="button"
+                                                class="dealer-operator-btn"
+                                                data-col="totalclosed"
+                                                data-op="="
+                                                aria-haspopup="true"
+                                                aria-expanded="false"
+                                                title="Filter operator"
+                                            >
+                                                =
+                                            </button>
+                                            <div class="dealer-operator-dropdown" hidden>
+                                                <button type="button" data-op="=">= Equals</button>
+                                                <button type="button" data-op="!=">!= Does not equal</button>
+                                                <button type="button" data-op="<">&lt; Less than</button>
+                                                <button type="button" data-op="<=">&lt;= Less than or equal to</button>
+                                                <button type="button" data-op=">">&gt; Greater than</button>
+                                                <button type="button" data-op=">=">&gt;= Greater than or equal to</button>
+                                            </div>
+                                            <input type="text" class="inquiries-assign-filter" data-col="totalclosed" placeholder="0">
+                                        </span>
+                                    </span>
+                                </th>
                                 <th><span class="inquiries-filter-wrap"><input type="text" class="inquiries-assign-filter" data-col="conversion"><i class="bi bi-search inquiries-filter-icon"></i></span></th>
                             </tr>
                         </thead>
@@ -659,25 +712,16 @@
                                 @endphp
                                 <tr class="inquiries-assign-dealer-row"
                                     data-assign-userid="{{ $uid }}"
-                                    data-assign-label="{{ e($label) }}"
-                                    data-f-email="{{ e(strtolower($email)) }}"
-                                    data-f-postcode="{{ e(strtolower($postcode)) }}"
-                                    data-f-city="{{ e(strtolower($city)) }}"
-                                    data-f-active="{{ e(strtolower($active)) }}"
-                                    data-f-company="{{ e(strtolower($company)) }}"
-                                    data-f-alias="{{ e(strtolower($alias)) }}"
-                                    data-f-totallead="{{ $totalLead }}"
-                                    data-f-totalclosed="{{ $totalClosed }}"
-                                    data-f-conversion="{{ strtolower($convLabel) }}">
-                                    <td>{{ $alias ?: '—' }}</td>
-                                    <td>{{ $company ?: '—' }}</td>
-                                    <td>{{ $postcode ?: '—' }}</td>
-                                    <td>{{ $city ?: '—' }}</td>
-                                    <td>{{ $email ?: '—' }}</td>
-                                    <td>{{ $active }}</td>
-                                    <td>{{ $totalLead }}</td>
-                                    <td>{{ $totalClosed }}</td>
-                                    <td>{{ $convLabel }}</td>
+                                    data-assign-label="{{ e($label) }}">
+                                    <td data-col="alias">{{ $alias ?: '—' }}</td>
+                                    <td data-col="company">{{ $company ?: '—' }}</td>
+                                    <td data-col="postcode">{{ $postcode ?: '—' }}</td>
+                                    <td data-col="city">{{ $city ?: '—' }}</td>
+                                    <td data-col="email">{{ $email ?: '—' }}</td>
+                                    <td data-col="active">{{ $active }}</td>
+                                    <td data-col="totallead">{{ $totalLead }}</td>
+                                    <td data-col="totalclosed">{{ $totalClosed }}</td>
+                                    <td data-col="conversion">{{ $convLabel }}</td>
                                 </tr>
                             @empty
                                 <tr><td colspan="9" class="inquiries-empty">No dealers found.</td></tr>
@@ -1011,13 +1055,16 @@ document.addEventListener('DOMContentLoaded', function() {
         var form = document.getElementById('assignUndoForm');
         var leadInput = document.getElementById('assignUndoLeadId');
         var prevInput = document.getElementById('assignUndoPrevAssigned');
-        if (!form || !leadInput || !prevInput) return;
+        var prevLastModifiedInput = document.getElementById('assignUndoPrevLastModified');
+        if (!form || !leadInput || !prevInput || !prevLastModifiedInput) return;
 
         var leadId = toast.getAttribute('data-lead-id') || '';
         var prevAssigned = toast.getAttribute('data-prev-assigned-to') || '';
+        var prevLastModified = toast.getAttribute('data-prev-lastmodified') || '';
         if (!leadId) return;
         leadInput.value = leadId;
         prevInput.value = prevAssigned;
+        prevLastModifiedInput.value = prevLastModified;
 
         toast.classList.remove('assign-undo-toast-hidden');
 
@@ -1465,7 +1512,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return '';
     };
 
-    var INQUIRY_NUMERIC_FILTER_COLS = ['users'];
+    var INQUIRY_NUMERIC_FILTER_COLS = ['users', 'totallead', 'totalclosed'];
 
     function parseInquiryFilterNumber(value) {
         var num = parseFloat(String(value || '').replace(/[^0-9.\-]/g, ''));
@@ -1475,6 +1522,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function normalizeInquiryStatusFilterValue(value) {
         var normalized = String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
         if (normalized === '' || normalized === 'all') return '';
+        if (normalized === 'open' || normalized === 'created') return 'created';
         if (normalized === 'follow up' || normalized === 'followup') return 'followup';
         if (normalized === 'confirmed' || normalized === 'case confirmed') return 'confirmed';
         if (normalized === 'completed' || normalized === 'case completed') return 'completed';
@@ -1660,7 +1708,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     document.addEventListener('click', function() {
-        [document.getElementById('unassignedTable'), document.getElementById('assignedTable'), document.getElementById('allTable')].forEach(function(tableEl) {
+        [document.getElementById('unassignedTable'), document.getElementById('assignedTable'), document.getElementById('allTable'), document.querySelector('#assignModal .inquiries-assign-dealers-table')].forEach(function(tableEl) {
             if (!tableEl) return;
             tableEl.querySelectorAll('.dealer-operator-dropdown').forEach(function(dropdown) { dropdown.hidden = true; });
             tableEl.querySelectorAll('.dealer-operator-btn').forEach(function(btn) { btn.setAttribute('aria-expanded', 'false'); });
@@ -1949,6 +1997,7 @@ document.addEventListener('DOMContentLoaded', function() {
     (function initAssignModal() {
         var modal = document.getElementById('assignModal');
         if (!modal) return;
+        var dealerTable = modal.querySelector('.inquiries-assign-dealers-table');
         var leadIdInput = document.getElementById('assignLeadId');
         var leadLabel = document.getElementById('assignLeadLabel');
         var hiddenTo = document.getElementById('assignToHidden');
@@ -1961,32 +2010,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (hiddenTo) hiddenTo.value = '';
             if (assignBtn) assignBtn.disabled = true;
             modal.querySelectorAll('.inquiries-assign-filter').forEach(function(inp) { inp.value = ''; });
+            resetInquiryOperatorMenus(dealerTable);
             modal.querySelectorAll('.inquiries-assign-dealer-row').forEach(function(r) { r.style.display = ''; });
             modal.querySelectorAll('.inquiries-assign-dealer-row').forEach(function(r) { r.classList.remove('selected'); });
             modal.hidden = false;
         }
 
         function applyDealerFilters() {
-            var filters = {};
-            modal.querySelectorAll('.inquiries-assign-filter').forEach(function(inp) {
-                var col = inp.getAttribute('data-col');
-                var val = (inp.value || '').toLowerCase().trim();
-                if (col && val) filters[col] = val;
-            });
+            var filters = collectInquiryColumnFilters(dealerTable, '.inquiries-assign-filter');
             modal.querySelectorAll('.inquiries-assign-dealer-row').forEach(function(row) {
-                var ok = true;
-                for (var col in filters) {
-                    var hay = (row.getAttribute('data-f-' + col) || '');
-                    if (hay.indexOf(filters[col]) === -1) { ok = false; break; }
-                }
-                row.style.display = ok ? '' : 'none';
+                row.style.display = inquiryRowMatchesColumnFilters(row, filters) ? '' : 'none';
             });
         }
 
         modal.querySelectorAll('.inquiries-assign-filter').forEach(function(inp) {
             inp.addEventListener('input', applyDealerFilters);
             inp.addEventListener('keyup', applyDealerFilters);
+            inp.addEventListener('change', applyDealerFilters);
         });
+        bindInquiryOperatorMenus(dealerTable, applyDealerFilters);
 
         document.addEventListener('click', function(e) {
             var btn = e.target && e.target.closest ? e.target.closest('[data-assign-lead]') : null;
@@ -2010,7 +2052,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     })();
 
-    // Delete inquiry (Incoming): confirm, then POST; show undo toast on success
+    // Delete inquiry (Incoming): delete immediately, then allow 7 seconds to undo
     (function initDeleteInquiry() {
         var baseUrl = '{{ route("admin.inquiries") }}';
         var deleteToast = document.getElementById('deleteUndoToast');
@@ -2020,6 +2062,14 @@ document.addEventListener('DOMContentLoaded', function() {
         var deleteUndoBtn = document.getElementById('deleteUndoBtn');
         var deleteUndoTimer = null;
 
+        function getTabCountValue(elementId) {
+            var el = document.getElementById(elementId);
+            if (!el) return 0;
+            var raw = String(el.textContent || '').replace(/[^\d-]/g, '');
+            var parsed = parseInt(raw || '0', 10);
+            return isNaN(parsed) ? 0 : parsed;
+        }
+
         function showDeleteUndoToast(leadId) {
             if (!deleteToast || !deleteToastMessage || !deleteUndoForm || !deleteUndoLeadId) return;
             deleteToastMessage.textContent = 'Lead #SQL-' + leadId + ' deleted.';
@@ -2027,10 +2077,10 @@ document.addEventListener('DOMContentLoaded', function() {
             deleteToast.style.display = '';
             deleteToast.classList.remove('assign-undo-toast-hidden');
             if (deleteUndoTimer) clearTimeout(deleteUndoTimer);
-            deleteUndoTimer = setTimeout(function() {
-                deleteToast.classList.add('assign-undo-toast-hidden');
-                deleteToast.style.display = 'none';
-            }, 5000);
+                deleteUndoTimer = setTimeout(function() {
+                    deleteToast.classList.add('assign-undo-toast-hidden');
+                    deleteToast.style.display = 'none';
+                }, 7000);
         }
 
         if (deleteUndoBtn && deleteUndoForm) {
@@ -2044,9 +2094,10 @@ document.addEventListener('DOMContentLoaded', function() {
             var btn = e.target && e.target.closest ? e.target.closest('.inquiries-delete-inquiry-btn') : null;
             if (!btn) return;
             e.preventDefault();
+            if (btn.disabled) return;
             var leadId = btn.getAttribute('data-lead-id');
             if (!leadId) return;
-            if (!confirm('Delete inquiry #SQL-' + leadId + '? You can undo this from the message below.')) return;
+            btn.disabled = true;
             var deleteUrl = baseUrl + '/' + leadId + '/delete';
             var csrf = document.querySelector('meta[name="csrf-token"]');
             var token = csrf ? csrf.getAttribute('content') : '';
@@ -2058,6 +2109,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (res.ok) {
                     var row = btn.closest('tr');
                     if (row) row.remove();
+                    setInquiryTabCount('incomingTabCount', getTabCountValue('incomingTabCount') - 1);
+                    setInquiryTabCount('allTabCount', getTabCountValue('allTabCount') - 1);
+                    if (typeof window.refreshIncomingPagination === 'function') window.refreshIncomingPagination();
                     showDeleteUndoToast(leadId);
                 } else {
                     res.json().catch(function() { return {}; }).then(function(d) {
@@ -2065,7 +2119,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         showInquiriesActionToast(message);
                     });
                 }
-            }).catch(function() { showInquiriesActionToast('Could not delete inquiry.'); });
+            }).catch(function() {
+                showInquiriesActionToast('Could not delete inquiry.');
+            }).finally(function() {
+                btn.disabled = false;
+            });
         });
     })();
 

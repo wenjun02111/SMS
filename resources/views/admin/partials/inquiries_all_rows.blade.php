@@ -11,8 +11,9 @@
         $addressDisplay = trim($addr1 . ' ' . $addr2);
         $assignedTo = trim((string) ($r->ASSIGNED_TO ?? ''));
         $rawStatus = strtoupper(trim((string) ($r->CURRENTSTATUS ?? '')));
+        $statusDisplay = $rawStatus === 'OPEN' ? 'CREATED' : ($rawStatus !== '' ? $rawStatus : 'PENDING');
         $statusClass = 'inquiries-status-new';
-        switch ($rawStatus) {
+        switch ($statusDisplay) {
             case 'CREATED': $statusClass = 'inquiries-status-created'; break;
             case 'PENDING':
             case 'ONGOING': $statusClass = 'inquiries-status-pending'; break;
@@ -29,7 +30,6 @@
             case 'FAILED': $statusClass = 'inquiries-status-failed'; break;
             default: $statusClass = 'inquiries-status-new'; break;
         }
-        $statusDisplay = $rawStatus !== '' ? $rawStatus : 'PENDING';
         $fullMsg = trim((string) ($r->DESCRIPTION ?? ''));
         $msgPreview = $fullMsg === '' ? '-' : (mb_strlen($fullMsg) > 30 ? (mb_substr($fullMsg, 0, 30) . '...') : $fullMsg);
         $isLongMsg = $fullMsg !== '' && mb_strlen($fullMsg) > 30;
@@ -59,7 +59,7 @@
         });
         $assignedAttachUrls = !empty($r->ASSIGNED_ATTACHMENT_URLS) && is_array($r->ASSIGNED_ATTACHMENT_URLS) ? $r->ASSIGNED_ATTACHMENT_URLS : [];
         $isAssignedRow = $assignedTo !== '';
-        $canAssignRow = !$isAssignedRow && $rawStatus === 'OPEN';
+        $canAssignRow = !$isAssignedRow && in_array($rawStatus, ['OPEN', 'CREATED'], true);
         $assignLeadLabel = $customerDisplay !== '-' ? $customerDisplay : ('#SQL-' . ($r->LEADID ?? ''));
     @endphp
     <td data-col="customername">{{ $customerDisplay }}</td>

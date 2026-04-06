@@ -2,7 +2,7 @@
 @section('title', 'Report - Dealer Sales Overtime')
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260402-8">
-    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}?v=20260402-2">
+    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}?v=20260406-1">
     <link rel="stylesheet" href="{{ asset('css/pages/admin-reports-v2.css') }}?v=20260324-9">
 @endpush
 @section('content')
@@ -389,10 +389,60 @@
                 }
             };
 
+            const failedClosedLabelHoverPlugin = {
+                id: 'failedClosedLabelHoverPlugin',
+                afterEvent: function (chart, args) {
+                    const event = args?.event;
+                    const canvas = chart?.canvas;
+                    const chartArea = chart?.chartArea;
+                    const categoryScale = chart?.scales?.y;
+
+                    if (!canvas || !chartArea || !categoryScale || !event) {
+                        return;
+                    }
+
+                    if (event.type === 'mouseout') {
+                        canvas.title = '';
+                        canvas.style.cursor = '';
+                        return;
+                    }
+
+                    const x = Number(event.x);
+                    const y = Number(event.y);
+                    const isInsideVerticalRange = y >= chartArea.top && y <= chartArea.bottom;
+
+                    if (!isInsideVerticalRange) {
+                        canvas.title = '';
+                        canvas.style.cursor = '';
+                        return;
+                    }
+
+                    const rawIndex = categoryScale.getValueForPixel(y);
+                    const rowIndex = Number.isFinite(rawIndex) ? Math.round(rawIndex) : -1;
+
+                    if (rowIndex < 0 || rowIndex >= rowCount) {
+                        canvas.title = '';
+                        canvas.style.cursor = '';
+                        return;
+                    }
+
+                    let hoveredName = '';
+
+                    if (x >= 0 && x < chartArea.left - 6) {
+                        hoveredName = failedName[rowIndex] ?? '';
+                    } else if (x > chartArea.right + 6 && x <= chart.width) {
+                        hoveredName = closedName[rowIndex] ?? '';
+                    }
+
+                    canvas.title = hoveredName && hoveredName !== '—' ? hoveredName : '';
+                    canvas.style.cursor = canvas.title ? 'help' : '';
+                }
+            };
+
             const config = {
                 type: 'bar',
                 data: data,
-                plugins: [failedClosedBackdropPlugin],
+                plugins: [failedClosedBackdropPlugin, failedClosedLabelHoverPlugin],
                 options: {
                     indexAxis: 'y',
                     responsive: true,

@@ -2795,13 +2795,15 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   background: #f3f4f6;
   color: #111827;
 }
-.inquiries-table .dealer-operator-search-wrap {
+.inquiries-table .dealer-operator-search-wrap,
+.inquiries-assign-dealers-table .dealer-operator-search-wrap {
   display: block;
   width: 100%;
   max-width: 108px;
   min-width: 0;
 }
-.inquiries-table .dealer-operator-search-box {
+.inquiries-table .dealer-operator-search-box,
+.inquiries-assign-dealers-table .dealer-operator-search-box {
   display: flex;
   align-items: center;
   min-width: 0;
@@ -2812,14 +2814,16 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   border-radius: 6px;
   background: #fff;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   box-sizing: border-box;
 }
-.inquiries-table .dealer-operator-search-box:focus-within {
+.inquiries-table .dealer-operator-search-box:focus-within,
+.inquiries-assign-dealers-table .dealer-operator-search-box:focus-within {
   border-color: #7f5af0;
   box-shadow: 0 0 0 2px rgba(127, 90, 240, 0.15);
 }
-.inquiries-table .dealer-operator-search-box .dealer-operator-btn {
+.inquiries-table .dealer-operator-search-box .dealer-operator-btn,
+.inquiries-assign-dealers-table .dealer-operator-search-box .dealer-operator-btn {
   flex-shrink: 0;
   width: 30px;
   height: 100%;
@@ -2837,11 +2841,13 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   justify-content: center;
   padding: 0;
 }
-.inquiries-table .dealer-operator-search-box .dealer-operator-btn:hover {
+.inquiries-table .dealer-operator-search-box .dealer-operator-btn:hover,
+.inquiries-assign-dealers-table .dealer-operator-search-box .dealer-operator-btn:hover {
   background: #f0ebff;
   color: #5b21b6;
 }
-.inquiries-table .dealer-operator-search-box input {
+.inquiries-table .dealer-operator-search-box input,
+.inquiries-assign-dealers-table .dealer-operator-search-box input {
   flex: 1;
   min-width: 0;
   height: 100%;
@@ -2853,11 +2859,13 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   line-height: 1;
   box-sizing: border-box;
 }
-.inquiries-table .dealer-operator-search-box input:focus {
+.inquiries-table .dealer-operator-search-box input:focus,
+.inquiries-assign-dealers-table .dealer-operator-search-box input:focus {
   outline: none;
   box-shadow: none;
 }
-.inquiries-table .dealer-operator-search-box .dealer-operator-dropdown {
+.inquiries-table .dealer-operator-search-box .dealer-operator-dropdown,
+.inquiries-assign-dealers-table .dealer-operator-search-box .dealer-operator-dropdown {
   position: absolute;
   left: 0;
   top: 100%;
@@ -2867,10 +2875,11 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  z-index: 100;
+  z-index: 1000;
   padding: 6px 0;
 }
-.inquiries-table .dealer-operator-search-box .dealer-operator-dropdown button {
+.inquiries-table .dealer-operator-search-box .dealer-operator-dropdown button,
+.inquiries-assign-dealers-table .dealer-operator-search-box .dealer-operator-dropdown button {
   display: block;
   width: 100%;
   text-align: left;
@@ -2881,7 +2890,8 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   color: #374151;
   cursor: pointer;
 }
-.inquiries-table .dealer-operator-search-box .dealer-operator-dropdown button:hover {
+.inquiries-table .dealer-operator-search-box .dealer-operator-dropdown button:hover,
+.inquiries-assign-dealers-table .dealer-operator-search-box .dealer-operator-dropdown button:hover {
   background: #f3f4f6;
   color: #111827;
 }

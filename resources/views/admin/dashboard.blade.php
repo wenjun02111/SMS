@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Dashboard - Admin')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/admin-dashboard.css') }}?v=20260326-19">
+    <link rel="stylesheet" href="{{ asset('css/pages/admin-dashboard.css') }}?v=20260406-01">
 @endpush
 @section('content')
 <div class="admin-dashboard-page">
@@ -60,6 +60,13 @@
                 $trendText = $p == 0.0 ? 'No change vs last week' : ($trendSign . abs($p) . '% vs last week');
             @endphp
             <span class="dashboard-metric-pill {{ $trendClass }}">{{ $trendText }}</span>
+        </div>
+    </div>
+    <div class="dashboard-metric-card">
+        <div class="dashboard-metric-icon dashboard-metric-icon-closing"><i class="bi bi-stopwatch"></i></div>
+        <div class="dashboard-metric-label">Avg. Closing Time</div>
+        <div class="dashboard-metric-value-row">
+            <div class="dashboard-metric-value">{{ $avgClosingTime }}</div>
         </div>
     </div>
 </section>

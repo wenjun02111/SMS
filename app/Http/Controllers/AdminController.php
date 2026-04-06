@@ -2,11 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\DatabaseAggregates;
 use App\Http\Controllers\Concerns\ResolvesInquiryAttachments;
 use App\Http\Controllers\Concerns\UsesSetupLinkStore;
 use App\Mail\InquiryAssignedToDealer;
 use App\Mail\PayoutCompletedNotification;
 use App\Mail\UserPasskeySetupLink;
+use App\Support\AttachmentUrlBuilder;
+use App\Support\DealerStatsAggregator;
+use App\Support\LeadEnricher;
+use App\Support\ProductConstants;
+use App\Support\QueryCache;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +25,7 @@ use Carbon\Carbon;
 
 class AdminController extends Controller
 {
+    use DatabaseAggregates;
     use ResolvesInquiryAttachments;
     use UsesSetupLinkStore;
 
@@ -82,55 +89,57 @@ class AdminController extends Controller
 
     private function loadInquiryPostcodeCityLookup(): array
     {
-        static $lookup = null;
+        return QueryCache::remember('postcode_city_lookup', function () {
+            static $lookup = null;
 
-        if (is_array($lookup)) {
-            return $lookup;
-        }
-
-        $lookup = [];
-        $path = base_path('malaysia-postcodes.json');
-        if (!is_file($path)) {
-            return $lookup;
-        }
-
-        try {
-            $decoded = json_decode((string) file_get_contents($path), true);
-        } catch (\Throwable $e) {
-            return $lookup;
-        }
-
-        if (!is_array($decoded) || !isset($decoded['state']) || !is_array($decoded['state'])) {
-            return $lookup;
-        }
-
-        foreach ($decoded['state'] as $state) {
-            if (!is_array($state)) {
-                continue;
+            if (is_array($lookup)) {
+                return $lookup;
             }
 
-            foreach (($state['city'] ?? []) as $city) {
-                if (!is_array($city)) {
+            $lookup = [];
+            $path = base_path('malaysia-postcodes.json');
+            if (!is_file($path)) {
+                return $lookup;
+            }
+
+            try {
+                $decoded = json_decode((string) file_get_contents($path), true);
+            } catch (\Throwable $e) {
+                return $lookup;
+            }
+
+            if (!is_array($decoded) || !isset($decoded['state']) || !is_array($decoded['state'])) {
+                return $lookup;
+            }
+
+            foreach ($decoded['state'] as $state) {
+                if (!is_array($state)) {
                     continue;
                 }
 
-                $cityName = trim((string) ($city['name'] ?? ''));
-                if ($cityName === '') {
-                    continue;
-                }
-
-                foreach (($city['postcode'] ?? []) as $postcode) {
-                    $normalizedPostcode = preg_replace('/\D+/', '', (string) $postcode);
-                    if ($normalizedPostcode === null || strlen($normalizedPostcode) !== 5 || isset($lookup[$normalizedPostcode])) {
+                foreach (($state['city'] ?? []) as $city) {
+                    if (!is_array($city)) {
                         continue;
                     }
 
-                    $lookup[$normalizedPostcode] = $cityName;
+                    $cityName = trim((string) ($city['name'] ?? ''));
+                    if ($cityName === '') {
+                        continue;
+                    }
+
+                    foreach (($city['postcode'] ?? []) as $postcode) {
+                        $normalizedPostcode = preg_replace('/\D+/', '', (string) $postcode);
+                        if ($normalizedPostcode === null || strlen($normalizedPostcode) !== 5 || isset($lookup[$normalizedPostcode])) {
+                            continue;
+                        }
+
+                        $lookup[$normalizedPostcode] = $cityName;
+                    }
                 }
             }
-        }
 
-        return $lookup;
+            return $lookup;
+        });
     }
 
     private function inquiryFormViewData(?object $inquiry = null): array
@@ -152,19 +161,7 @@ class AdminController extends Controller
 
         $data = [
             'dealers' => $dealers,
-            'productInterestedList' => [
-                1 => 'SQL Account',
-                2 => 'SQL Payroll',
-                3 => 'SQL Production',
-                4 => 'Mobile Sales',
-                5 => 'SQL Ecommerce',
-                6 => 'SQL EBI Wellness POS',
-                7 => 'SQL X Suduai',
-                8 => 'SQL X-Store',
-                9 => 'SQL Vision',
-                10 => 'SQL HRMS',
-                11 => 'Others',
-            ],
+            'productInterestedList' => ProductConstants::fullNames(),
             'postcodeCityLookup' => $this->loadInquiryPostcodeCityLookup(),
             'currentPage' => 'inquiries',
         ];
@@ -183,40 +180,44 @@ class AdminController extends Controller
             return [];
         }
 
-        $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
-        $rows = DB::select(
-            'SELECT "LEADID", "LEAD_ACTID", "USERID", "DESCRIPTION"
-             FROM "LEAD_ACT"
-             WHERE "LEADID" IN (' . $placeholders . ')
-               AND (
-                   UPPER(TRIM(COALESCE("SUBJECT", \'\'))) STARTING WITH \'LEAD ASSIGNED\'
-                   OR UPPER(TRIM(COALESCE("DESCRIPTION", \'\'))) STARTING WITH \'LEAD ASSIGNED\'
-               )
-             ORDER BY "LEADID" ASC, "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
-            $leadIds
-        );
+        $cacheKey = 'latest_assignment:' . md5(implode(',', $leadIds));
+        
+        return QueryCache::remember($cacheKey, function () use ($leadIds) {
+            $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
+            $rows = DB::select(
+                'SELECT "LEADID", "LEAD_ACTID", "USERID", "DESCRIPTION"
+                 FROM "LEAD_ACT"
+                 WHERE "LEADID" IN (' . $placeholders . ')
+                   AND (
+                       UPPER(TRIM(COALESCE("SUBJECT", \'\'))) STARTING WITH \'LEAD ASSIGNED\'
+                       OR UPPER(TRIM(COALESCE("DESCRIPTION", \'\'))) STARTING WITH \'LEAD ASSIGNED\'
+                   )
+                 ORDER BY "LEADID" ASC, "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
+                $leadIds
+            );
 
-        $map = [];
-        foreach ($rows as $row) {
-            $leadId = (int) ($row->LEADID ?? 0);
-            if ($leadId <= 0 || array_key_exists($leadId, $map)) {
-                continue;
-            }
+            $map = [];
+            foreach ($rows as $row) {
+                $leadId = (int) ($row->LEADID ?? 0);
+                if ($leadId <= 0 || array_key_exists($leadId, $map)) {
+                    continue;
+                }
 
-            $userId = trim((string) ($row->USERID ?? ''));
-            if ($userId === '') {
-                $desc = trim((string) ($row->DESCRIPTION ?? ''));
-                if ($desc !== '' && preg_match('/Lead Assigned by\s+(\S+)\s+to\s+(\S+)/i', $desc, $m)) {
-                    $userId = trim((string) ($m[1] ?? ''));
+                $userId = trim((string) ($row->USERID ?? ''));
+                if ($userId === '') {
+                    $desc = trim((string) ($row->DESCRIPTION ?? ''));
+                    if ($desc !== '' && preg_match('/Lead Assigned by\s+(\S+)\s+to\s+(\S+)/i', $desc, $m)) {
+                        $userId = trim((string) ($m[1] ?? ''));
+                    }
+                }
+
+                if ($userId !== '') {
+                    $map[$leadId] = $userId;
                 }
             }
 
-            if ($userId !== '') {
-                $map[$leadId] = $userId;
-            }
-        }
-
-        return $map;
+            return $map;
+        });
     }
 
     private function userDisplayMaps(array $userIds): array
@@ -230,57 +231,61 @@ class AdminController extends Controller
             return ['assignedToMap' => [], 'actorMap' => []];
         }
 
-        $placeholders = implode(',', array_fill(0, count($userIds), '?'));
-        $users = DB::select(
-            'SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL"
-             FROM "USERS"
-             WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')',
-            $userIds
-        );
+        $cacheKey = 'user_display_maps:' . md5(implode(',', $userIds));
+        
+        return QueryCache::remember($cacheKey, function () use ($userIds) {
+            $placeholders = implode(',', array_fill(0, count($userIds), '?'));
+            $users = DB::select(
+                'SELECT "USERID","SYSTEMROLE","ALIAS","COMPANY","EMAIL"
+                 FROM "USERS"
+                 WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')',
+                $userIds
+            );
 
-        $assignedToMap = [];
-        $actorMap = [];
+            $assignedToMap = [];
+            $actorMap = [];
 
-        foreach ($users as $u) {
-            $uid = trim((string) ($u->USERID ?? ''));
-            if ($uid === '') {
-                continue;
+            foreach ($users as $u) {
+                $uid = trim((string) ($u->USERID ?? ''));
+                if ($uid === '') {
+                    continue;
+                }
+
+                $role = trim((string) ($u->SYSTEMROLE ?? ''));
+                $company = trim((string) ($u->COMPANY ?? ''));
+                $alias = trim((string) ($u->ALIAS ?? ''));
+                $email = trim((string) ($u->EMAIL ?? ''));
+                $fallback = $email !== '' ? $email : $uid;
+
+                if ($company !== '' && $alias !== '') {
+                    $assignedToMap[$uid] = $company . '- ' . $alias;
+                } elseif ($company !== '') {
+                    $assignedToMap[$uid] = $company;
+                } elseif ($alias !== '') {
+                    $assignedToMap[$uid] = $alias;
+                } else {
+                    $assignedToMap[$uid] = $fallback;
+                }
+
+                if ($role !== '' && $alias !== '') {
+                    $actorMap[$uid] = $role . '- ' . $alias;
+                } elseif ($role !== '') {
+                    $actorMap[$uid] = $role . '- ' . ($company !== '' ? $company : ($email !== '' ? $email : $uid));
+                } elseif ($alias !== '') {
+                    $actorMap[$uid] = $alias;
+                } else {
+                    $actorMap[$uid] = $fallback;
+                }
             }
 
-            $role = trim((string) ($u->SYSTEMROLE ?? ''));
-            $company = trim((string) ($u->COMPANY ?? ''));
-            $alias = trim((string) ($u->ALIAS ?? ''));
-            $email = trim((string) ($u->EMAIL ?? ''));
-            $fallback = $email !== '' ? $email : $uid;
-
-            if ($company !== '' && $alias !== '') {
-                $assignedToMap[$uid] = $company . '- ' . $alias;
-            } elseif ($company !== '') {
-                $assignedToMap[$uid] = $company;
-            } elseif ($alias !== '') {
-                $assignedToMap[$uid] = $alias;
-            } else {
-                $assignedToMap[$uid] = $fallback;
-            }
-
-            if ($role !== '' && $alias !== '') {
-                $actorMap[$uid] = $role . '- ' . $alias;
-            } elseif ($role !== '') {
-                $actorMap[$uid] = $role . '- ' . ($company !== '' ? $company : ($email !== '' ? $email : $uid));
-            } elseif ($alias !== '') {
-                $actorMap[$uid] = $alias;
-            } else {
-                $actorMap[$uid] = $fallback;
-            }
-        }
-
-        return ['assignedToMap' => $assignedToMap, 'actorMap' => $actorMap];
+            return ['assignedToMap' => $assignedToMap, 'actorMap' => $actorMap];
+        });
     }
 
     private function getLeadCurrentActionState(int $leadId): ?array
     {
         $lead = DB::selectOne(
-            'SELECT "LEADID","ASSIGNED_TO" FROM "LEAD" WHERE "LEADID" = ?',
+            'SELECT "LEADID","ASSIGNED_TO","CURRENTSTATUS" FROM "LEAD" WHERE "LEADID" = ?',
             [$leadId]
         );
 
@@ -296,9 +301,15 @@ class AdminController extends Controller
             [$leadId]
         );
 
+        $assignedTo = trim((string) ($lead->ASSIGNED_TO ?? ''));
+        $leadStatus = strtoupper(trim((string) ($lead->CURRENTSTATUS ?? '')));
+        $latestStatus = strtoupper(trim((string) ($latest->STATUS ?? '')));
+
         return [
-            'assigned_to' => trim((string) ($lead->ASSIGNED_TO ?? '')),
-            'status' => strtoupper(trim((string) ($latest->STATUS ?? ''))),
+            'assigned_to' => $assignedTo,
+            'status' => $assignedTo === ''
+                ? ($leadStatus !== '' ? $leadStatus : $latestStatus)
+                : $latestStatus,
         ];
     }
 
@@ -346,6 +357,84 @@ class AdminController extends Controller
 
         // Conversion rate: closed / total leads
         $conversionRate = $totalLeads > 0 ? round(($totalClosed / $totalLeads) * 100, 1) : 0;
+        // Average closing time: from first PENDING to first COMPLETED
+        $avgClosingSeconds = null;
+        $avgClosingTime = '-';
+
+        try {
+            // Get all lead activity records
+            $allRows = DB::select(
+                'SELECT
+                    a."LEADID",
+                    a."STATUS",
+                    a."CREATIONDATE"
+                 FROM "LEAD_ACT" a
+                 WHERE a."STATUS" IS NOT NULL
+                 ORDER BY a."LEADID", a."CREATIONDATE"'
+            );
+
+            $leadTimings = [];
+            
+            foreach ($allRows as $row) {
+                $leadId = (int) ($row->LEADID ?? 0);
+                $status = strtoupper(trim((string) ($row->STATUS ?? '')));
+                $createdAt = $row->CREATIONDATE;
+
+                if ($leadId <= 0 || !$createdAt || !$status) {
+                    continue;
+                }
+
+                if (!isset($leadTimings[$leadId])) {
+                    $leadTimings[$leadId] = [
+                        'pending_at' => null,
+                        'completed_at' => null,
+                    ];
+                }
+
+                // Capture first PENDING
+                if ($status === 'PENDING' && !$leadTimings[$leadId]['pending_at']) {
+                    $leadTimings[$leadId]['pending_at'] = $createdAt;
+                }
+
+                // Capture first COMPLETED or REWARDED
+                if (($status === 'COMPLETED' || $status === 'REWARDED') && !$leadTimings[$leadId]['completed_at']) {
+                    $leadTimings[$leadId]['completed_at'] = $createdAt;
+                }
+            }
+
+            // Calculate average across all leads
+            $total = 0;
+            $count = 0;
+
+            foreach ($leadTimings as $timing) {
+                $pendingAt = $timing['pending_at'];
+                $completedAt = $timing['completed_at'];
+
+                if (!$pendingAt || !$completedAt) {
+                    continue;
+                }
+
+                $pendingTs = strtotime((string) $pendingAt);
+                $completedTs = strtotime((string) $completedAt);
+
+                if (!$pendingTs || !$completedTs || $completedTs < $pendingTs) {
+                    continue;
+                }
+
+                $duration = $completedTs - $pendingTs;
+                $total += $duration;
+                $count++;
+            }
+
+            if ($count > 0) {
+                $avgClosingSeconds = (int) round($total / $count);
+            }
+        } catch (\Throwable $e) {
+            \Log::error('Dashboard closing time calculation failed: ' . $e->getMessage());
+            $avgClosingSeconds = null;
+        }
+
+        $avgClosingTime = DealerStatsAggregator::formatClosingTime($avgClosingSeconds);
 
         // Week-over-week comparison uses the current week versus the previous week for activity cards.
         $startThisWeek = Carbon::now()->startOfWeek(Carbon::MONDAY);
@@ -490,29 +579,25 @@ class AdminController extends Controller
                 }
             }
 
-            $dealerStats = collect($topDealersRaw)->map(function ($d) {
+            // PERFORMANCE: Get dealer statistics with proper dealer ID extraction
+            $dealerIds = array_map(fn($d) => (string) ($d->USERID ?? ''), $topDealersRaw);
+            $allStats = DealerStatsAggregator::getAllDealerStats($dealerIds);
+            $allClosingTimes = DealerStatsAggregator::getAllDealerClosingTimes($dealerIds);
+
+            $dealerStats = collect($topDealersRaw)->map(function ($d) use ($allStats, $allClosingTimes) {
                 $userId = (string) ($d->USERID ?? '');
-                $leadsRow = DB::selectOne(
-                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50)))',
-                    [$userId]
-                );
-                $closedRow = DB::selectOne(
-                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND "CURRENTSTATUS" = \'Closed\'',
-                    [$userId]
-                );
-                $failedRow = DB::selectOne(
-                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND UPPER(TRIM("CURRENTSTATUS")) = \'FAILED\'',
-                    [$userId]
-                );
-                $ongoingRow = DB::selectOne(
-                    'SELECT COUNT(*) as c FROM "LEAD" WHERE TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50))) AND UPPER(TRIM("CURRENTSTATUS")) = \'ONGOING\'',
-                    [$userId]
-                );
-                $leads = (int) ($leadsRow->c ?? $leadsRow->C ?? current((array) $leadsRow) ?? 0);
-                $closed = (int) ($closedRow->c ?? $closedRow->C ?? current((array) $closedRow) ?? 0);
-                $failed = (int) ($failedRow->c ?? $failedRow->C ?? current((array) $failedRow) ?? 0);
-                $ongoing = (int) ($ongoingRow->c ?? $ongoingRow->C ?? current((array) $ongoingRow) ?? 0);
+                
+                // Get pre-fetched stats for this dealer (eliminates N+1)
+                $stats = $allStats[$userId] ?? ['totalLead' => 0, 'totalClosed' => 0, 'totalFailed' => 0, 'totalOngoing' => 0];
+                $leads = $stats['totalLead'] ?? 0;
+                $closed = $stats['totalClosed'] ?? 0;
+                $failed = $stats['totalFailed'] ?? 0;
+                $ongoing = $stats['totalOngoing'] ?? 0;
                 $conversion = $leads > 0 ? ($closed / $leads) : 0;
+
+                // Get pre-fetched closing time (eliminates N+1)
+                $avgClosingSeconds = $allClosingTimes[$userId] ?? null;
+
                 $company = trim((string) ($d->COMPANY ?? ''));
                 $alias = trim((string) ($d->ALIAS ?? ''));
                 $email = trim((string) ($d->EMAIL ?? ''));
@@ -521,77 +606,27 @@ class AdminController extends Controller
                     $dealerName = $company . '-' . $alias;
                 }
 
-                // Avg. Closing Time: average(Completed status CREATIONDATE − Pending status CREATIONDATE) per LEADID for this dealer.
-                $avgClosingSeconds = null;
-                try {
-                    $rows = DB::select(
-                        'SELECT
-                            a."LEADID" AS lead_id,
-                            MIN(CASE WHEN UPPER(TRIM(a."STATUS")) = \'PENDING\' THEN a."CREATIONDATE" END) AS pending_at,
-                            MIN(CASE WHEN UPPER(TRIM(a."STATUS")) = \'COMPLETED\' THEN a."CREATIONDATE" END) AS completed_at
-                         FROM "LEAD_ACT" a
-                         JOIN "LEAD" l ON l."LEADID" = a."LEADID"
-                         WHERE TRIM(CAST(l."ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(? AS VARCHAR(50)))
-                         GROUP BY a."LEADID"',
-                        [$userId]
-                    );
-                    $total = 0;
-                    $count = 0;
-                    foreach ($rows as $r) {
-                        $p = $r->pending_at ?? $r->PENDING_AT ?? null;
-                        $cAt = $r->completed_at ?? $r->COMPLETED_AT ?? null;
-                        if (!$p || !$cAt) continue;
-                        $pTs = strtotime((string) $p);
-                        $cTs = strtotime((string) $cAt);
-                        if (!$pTs || !$cTs || $cTs < $pTs) continue;
-                        $total += ($cTs - $pTs);
-                        $count++;
-                    }
-                    if ($count > 0) {
-                        $avgClosingSeconds = (int) round($total / $count);
-                    }
-                } catch (\Throwable $e) {
-                    $avgClosingSeconds = null;
-                }
-
-                $avgClosingDisplay = '-';
-                if (is_int($avgClosingSeconds)) {
-                    $mins = (int) floor($avgClosingSeconds / 60);
-                    if ($mins < 60) {
-                        $avgClosingDisplay = $mins . ' min';
-                    } elseif ($mins < 60 * 24) {
-                        $h = (int) floor($mins / 60);
-                        $m = $mins % 60;
-                        $avgClosingDisplay = $h . 'h ' . $m . 'm';
-                    } else {
-                        $d2 = (int) floor($mins / (60 * 24));
-                        $remM = $mins % (60 * 24);
-                        $h2 = (int) floor($remM / 60);
-                        $avgClosingDisplay = $d2 . 'd ' . $h2 . 'h';
-                    }
-                }
+                $avgClosingDisplay = DealerStatsAggregator::formatClosingTime($avgClosingSeconds);
 
                 $postcode = trim((string) ($d->POSTCODE ?? ''));
                 $city = trim((string) ($d->CITY ?? ''));
                 $location = trim(trim($postcode . ' ' . $city));
-            return [
+
+                return [
                     'dealer_name' => $dealerName,
                     'location' => $location,
-                'total_leads' => $leads,
+                    'total_leads' => $leads,
                     'ongoing_count' => $ongoing,
-                'closed_count' => $closed,
+                    'closed_count' => $closed,
                     'failed_count' => $failed,
                     'conversion_rate' => round($conversion * 100, 1),
                     'avg_closing_time' => $avgClosingDisplay,
-                    // raw seconds for sorting (smaller = faster closing)
                     'avg_closing_seconds' => $avgClosingSeconds,
                 ];
             })
-                // Highest conversion rate first; tie-breakers: fastest avg closing, then closed, then leads
                 ->sort(function (array $a, array $b) {
                     $c = ($b['conversion_rate'] <=> $a['conversion_rate']);
                     if ($c !== 0) return $c;
-                    // Prefer smaller average closing time (in seconds). Nulls go last.
                     $ta = $a['avg_closing_seconds'] ?? null;
                     $tb = $b['avg_closing_seconds'] ?? null;
                     $hasA = is_int($ta);
@@ -600,7 +635,6 @@ class AdminController extends Controller
                         $c2 = ($ta <=> $tb);
                         if ($c2 !== 0) return $c2;
                     } elseif ($hasA !== $hasB) {
-                        // Dealer with a real value comes before one without.
                         return $hasA ? -1 : 1;
                     }
                     $c3 = ($b['closed_count'] <=> $a['closed_count']);
@@ -694,6 +728,8 @@ class AdminController extends Controller
             'totalClosed' => $totalClosed,
             'activeInquiries' => $activeInquiries,
             'conversionRate' => $conversionRate,
+            'avgClosingTime' => $avgClosingTime,
+            'avgClosingSeconds' => $avgClosingSeconds,
             'pctLeads' => $pctLeads,
             'pctClosed' => $pctClosed,
             'pctActive' => $pctActive,
@@ -782,7 +818,7 @@ class AdminController extends Controller
         foreach ($rows as $r) {
             $assignedTo = trim((string) ($r->ASSIGNED_TO ?? ''));
             $leadStatus = strtoupper(trim((string) ($r->LEAD_CURRENTSTATUS ?? $r->CURRENTSTATUS ?? '')));
-            if ($assignedTo === '' && $leadStatus === 'OPEN') {
+            if ($assignedTo === '' && in_array($leadStatus, ['OPEN', 'CREATED'], true)) {
                 $r->CURRENTSTATUS = $r->LEAD_CURRENTSTATUS ?? $r->CURRENTSTATUS;
                 $unassigned[] = $r;
             } elseif ($assignedTo !== '') {
@@ -790,7 +826,7 @@ class AdminController extends Controller
             }
         }
 
-        // Default order: incoming = date oldest first; assigned = assign date latest first
+        // Sort unassigned and assigned
         usort($unassigned, function ($a, $b) {
             $ta = strtotime($a->CREATEDAT ?? '0');
             $tb = strtotime($b->CREATEDAT ?? '0');
@@ -802,133 +838,12 @@ class AdminController extends Controller
             return $tb <=> $ta;
         });
 
-        // Attach latest completion date, payouts date, dealt products, and latest attachment for assigned inquiries.
-        try {
-            $leadIds = [];
-            foreach ($rows as $r) {
-                $lid = (int) ($r->LEADID ?? 0);
-                if ($lid > 0) {
-                    $leadIds[$lid] = true;
-                }
-            }
-            $leadIds = array_keys($leadIds);
-            if (!empty($leadIds)) {
-                $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
-                $completedRows = DB::select(
-                    'SELECT "LEADID", MAX("CREATIONDATE") AS COMPLETED_AT
-                     FROM "LEAD_ACT"
-                     WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\'
-                       AND "LEADID" IN (' . $placeholders . ')
-                     GROUP BY "LEADID"',
-                    $leadIds
-                );
-                $rewardedRows = DB::select(
-                    'SELECT "LEADID", MAX("CREATIONDATE") AS REWARDED_AT
-                     FROM "LEAD_ACT"
-                     WHERE UPPER(TRIM("STATUS")) = \'REWARDED\'
-                       AND "LEADID" IN (' . $placeholders . ')
-                     GROUP BY "LEADID"',
-                    $leadIds
-                );
-                $dealRows = DB::select(
-                    'SELECT a."LEADID", a."DEALTPRODUCT"
-                     FROM "LEAD_ACT" a
-                     JOIN (
-                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
-                         FROM "LEAD_ACT"
-                         WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\'
-                           AND "LEADID" IN (' . $placeholders . ')
-                         GROUP BY "LEADID"
-                     ) m ON m."LEADID" = a."LEADID" AND m.MAXCD = a."CREATIONDATE"
-                     WHERE UPPER(TRIM(a."STATUS")) = \'COMPLETED\'
-                       AND a."LEADID" IN (' . $placeholders . ')',
-                    array_merge($leadIds, $leadIds)
-                );
-                $completedDateMap = [];
-                $rewardedDateMap = [];
-                $dealtProductMap = [];
-                $attachmentMap = [];
-                $attachmentActMap = [];
-                foreach ($completedRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $completedDateMap[$lid] = $item->COMPLETED_AT ?? $item->completed_at ?? null;
-                    }
-                }
-                foreach ($rewardedRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $rewardedDateMap[$lid] = $item->REWARDED_AT ?? $item->rewarded_at ?? null;
-                    }
-                }
-                foreach ($dealRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $dealtProductMap[$lid] = $item->DEALTPRODUCT ?? $item->dealtproduct ?? null;
-                    }
-                }
-                $attachRows = DB::select(
-                    'SELECT "LEADID", "LEAD_ACTID", "ATTACHMENT", "CREATIONDATE"
-                     FROM "LEAD_ACT"
-                     WHERE "LEADID" IN (' . $placeholders . ')
-                       AND "ATTACHMENT" IS NOT NULL
-                     ORDER BY "LEADID" ASC, "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
-                    $leadIds
-                );
-                foreach ($attachRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid <= 0 || array_key_exists($lid, $attachmentMap)) {
-                        continue;
-                    }
-                    $attachment = $item->ATTACHMENT ?? $item->attachment ?? null;
-                    if ($attachment === null || trim((string) $attachment) === '') {
-                        continue;
-                    }
-                    $attachmentMap[$lid] = $attachment;
-                    $attachmentActMap[$lid] = (int) ($item->LEAD_ACTID ?? $item->lead_actid ?? 0);
-                }
-                foreach ($rows as $r) {
-                    $lid = (int) ($r->LEADID ?? 0);
-                    if ($lid > 0 && isset($completedDateMap[$lid])) {
-                        $r->COMPLETED_AT = $completedDateMap[$lid];
-                    }
-                    if ($lid > 0 && isset($rewardedDateMap[$lid])) {
-                        $r->REWARDED_AT = $rewardedDateMap[$lid];
-                    }
-                    if ($lid > 0 && isset($dealtProductMap[$lid])) {
-                        $r->DEALTPRODUCT = $dealtProductMap[$lid];
-                    }
-                    if ($lid > 0 && array_key_exists($lid, $attachmentMap)) {
-                        $r->ASSIGNED_ATTACHMENT = $attachmentMap[$lid];
-                        $r->ASSIGNED_LEAD_ACT_ID = $attachmentActMap[$lid] ?? 0;
-                    }
-                    $urls = [];
-                    $attachmentRaw = $r->ASSIGNED_ATTACHMENT ?? null;
-                    $leadActId = (int) ($r->ASSIGNED_LEAD_ACT_ID ?? 0);
-                    if ($attachmentRaw !== null && trim((string) $attachmentRaw) !== '') {
-                        $attachmentStr = trim((string) $attachmentRaw);
-                        $attachmentStr = str_replace('\\', '/', $attachmentStr);
-                        if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
-                            foreach (explode(',', $attachmentStr) as $path) {
-                                $path = trim(str_replace('\\', '/', $path));
-                                if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
-                                    $urls[] = route('admin.rewards.serve-attachment', ['path' => $path]);
-                                }
-                            }
-                        } else {
-                            if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
-                                $urls[] = route('admin.rewards.serve-attachment', ['path' => $attachmentStr]);
-                            } elseif ($lid > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
-                                $urls[] = route('admin.rewards.activity-attachment', ['leadId' => $lid, 'leadActId' => $leadActId]);
-                            }
-                        }
-                    }
-                    $r->ASSIGNED_ATTACHMENT_URLS = $urls;
-                }
-            }
-        } catch (\Throwable $e) {
-            // Leave assigned activity enrichment blank if LEAD_ACT lookup fails.
-        }
+        // Enrich leads with activity dates, dealt products, and attachments
+        $rows = LeadEnricher::enrichLeads(
+            $rows,
+            'admin.rewards.serve-attachment',
+            'admin.rewards.activity-attachment'
+        );
 
         // Resolve display names for source, assigned by, and assigned to.
         try {
@@ -975,19 +890,9 @@ class AdminController extends Controller
                 $totalOngoing++;
             }
         }
-        $productLabels = [
-            1 => 'Account',
-            2 => 'Payroll',
-            3 => 'Production',
-            4 => 'Mobile Sales',
-            5 => 'Ecommerce',
-            6 => 'EBI POS',
-            7 => 'Sudu AI',
-            8 => 'X-Store',
-            9 => 'Vision',
-            10 => 'HRMS',
-            11 => 'Others',
-        ];
+
+        // Use product labels from constants
+        $productLabels = ProductConstants::all();
 
         // Dealer list for Assign dropdown: only active dealers (with stats similar to Dealers page)
         $dealers = [];
@@ -1123,124 +1028,12 @@ class AdminController extends Controller
             }
         }
 
-        try {
-            if (!empty($leadIds)) {
-                $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
-                $completedRows = DB::select(
-                    'SELECT "LEADID", MAX("CREATIONDATE") AS COMPLETED_AT
-                     FROM "LEAD_ACT"
-                     WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\'
-                       AND "LEADID" IN (' . $placeholders . ')
-                     GROUP BY "LEADID"',
-                    $leadIds
-                );
-                $rewardedRows = DB::select(
-                    'SELECT "LEADID", MAX("CREATIONDATE") AS REWARDED_AT
-                     FROM "LEAD_ACT"
-                     WHERE UPPER(TRIM("STATUS")) = \'REWARDED\'
-                       AND "LEADID" IN (' . $placeholders . ')
-                     GROUP BY "LEADID"',
-                    $leadIds
-                );
-                $dealRows = DB::select(
-                    'SELECT a."LEADID", a."DEALTPRODUCT"
-                     FROM "LEAD_ACT" a
-                     JOIN (
-                         SELECT "LEADID", MAX("CREATIONDATE") AS MAXCD
-                         FROM "LEAD_ACT"
-                         WHERE UPPER(TRIM("STATUS")) = \'COMPLETED\'
-                           AND "LEADID" IN (' . $placeholders . ')
-                         GROUP BY "LEADID"
-                     ) m ON m."LEADID" = a."LEADID" AND m.MAXCD = a."CREATIONDATE"
-                     WHERE UPPER(TRIM(a."STATUS")) = \'COMPLETED\'
-                       AND a."LEADID" IN (' . $placeholders . ')',
-                    array_merge($leadIds, $leadIds)
-                );
-                $completedDateMap = [];
-                $rewardedDateMap = [];
-                $dealtProductMap = [];
-                $attachmentMap = [];
-                $attachmentActMap = [];
-                foreach ($completedRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $completedDateMap[$lid] = $item->COMPLETED_AT ?? $item->completed_at ?? null;
-                    }
-                }
-                foreach ($rewardedRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $rewardedDateMap[$lid] = $item->REWARDED_AT ?? $item->rewarded_at ?? null;
-                    }
-                }
-                foreach ($dealRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid > 0) {
-                        $dealtProductMap[$lid] = $item->DEALTPRODUCT ?? $item->dealtproduct ?? null;
-                    }
-                }
-                $attachRows = DB::select(
-                    'SELECT "LEADID", "LEAD_ACTID", "ATTACHMENT", "CREATIONDATE"
-                     FROM "LEAD_ACT"
-                     WHERE "LEADID" IN (' . $placeholders . ')
-                       AND "ATTACHMENT" IS NOT NULL
-                     ORDER BY "LEADID" ASC, "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
-                    $leadIds
-                );
-                foreach ($attachRows as $item) {
-                    $lid = (int) ($item->LEADID ?? 0);
-                    if ($lid <= 0 || array_key_exists($lid, $attachmentMap)) {
-                        continue;
-                    }
-                    $attachment = $item->ATTACHMENT ?? $item->attachment ?? null;
-                    if ($attachment === null || trim((string) $attachment) === '') {
-                        continue;
-                    }
-                    $attachmentMap[$lid] = $attachment;
-                    $attachmentActMap[$lid] = (int) ($item->LEAD_ACTID ?? $item->lead_actid ?? 0);
-                }
-                foreach ($rows as $r) {
-                    $lid = (int) ($r->LEADID ?? 0);
-                    if ($lid > 0 && isset($completedDateMap[$lid])) {
-                        $r->COMPLETED_AT = $completedDateMap[$lid];
-                    }
-                    if ($lid > 0 && isset($rewardedDateMap[$lid])) {
-                        $r->REWARDED_AT = $rewardedDateMap[$lid];
-                    }
-                    if ($lid > 0 && isset($dealtProductMap[$lid])) {
-                        $r->DEALTPRODUCT = $dealtProductMap[$lid];
-                    }
-                    if ($lid > 0 && array_key_exists($lid, $attachmentMap)) {
-                        $r->ASSIGNED_ATTACHMENT = $attachmentMap[$lid];
-                        $r->ASSIGNED_LEAD_ACT_ID = $attachmentActMap[$lid] ?? 0;
-                    }
-                    $urls = [];
-                    $attachmentRaw = $r->ASSIGNED_ATTACHMENT ?? null;
-                    $leadActId = (int) ($r->ASSIGNED_LEAD_ACT_ID ?? 0);
-                    if ($attachmentRaw !== null && trim((string) $attachmentRaw) !== '') {
-                        $attachmentStr = trim((string) $attachmentRaw);
-                        $attachmentStr = str_replace('\\', '/', $attachmentStr);
-                        if (str_contains($attachmentStr, ',') || str_starts_with($attachmentStr, 'inquiry-attachments')) {
-                            foreach (explode(',', $attachmentStr) as $path) {
-                                $path = trim(str_replace('\\', '/', $path));
-                                if ($path !== '' && str_starts_with($path, 'inquiry-attachments/')) {
-                                    $urls[] = route('admin.rewards.serve-attachment', ['path' => $path]);
-                                }
-                            }
-                        } else {
-                            if (str_starts_with($attachmentStr, 'inquiry-attachments/')) {
-                                $urls[] = route('admin.rewards.serve-attachment', ['path' => $attachmentStr]);
-                            } elseif ($lid > 0 && $leadActId > 0 && preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $attachmentStr)) {
-                                $urls[] = route('admin.rewards.activity-attachment', ['leadId' => $lid, 'leadActId' => $leadActId]);
-                            }
-                        }
-                    }
-                    $r->ASSIGNED_ATTACHMENT_URLS = $urls;
-                }
-            }
-        } catch (\Throwable $e) {
-            // Leave assigned activity enrichment blank if LEAD_ACT lookup fails.
-        }
+        // Enrich leads with activity dates, dealt products, and attachments
+        $rows = LeadEnricher::enrichLeads(
+            $rows,
+            'admin.rewards.serve-attachment',
+            'admin.rewards.activity-attachment'
+        );
 
         try {
             $assignmentByLeadMap = $this->latestAssignmentUserMap(array_map(
@@ -1276,10 +1069,7 @@ class AdminController extends Controller
             // fallback raw ids
         }
 
-        $productLabels = [
-            1 => 'Account', 2 => 'Payroll', 3 => 'Production', 4 => 'Mobile Sales', 5 => 'Ecommerce',
-            6 => 'EBI POS', 7 => 'Sudu AI', 8 => 'X-Store', 9 => 'Vision', 10 => 'HRMS', 11 => 'Others',
-        ];
+        $productLabels = ProductConstants::all();
         $assignedTotal = count($assigned);
         $assignedLastPage = $assignedTotal > 0 ? (int) ceil($assignedTotal / $perPage) : 1;
         $page = min($page, $assignedLastPage);
@@ -1359,16 +1149,19 @@ class AdminController extends Controller
 
         // Remember previous assignee for possible undo
         $prevAssignedTo = null;
+        $prevLastModified = null;
         try {
             $current = DB::selectOne(
-                'SELECT "ASSIGNED_TO" FROM "LEAD" WHERE "LEADID" = ?',
+                'SELECT "ASSIGNED_TO", "LASTMODIFIED" FROM "LEAD" WHERE "LEADID" = ?',
                 [$leadId]
             );
             if ($current) {
                 $prevAssignedTo = trim((string) ($current->ASSIGNED_TO ?? ''));
+                $prevLastModified = $current->LASTMODIFIED ?? null;
             }
         } catch (\Throwable $e) {
             $prevAssignedTo = null;
+            $prevLastModified = null;
         }
 
         try {
@@ -1415,6 +1208,7 @@ class AdminController extends Controller
             'lead_id' => $leadId,
             'prev_assigned_to' => $prevAssignedTo,
             'new_assigned_to' => $assignedTo,
+            'prev_lastmodified' => $prevLastModified,
         ];
 
         return redirect()->route('admin.inquiries')
@@ -1453,63 +1247,54 @@ class AdminController extends Controller
         $validated = $request->validate([
             'LEADID' => 'required|integer|min:1',
             'PREV_ASSIGNED_TO' => 'nullable|string|max:50',
+            'PREV_LASTMODIFIED' => 'nullable|string|max:50',
         ]);
         $leadId = (int) $validated['LEADID'];
         $prev = trim((string) ($validated['PREV_ASSIGNED_TO'] ?? ''));
+        $prevLastModified = trim((string) ($validated['PREV_LASTMODIFIED'] ?? ''));
 
         try {
             DB::beginTransaction();
 
-            $row = DB::selectOne(
-                'SELECT "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
-                    "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
-                    "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
-                    "CURRENTSTATUS","CREATEDAT","CREATEDBY"
-                 FROM "LEAD" WHERE "LEADID" = ?',
-                [$leadId]
-            );
-            if (!$row) {
+            $assignedTo = $prev !== '' ? $prev : null;
+            $restoredLastModified = $prevLastModified !== '' ? $prevLastModified : null;
+
+            if ($prev === '') {
+                $updated = DB::update(
+                    'UPDATE "LEAD"
+                     SET "ASSIGNED_TO" = ?, "CURRENTSTATUS" = ?, "LASTMODIFIED" = ?
+                     WHERE "LEADID" = ?',
+                    [$assignedTo, 'Open', $restoredLastModified, $leadId]
+                );
+            } else {
+                $updated = DB::update(
+                    'UPDATE "LEAD"
+                     SET "ASSIGNED_TO" = ?, "LASTMODIFIED" = ?
+                     WHERE "LEADID" = ?',
+                    [$assignedTo, $restoredLastModified, $leadId]
+                );
+            }
+
+            if ((int) $updated < 1) {
                 DB::rollBack();
                 return redirect()->route('admin.inquiries')->with('error', 'Lead not found.');
             }
 
-            $assignedTo = $prev !== '' ? $prev : null;
+              if ($prev === '') {
+                  DB::delete(
+                      'DELETE FROM "LEAD_ACT"
+                       WHERE "LEADID" = ?
+                         AND UPPER(TRIM(COALESCE("STATUS", \'\'))) = ?',
+                      [$leadId, 'PENDING']
+                  );
 
-            // Delete activity for this lead so we can delete the lead row (FK)
-            DB::delete('DELETE FROM "LEAD_ACT" WHERE "LEADID" = ?', [$leadId]);
-            DB::delete('DELETE FROM "LEAD" WHERE "LEADID" = ?', [$leadId]);
-
-            // Re-insert same lead with the same LEADID (get back the id we just deleted); status back to Open
-            DB::insert(
-                'INSERT INTO "LEAD" (
-                    "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
-                    "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
-                    "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
-                    "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)',
-                [
-                    $leadId,
-                    $row->PRODUCTID ?? null,
-                    $row->COMPANYNAME ?? null,
-                    $row->CONTACTNAME ?? null,
-                    $row->CONTACTNO ?? null,
-                    $row->EMAIL ?? null,
-                    $row->ADDRESS1 ?? null,
-                    $row->ADDRESS2 ?? null,
-                    $row->CITY ?? null,
-                    $row->POSTCODE ?? null,
-                    $row->BUSINESSNATURE ?? null,
-                    $row->USERCOUNT ?? null,
-                    $row->EXISTINGSOFTWARE ?? null,
-                    $row->DEMOMODE ?? null,
-                    $row->DESCRIPTION ?? null,
-                    $row->REFERRALCODE ?? null,
-                    'Open',
-                    $row->CREATEDAT ?? null,
-                    $row->CREATEDBY ?? null,
-                    $assignedTo,
-                ]
-            );
+                  DB::update(
+                      'UPDATE "LEAD"
+                       SET "CURRENTSTATUS" = ?, "LASTMODIFIED" = ?
+                       WHERE "LEADID" = ?',
+                      ['Open', $restoredLastModified, $leadId]
+                  );
+              }
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -1633,7 +1418,7 @@ class AdminController extends Controller
                 'description' => trim((string) ($r->DESCRIPTION ?? '')),
                 'status' => $status,
                 'created_at' => $createdAtIso,
-                'attachment_urls' => $this->buildInquiryActivityAttachmentUrls(
+                'attachment_urls' => AttachmentUrlBuilder::buildUrls(
                     $r->ATTACHMENT ?? null,
                     (int) ($r->LEADID ?? $leadId),
                     (int) ($r->LEAD_ACTID ?? 0),
@@ -2036,6 +1821,19 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'message' => $staleMessage], $code);
         }
 
+        $activityRows = [];
+        try {
+            $activityRows = DB::select(
+                'SELECT "LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS"
+                 FROM "LEAD_ACT"
+                 WHERE "LEADID" = ?
+                 ORDER BY "CREATIONDATE" ASC, "LEAD_ACTID" ASC',
+                [$leadId]
+            );
+        } catch (\Throwable $e) {
+            $activityRows = [];
+        }
+
         try {
             DB::delete('DELETE FROM "LEAD_ACT" WHERE "LEADID" = ?', [$leadId]);
             DB::delete('DELETE FROM "LEAD" WHERE "LEADID" = ?', [$leadId]);
@@ -2047,6 +1845,7 @@ class AdminController extends Controller
         $request->session()->put('delete_undo', [
             'lead_id' => $leadId,
             'lead' => (array) $row,
+            'activities' => array_map(static fn ($activity) => (array) $activity, $activityRows),
         ]);
 
         return response()->json(['success' => true]);
@@ -2063,14 +1862,17 @@ class AdminController extends Controller
         }
 
         $lead = $data['lead'];
+        $activities = $data['activities'] ?? [];
         try {
+            DB::beginTransaction();
+
             DB::insert(
                 'INSERT INTO "LEAD" (
                     "LEADID","PRODUCTID","COMPANYNAME","CONTACTNAME","CONTACTNO","EMAIL",
                     "ADDRESS1","ADDRESS2","CITY","POSTCODE","BUSINESSNATURE","USERCOUNT",
                     "EXISTINGSOFTWARE","DEMOMODE","DESCRIPTION","REFERRALCODE",
                     "CURRENTSTATUS","CREATEDAT","CREATEDBY","ASSIGNED_TO","LASTMODIFIED"
-                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)',
+                ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                 [
                     $leadId,
                     $lead['PRODUCTID'] ?? null,
@@ -2092,9 +1894,47 @@ class AdminController extends Controller
                     $lead['CREATEDAT'] ?? null,
                     $lead['CREATEDBY'] ?? null,
                     $lead['ASSIGNED_TO'] ?? null,
+                    $lead['LASTMODIFIED'] ?? null,
                 ]
             );
+
+            DB::delete('DELETE FROM "LEAD_ACT" WHERE "LEADID" = ?', [$leadId]);
+
+            foreach ($activities as $activity) {
+                DB::insert(
+                    'INSERT INTO "LEAD_ACT" (
+                        "LEAD_ACTID","LEADID","USERID","CREATIONDATE","SUBJECT","DESCRIPTION","ATTACHMENT","STATUS"
+                    ) VALUES (?,?,?,?,?,?,?,?)',
+                    [
+                        $activity['LEAD_ACTID'] ?? null,
+                        $activity['LEADID'] ?? $leadId,
+                        $activity['USERID'] ?? null,
+                        $activity['CREATIONDATE'] ?? null,
+                        $activity['SUBJECT'] ?? null,
+                        $activity['DESCRIPTION'] ?? null,
+                        $activity['ATTACHMENT'] ?? null,
+                        $activity['STATUS'] ?? null,
+                    ]
+                );
+            }
+
+            DB::update(
+                'UPDATE "LEAD"
+                 SET "CURRENTSTATUS" = ?, "CREATEDAT" = ?, "CREATEDBY" = ?, "ASSIGNED_TO" = ?, "LASTMODIFIED" = ?
+                 WHERE "LEADID" = ?',
+                [
+                    $lead['CURRENTSTATUS'] ?? 'Open',
+                    $lead['CREATEDAT'] ?? null,
+                    $lead['CREATEDBY'] ?? null,
+                    $lead['ASSIGNED_TO'] ?? null,
+                    $lead['LASTMODIFIED'] ?? null,
+                    $leadId,
+                ]
+            );
+
+            DB::commit();
         } catch (\Throwable $e) {
+            DB::rollBack();
             return redirect()->route('admin.inquiries')->with('error', 'Could not undo the delete. Please try again.');
         }
 
@@ -2268,64 +2108,127 @@ class AdminController extends Controller
         return 'E STREAM SDN BHD';
     }
 
-    private function adminReportScopeOptions(): array
+    private function adminReportDealerDisplayName(
+        ?string $company,
+        ?string $alias,
+        ?string $email,
+        ?string $fallbackId = null
+    ): string {
+        $company = trim((string) $company);
+        $alias = trim((string) $alias);
+        $email = trim((string) $email);
+        $fallbackId = trim((string) $fallbackId);
+
+        if ($company !== '' && strtoupper($company) === $this->adminReportEstreamCompany() && $alias !== '') {
+            return $company . ' - ' . $alias;
+        }
+
+        if ($company !== '') {
+            return $company;
+        }
+
+        if ($alias !== '') {
+            return $alias;
+        }
+
+        if ($email !== '') {
+            return $email;
+        }
+
+        return $fallbackId !== '' ? $fallbackId : '-';
+    }
+
+    private function adminReportDealerDisplayNames(array $userIds): array
     {
-        static $options = null;
+        $normalizedIds = array_values(array_unique(array_filter(array_map(
+            static fn ($id) => trim((string) $id),
+            $userIds
+        ), static fn ($id) => $id !== '')));
 
-        if (is_array($options)) {
-            return $options;
+        if ($normalizedIds === []) {
+            return [];
         }
 
-        $options = [
-            'all' => 'All',
-            'all_dealers' => 'All Dealers (No E Stream)',
-            'estream' => 'All E Stream',
-        ];
+        $placeholders = implode(',', array_fill(0, count($normalizedIds), '?'));
+        $rows = DB::select(
+            'SELECT "USERID", "COMPANY", "ALIAS", "EMAIL"
+             FROM "USERS"
+             WHERE CAST("USERID" AS VARCHAR(50)) IN (' . $placeholders . ')',
+            $normalizedIds
+        );
 
-        try {
-            $dealerRows = DB::select(
-                'SELECT DISTINCT u."USERID", u."COMPANY", u."ALIAS", u."EMAIL"
-                 FROM "USERS" u
-                 WHERE EXISTS (
-                     SELECT 1
-                     FROM "LEAD" l
-                     WHERE TRIM(CAST(l."ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(u."USERID" AS VARCHAR(50)))
-                 )
-                 ORDER BY UPPER(TRIM(COALESCE("COMPANY", \'\'))),
-                          UPPER(TRIM(COALESCE("ALIAS", \'\'))),
-                          UPPER(TRIM(COALESCE("EMAIL", \'\'))),
-                          "USERID"'
-            );
-        } catch (\Throwable $e) {
-            return $options;
-        }
-
-        foreach ($dealerRows as $dealerRow) {
-            $dealerId = trim((string) ($dealerRow->USERID ?? ''));
+        $names = [];
+        foreach ($rows as $row) {
+            $dealerId = trim((string) ($row->USERID ?? ''));
             if ($dealerId === '') {
                 continue;
             }
 
-            $company = trim((string) ($dealerRow->COMPANY ?? ''));
-            $alias = trim((string) ($dealerRow->ALIAS ?? ''));
-            $email = trim((string) ($dealerRow->EMAIL ?? ''));
-
-            if ($company !== '' && $alias !== '') {
-                $label = $company . ' - ' . $alias;
-            } elseif ($company !== '') {
-                $label = $company;
-            } elseif ($alias !== '') {
-                $label = $alias;
-            } elseif ($email !== '') {
-                $label = $email;
-            } else {
-                $label = $dealerId;
-            }
-
-            $options['dealer:' . $dealerId] = $label;
+            $names[$dealerId] = $this->adminReportDealerDisplayName(
+                (string) ($row->COMPANY ?? ''),
+                (string) ($row->ALIAS ?? ''),
+                (string) ($row->EMAIL ?? ''),
+                $dealerId
+            );
         }
 
-        return $options;
+        return $names;
+    }
+
+    private function adminReportScopeOptions(): array
+    {
+        return QueryCache::remember('admin_report_scope_options', function () {
+            $options = [
+                'all' => 'All',
+                'all_dealers' => 'All Dealers (No E Stream)',
+                'estream' => 'All E Stream',
+            ];
+
+            try {
+                $dealerRows = DB::select(
+                    'SELECT DISTINCT u."USERID", u."COMPANY", u."ALIAS", u."EMAIL"
+                     FROM "USERS" u
+                     WHERE EXISTS (
+                         SELECT 1
+                         FROM "LEAD" l
+                         WHERE TRIM(CAST(l."ASSIGNED_TO" AS VARCHAR(50))) = TRIM(CAST(u."USERID" AS VARCHAR(50)))
+                     )
+                     ORDER BY UPPER(TRIM(COALESCE("COMPANY", \'\'))),
+                              UPPER(TRIM(COALESCE("ALIAS", \'\'))),
+                              UPPER(TRIM(COALESCE("EMAIL", \'\'))),
+                              "USERID"'
+                );
+            } catch (\Throwable $e) {
+                return $options;
+            }
+
+            foreach ($dealerRows as $dealerRow) {
+                $dealerId = trim((string) ($dealerRow->USERID ?? ''));
+                if ($dealerId === '') {
+                    continue;
+                }
+
+                $company = trim((string) ($dealerRow->COMPANY ?? ''));
+                $alias = trim((string) ($dealerRow->ALIAS ?? ''));
+                $email = trim((string) ($dealerRow->EMAIL ?? ''));
+
+                if ($company !== '' && $alias !== '') {
+                    $label = $company . ' - ' . $alias;
+                } elseif ($company !== '') {
+                    $label = $company;
+                } elseif ($alias !== '') {
+                    $label = $alias;
+                } elseif ($email !== '') {
+                    $label = $email;
+                } else {
+                    $label = $dealerId;
+                }
+
+                $options['dealer:' . $dealerId] = $label;
+            }
+
+            return $options;
+        });
     }
 
     private function resolveAdminReportScope(Request $request): string
@@ -2866,6 +2769,11 @@ class AdminController extends Controller
             );
         }
 
+        $dealerNameById = $this->adminReportDealerDisplayNames(array_map(
+            static fn ($row) => (string) ($row->DEALER_ID ?? $row->dealer_id ?? ''),
+            $dealerTotals
+        ));
+
         $totalsByDealer = [];
         foreach ($dealerTotals as $r) {
             $id = (string) ($r->DEALER_ID ?? $r->dealer_id ?? '');
@@ -2874,7 +2782,7 @@ class AdminController extends Controller
             $closed = (int) ($r->CLOSED_C ?? $r->closed_c ?? 0);
             $totalsByDealer[$id] = [
                 'dealer_id' => $id,
-                'name' => (string) ($r->NAME ?? $r->name ?? $id),
+                'name' => $dealerNameById[$id] ?? (string) ($r->NAME ?? $r->name ?? $id),
                 'total' => $total,
                 'closed' => $closed,
                 'closed_rate' => $total > 0 ? ($closed / $total * 100) : 0,
@@ -3144,7 +3052,7 @@ class AdminController extends Controller
             $total = isset($totalsByDealer[$id]) ? (int) $totalsByDealer[$id]['total'] : $failed;
             $top10Failed[] = [
                 'dealer_id' => $id,
-                'name' => (string) ($r->NAME ?? $r->name ?? $id),
+                'name' => $dealerNameById[$id] ?? (string) ($r->NAME ?? $r->name ?? $id),
                 'count' => $failed,
                 'total_assigned' => $total,
                 'percentage' => $total > 0 ? round($failed / $total * 100, 1) : 0,
@@ -3190,7 +3098,7 @@ class AdminController extends Controller
             $total = isset($totalsByDealer[$id]) ? (int) $totalsByDealer[$id]['total'] : $closed;
             $top10Closed[] = [
                 'dealer_id' => $id,
-                'name' => (string) ($r->NAME ?? $r->name ?? $id),
+                'name' => $dealerNameById[$id] ?? (string) ($r->NAME ?? $r->name ?? $id),
                 'count' => $closed,
                 'total_assigned' => $total,
                 'percentage' => $total > 0 ? round($closed / $total * 100, 1) : 0,
@@ -3261,25 +3169,6 @@ class AdminController extends Controller
 
         $startStr = $start->format('Y-m-d H:i:s');
         $endStr = $end->format('Y-m-d H:i:s');
-        $formatDealerName = static function (?string $company, ?string $alias, ?string $email, ?string $fallbackId = null): string {
-            $company = trim((string) $company);
-            $alias = trim((string) $alias);
-            $email = trim((string) $email);
-            $fallbackId = trim((string) $fallbackId);
-            if ($company !== '' && $alias !== '') {
-                return $company . ' - ' . $alias;
-            }
-            if ($company !== '') {
-                return $company;
-            }
-            if ($alias !== '') {
-                return $alias;
-            }
-            if ($email !== '') {
-                return $email;
-            }
-            return $fallbackId !== '' ? $fallbackId : '-';
-        };
         [$leadScopeSql, $leadScopeBindings] = $this->buildAdminReportScopeSql(
             $selectedReportScope,
             'l."ASSIGNED_TO"',
@@ -3338,7 +3227,7 @@ class AdminController extends Controller
             $dealers[] = [
                 'dealer_id' => $dealerId,
                 'email' => $email,
-                'name' => $formatDealerName($company, $alias, $email, $dealerId),
+                'name' => $this->adminReportDealerDisplayName($company, $alias, $email, $dealerId),
                 'total' => $total,
                 'closed' => $closed,
                 'rewarded' => $rewarded,
@@ -3381,7 +3270,7 @@ class AdminController extends Controller
             $company = (string) ($r->DEALER_COMPANY ?? $r->dealer_company ?? '');
             $alias = (string) ($r->DEALER_ALIAS ?? $r->dealer_alias ?? '');
             $email = (string) ($r->DEALER_EMAIL ?? $r->dealer_email ?? '');
-            $name = $formatDealerName($company, $alias, $email, $id);
+            $name = $this->adminReportDealerDisplayName($company, $alias, $email, $id);
             $dealt = trim((string) ($r->DEALT ?? $r->dealt ?? ''));
             if ($dealt === '') {
                 continue;

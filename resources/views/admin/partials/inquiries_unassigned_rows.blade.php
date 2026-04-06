@@ -67,8 +67,9 @@
     <td data-col="referralcode">{{ $r->REFERRALCODE ?? '-' }}</td>
     @php
         $rawStatus = strtoupper(trim((string) ($r->CURRENTSTATUS ?? '')));
+        $statusDisplay = $rawStatus === 'OPEN' ? 'CREATED' : ($rawStatus !== '' ? $rawStatus : 'PENDING');
         $statusClass = 'inquiries-status-new';
-        switch ($rawStatus) {
+        switch ($statusDisplay) {
             case 'CREATED': $statusClass = 'inquiries-status-created'; break;
             case 'PENDING': $statusClass = 'inquiries-status-pending'; break;
             case 'FOLLOWUP':
@@ -85,7 +86,7 @@
             default: $statusClass = 'inquiries-status-new'; break;
         }
     @endphp
-    <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $rawStatus !== '' ? $rawStatus : 'PENDING' }}</span></td>
+    <td data-col="status"><span class="inquiries-status {{ $statusClass }}">{{ $statusDisplay }}</span></td>
     <td class="inquiries-col-action inquiries-action-cell">
         @php
             $acompany = trim((string) ($r->COMPANYNAME ?? ''));

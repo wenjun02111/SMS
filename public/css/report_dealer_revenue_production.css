@@ -100,18 +100,18 @@
   justify-content: flex-end;
 }
 .rrp-tabs-row {
-  margin: 0 0 16px;
+  margin: 0 0 12px;
 }
 
 .rrp-filter-row {
   display: flex;
   justify-content: flex-end;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 .rrp-filter-form {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   --report-scope-picker-height: 31px;
   --report-scope-picker-width: 270px;
   --report-filter-radius: 8px;
@@ -226,32 +226,32 @@
 .rrp-top-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 .rrp-metric-card {
   background: #ffffff;
   border-radius: 11px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   border: 1px solid #e5e7eb;
 }
 .rrp-metric-label {
-  font-size: 11px;
+  font-size: 10px;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 800;
 }
 .rrp-metric-value {
-  margin-top: 8px;
-  font-size: 22px;
+  margin-top: 6px;
+  font-size: 20px;
   font-weight: 900;
   color: #1e293b;
 }
 .rrp-metric-sub {
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 4px;
+  font-size: 11px;
   color: #64748b;
 }
 
@@ -261,35 +261,35 @@
   border: 1px solid #e5e7eb;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
   overflow: hidden;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 .rrp-panel-header {
-  padding: 12px 14px;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   border-bottom: 1px solid #e5e7eb;
 }
 .rrp-panel-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
   color: #1e293b;
 }
 .rrp-panel-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   color: #64748b;
   margin-top: 2px;
 }
 .rrp-panel-body {
-  padding: 14px;
+  padding: 12px;
 }
 
 .rrp-legend {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 11px;
   color: #64748b;
 }
 .rrp-legend-item { display: inline-flex; align-items: center; }
@@ -304,7 +304,7 @@
 .rrp-dot-gold { background: #eab308; }
 .rrp-dot-green { background: #22c55e; }
 
-.rrp-chart-wrap { height: 270px; }
+.rrp-chart-wrap { height: 236px; }
 .rrp-chart-wrap canvas { width: 100% !important; height: 100% !important; }
 .rrp-empty { margin: 4px 0; font-size: 13px; color: #64748b; }
 
@@ -329,7 +329,7 @@
   color: #9ca3af;
 }
 .rrp-page {
-  padding: 0 22px 22px;
+  padding: 0 18px 16px;
   background: #f7f7ff;
   color: #1e293b;
   min-width: 0;

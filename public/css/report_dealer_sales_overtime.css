@@ -1,9 +1,9 @@
 /* Dedicated report CSS for dealer sales overtime */
 /* Reports v2 - matches provided reference layout */
 .rv2-page {
-  padding: 0px 25px 22px 22px;
+  padding: 0 20px 16px 18px;
   background: #f7f7ff;
-  font-size: 115%;
+  font-size: 108%;
   color: #1e293b;
   min-width: 0;
   overflow-x: hidden;
@@ -78,7 +78,7 @@
 .reports-dropdown-item:hover { background: #ede9fe; color: #312e81; }
 
 .rv2-header {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .rv2-title-row { display: flex; align-items: center; gap: 10px; }
@@ -130,19 +130,19 @@
 
 /* Filtered layer: one block for chart + table so filter clearly applies to both */
 .rv2-filtered-layer {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   background: linear-gradient(180deg, #ffffff 0%, #f9faff 100%);
   border: 1px solid #dfe3f2;
-  border-radius: 14px;
+  border-radius: 12px;
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
   overflow: hidden;
 }
 .rv2-filtered-layer-head {
-  padding: 12px 16px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
   border-bottom: 1px solid #e5e7eb;
   background: rgba(255, 255, 255, 0.88);
@@ -170,7 +170,7 @@
 
 .rv2-filters {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: stretch;
 }
@@ -190,15 +190,15 @@
   --report-filter-clear-font-size: 11px;
 }
 .rv2-filter {
-  min-width: 198px;
-  padding: 9px 11px;
+  min-width: 186px;
+  padding: 8px 10px;
   border: 1px solid #d6d9e8;
-  border-radius: 11px;
+  border-radius: 10px;
   background: #ffffff;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
 }
 .rv2-filter-label {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   font-size: 10px;
   font-weight: 800;
   color: #9ca3af;
@@ -268,17 +268,17 @@
   padding: 0;
 }
 
-.rv2-panel-body { padding: 14px; }
+.rv2-panel-body { padding: 12px; }
 .rv2-panel-head {
-  padding: 14px;
+  padding: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
   border-bottom: 1px solid #e5e7eb;
 }
 .rv2-section-title { font-size: 14px; font-weight: 800; color: #1e293b; }
-.rv2-section-title-prominent { font-size: 18px; line-height: 1.2; }
+.rv2-section-title-prominent { font-size: 16px; line-height: 1.2; }
 .rv2-section-subtitle { font-size: 12px; color: #64748b; margin-top: 2px; }
 
 .rv2-legend { display: flex; align-items: center; gap: 16px; font-size: 12px; color: #64748b; }
@@ -327,10 +327,10 @@
   border: 1px solid #e5e7eb;
   border-radius: 13px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  padding: 9px 10px;
-  min-height: 216px;
+  padding: 7px 8px;
+  min-height: 188px;
 }
-.rv2-chart-wrap canvas { width: 100% !important; height: 198px !important; }
+.rv2-chart-wrap canvas { width: 100% !important; height: 176px !important; }
 
 .rv2-bar-charts-row {
   display: grid;
@@ -341,32 +341,32 @@
 .rv2-bar-chart-half {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 .rv2-bar-chart-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: #1e293b;
 }
 .rv2-bar-chart-title-failed { color: #dc2626; }
 .rv2-bar-chart-title-closed { color: #16a34a; }
 .rv2-bar-chart-wrap {
-  min-height: 252px;
+  min-height: 220px;
   position: relative;
 }
-.rv2-bar-chart-wrap canvas { height: 252px !important; }
+.rv2-bar-chart-wrap canvas { height: 220px !important; }
 
 .rv2-bar-chart-title-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .rv2-bar-chart-wrap-full {
-  min-height: 234px;
+  min-height: 208px;
   width: 100%;
   max-width: 100%;
 }

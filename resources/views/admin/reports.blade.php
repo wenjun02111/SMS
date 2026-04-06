@@ -2,12 +2,12 @@
 @section('title', 'Report - Monthly Performance Analytics')
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260402-8">
-    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260402-15">
+    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260406-3">
     <style>
         .reports-page .dashboard-panels-two-column {
             display: grid;
             grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-            gap: 20px;
+            gap: 14px;
             min-width: 0;
         }
 
@@ -20,8 +20,8 @@
         .reports-page .reports-status-section,
         .reports-page .reports-product-section {
             border: 1px solid #e8ecf5;
-            border-radius: 20px;
-            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05);
+            border-radius: 18px;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
             overflow: hidden;
             background: #ffffff;
         }
@@ -32,8 +32,8 @@
             display: flex;
             align-items: flex-start;
             justify-content: space-between;
-            gap: 16px;
-            padding: 20px 22px 12px;
+            gap: 10px;
+            padding: 16px 18px 8px;
             border-bottom: none;
         }
 
@@ -49,7 +49,7 @@
         .reports-page .reports-status-heading .dashboard-panel-title,
         .reports-page .reports-product-heading .dashboard-panel-title {
             margin: 0;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 700;
             line-height: 1.2;
             color: #0f172a;
@@ -59,7 +59,7 @@
         .reports-inquiry-subtitle,
         .reports-status-subtitle,
         .reports-product-subtitle {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 500;
             color: #64748b;
             line-height: 1.4;
@@ -70,15 +70,15 @@
             align-items: center;
             justify-content: flex-end;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 8px;
         }
 
         .reports-inquiry-chip,
         .reports-product-scale-chip {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 7px 12px;
+            gap: 6px;
+            padding: 6px 10px;
             border-radius: 999px;
             border: 1px solid #e2e8f0;
             background: #ffffff;
@@ -95,7 +95,7 @@
         }
 
         .reports-inquiry-chip-value {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: #0f172a;
         }
@@ -105,8 +105,8 @@
             align-items: center;
             justify-content: center;
             flex-wrap: wrap;
-            gap: 18px;
-            padding: 10px 0 4px;
+            gap: 14px;
+            padding: 6px 0 0;
         }
 
         .admin-inquiry-trend-legend-button {
@@ -155,20 +155,20 @@
         .reports-page .reports-inquiry-section .dashboard-panel-body,
         .reports-page .reports-status-section .dashboard-panel-body,
         .reports-page .reports-product-section .dashboard-panel-body {
-            padding: 0 22px 22px;
+            padding: 0 18px 16px;
         }
 
         .dealer-reports-card,
         .dealer-reports-status-card,
         .reports-product-card {
             border: 1px solid #eef2f8;
-            border-radius: 18px;
+            border-radius: 16px;
             background: linear-gradient(180deg, #ffffff 0%, #fbfcff 100%);
-            padding: 14px 16px 12px;
+            padding: 10px 12px 8px;
         }
 
         .reports-page .reports-inquiry-section .dealer-reports-card {
-            padding: 12px 14px 6px;
+            padding: 8px 10px 2px;
         }
 
         .dealer-reports-chart-wrapper,
@@ -178,7 +178,7 @@
             background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
             border-radius: 10px;
             border: 1px solid #e5e7eb;
-            padding: 10px;
+            padding: 8px;
             box-sizing: border-box;
         }
 
@@ -229,8 +229,8 @@
         .dealer-reports-empty,
         .reports-product-empty {
             margin: 0;
-            padding: 20px 8px;
-            font-size: 14px;
+            padding: 12px 6px;
+            font-size: 13px;
             color: #64748b;
             text-align: center;
         }
@@ -239,7 +239,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 10px;
         }
 
         .reports-page .report-donut-wrapper {
@@ -517,7 +517,7 @@
                 @if (!$hasInquiryTrendData)
                     <p class="dealer-reports-empty">No leads created in this period yet.</p>
                 @else
-                    <div class="dealer-reports-chart-wrapper" style="height: 336px;">
+                    <div class="dealer-reports-chart-wrapper" style="height: 272px;">
                         <p class="dealer-reports-chart-fallback">Unable to load inquiry trend chart.</p>
                         <canvas id="adminInquiryTrendChart"></canvas>
                     </div>
@@ -653,10 +653,10 @@
         @else
             @php
                 $itemCount = $productConversionDisplay->count();
-                $barHeightPx = 20;
-                $gapPx = 10;
-                $paddingPx = 44;
-                $chartHeightPx = max(168, $itemCount * ($barHeightPx + $gapPx) + $paddingPx);
+                $barHeightPx = 16;
+                $gapPx = 8;
+                $paddingPx = 28;
+                $chartHeightPx = max(132, $itemCount * ($barHeightPx + $gapPx) + $paddingPx);
             @endphp
             <div class="reports-product-chart-wrapper" style="height: {{ $chartHeightPx }}px;">
                 <p class="reports-product-chart-fallback">Unable to load product conversion chart.</p>
