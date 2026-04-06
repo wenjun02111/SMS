@@ -184,16 +184,27 @@
     }
 
     var passkeyUtils = window.SQLSMSPasskey;
+    var loginPasskeyBtn = document.getElementById('login-passkey-btn');
+    var registerPasskeyBtn = document.getElementById('register-passkey-btn');
+    var registerPasskeyPhoneBtn = document.getElementById('register-passkey-phone-btn');
+
+    function resetPasskeyScreenState() {
+        [loginPasskeyBtn, registerPasskeyBtn, registerPasskeyPhoneBtn].forEach(function (button) {
+            if (button) {
+                button.disabled = false;
+            }
+        });
+    }
 
     if (!window.PublicKeyCredential || !passkeyUtils) {
-        var lp = document.getElementById('login-passkey-btn');
-        if (lp) { lp.disabled = true; lp.title = 'Passkeys not supported in this browser'; }
-        var rp = document.getElementById('register-passkey-btn');
-        if (rp) { rp.disabled = true; rp.title = 'Passkeys not supported in this browser'; }
+        if (loginPasskeyBtn) { loginPasskeyBtn.disabled = true; loginPasskeyBtn.title = 'Passkeys not supported in this browser'; }
+        if (registerPasskeyBtn) { registerPasskeyBtn.disabled = true; registerPasskeyBtn.title = 'Passkeys not supported in this browser'; }
         return;
     }
 
-    var loginPasskeyBtn = document.getElementById('login-passkey-btn');
+    window.addEventListener('pageshow', resetPasskeyScreenState);
+    window.addEventListener('pagehide', resetPasskeyScreenState);
+
     if (loginPasskeyBtn) {
     loginPasskeyBtn.addEventListener('click', function () {
         var btn = this;
@@ -235,8 +246,6 @@
     }
 
     // Register passkey (after sign-in, still on login page)
-    var registerPasskeyBtn = document.getElementById('register-passkey-btn');
-    var registerPasskeyPhoneBtn = document.getElementById('register-passkey-phone-btn');
     if (registerPasskeyBtn || registerPasskeyPhoneBtn) {
         var dashboardUrl = '{{ $dashboard_url ?? "" }}';
         function setRegisterButtonsDisabled(disabled) {
