@@ -1449,6 +1449,18 @@ button.dealer-pagination-btn:disabled {
   flex-direction: column;
   min-height: 608px;
 }
+
+.dealer-dashboard-content .dealer-inquiries-panel .dealer-table-wrapper {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.dealer-dashboard-content .dealer-inquiries-panel .dealer-table-header {
+  flex-shrink: 0;
+}
+
 .dealer-dashboard-content .dealer-inquiries-panel .dealer-table-footer {
   flex-shrink: 0;
   width: 100%;
@@ -1498,13 +1510,19 @@ button.dealer-pagination-btn:disabled {
   flex: 1 1 auto;
   display: flex;
   grid-template-columns: 1fr;
-  min-width: 900px;
+  min-width: 980px;
   padding: 0;
   gap: 0;
+  align-items: stretch;
 }
 
 .dealer-table-row--empty:hover {
   background-color: transparent;
+}
+
+.dealer-dashboard-content .dealer-inquiries-panel .dealer-table-empty {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .dealer-table-row:hover {

@@ -3349,6 +3349,26 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   flex-wrap: wrap;
 }
 
+.inquiry-progression-steps .inquiry-step[data-step="FAILED"],
+.inquiry-progression-steps .inquiry-connector[data-next-step="FAILED"] {
+  display: none;
+}
+
+.inquiry-progression-steps--failed .inquiry-step[data-step="FAILED"] {
+  display: flex;
+}
+
+.inquiry-progression-steps--failed .inquiry-connector[data-next-step="FAILED"] {
+  display: block;
+}
+
+.inquiry-progression-steps--failed .inquiry-step[data-step="COMPLETED"],
+.inquiry-progression-steps--failed .inquiry-step[data-step="REWARDED"],
+.inquiry-progression-steps--failed .inquiry-connector[data-next-step="COMPLETED"],
+.inquiry-progression-steps--failed .inquiry-connector[data-next-step="REWARDED"] {
+  display: none;
+}
+
 .inquiry-step {
   display: flex;
   align-items: center;
@@ -3403,6 +3423,13 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
   color: #ffffff;
 }
 
+.inquiry-step--done.inquiry-step--failed,
+.inquiry-step--active.inquiry-step--failed,
+.inquiry-step--failed-terminal {
+  background: #111827;
+  color: #ffffff;
+}
+
 /* Active/selected step: color */
 .inquiry-step--active.inquiry-step--red {
   background: #FF4500;
@@ -3433,6 +3460,10 @@ html.dashboard-root-sidebar-collapsed-preload .dashboard-sidebar {
 
 .inquiry-step--active.inquiry-step--selected {
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18), 0 10px 18px rgba(15, 23, 42, 0.12);
+}
+
+.inquiry-step--failed-terminal.inquiry-step--selected {
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.18), 0 10px 18px rgba(15, 23, 42, 0.12);
 }
 
 .inquiry-step--done.inquiry-step--past-muted {

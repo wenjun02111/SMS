@@ -1014,6 +1014,16 @@ class DealerController extends Controller
             }
         }
 
+        $latestNonFailedRow = DB::selectOne(
+            'SELECT FIRST 1 la."STATUS"
+               FROM "LEAD_ACT" la
+              WHERE la."LEADID" = ?
+                AND UPPER(TRIM(COALESCE(la."STATUS", \'\'))) NOT IN (\'CREATED\', \'FAILED\')
+              ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC',
+            [$leadId]
+        );
+        $latestNonFailedStatus = $latestNonFailedRow ? trim((string) ($latestNonFailedRow->STATUS ?? '')) : '';
+
         $lastReward = null;
         $lastRow = DB::selectOne(
             'SELECT FIRST 1 la."CREATIONDATE", la."DESCRIPTION" FROM "LEAD_ACT" la
@@ -1040,6 +1050,7 @@ class DealerController extends Controller
             'activities' => $activities,
             'last_reward_details' => $lastReward,
             'latest_status' => $latestStatus,
+            'latest_non_failed_status' => $latestNonFailedStatus,
             'latest_created_at' => $latestCreatedAt,
         ]);
     }

@@ -2,7 +2,7 @@
 @section('title', 'My Inquiries – SQL LMS Dealer Console')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/dealer-inquiries.css') }}?v=20260401-17">
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-inquiries.css') }}?v=20260407-01">
 @endpush
 
 @section('content')
@@ -801,16 +801,18 @@ if (document.readyState === 'loading') {
                 <span class="inquiry-progression-label">INQUIRY PROGRESSION</span>
                 <div class="inquiry-progression-steps" id="inquiryProgressionSteps">
                     <div class="inquiry-step inquiry-step--red" data-step="PENDING" data-color="red"><span>PENDING</span></div>
-                    <div class="inquiry-connector"></div>
+                    <div class="inquiry-connector" data-next-step="FOLLOW UP"></div>
                     <div class="inquiry-step inquiry-step--red" data-step="FOLLOW UP" data-color="red"><span>FOLLOW UP</span></div>
-                    <div class="inquiry-connector"></div>
+                    <div class="inquiry-connector" data-next-step="DEMO"></div>
                     <div class="inquiry-step inquiry-step--yellow" data-step="DEMO" data-color="yellow"><span>DEMO</span></div>
-                    <div class="inquiry-connector"></div>
+                    <div class="inquiry-connector" data-next-step="CONFIRMED"></div>
                     <div class="inquiry-step inquiry-step--yellow" data-step="CONFIRMED" data-color="yellow"><span>CONFIRMED</span></div>
-                    <div class="inquiry-connector"></div>
+                    <div class="inquiry-connector" data-next-step="COMPLETED"></div>
                     <div class="inquiry-step inquiry-step--green" data-step="COMPLETED" data-color="green"><span>COMPLETED</span></div>
-                    <div class="inquiry-connector"></div>
+                    <div class="inquiry-connector" data-next-step="REWARDED"></div>
                     <div class="inquiry-step inquiry-step--green" data-step="REWARDED" data-color="green"><span>REWARDED</span></div>
+                    <div class="inquiry-connector" data-next-step="FAILED"></div>
+                    <div class="inquiry-step inquiry-step--failed" data-step="FAILED" data-color="failed"><span>FAILED</span></div>
                 </div>
             </div>
             <div class="inquiry-view-message inquiry-latest-failed-notice" id="inquiryLatestFailedNotice" hidden>
@@ -818,7 +820,12 @@ if (document.readyState === 'loading') {
                     <span class="inquiry-field-label">LATEST STATUS IS</span>
                     <span class="inquiry-latest-failed-badge">FAILED</span>
                 </div>
-                <div class="inquiry-view-message-content" id="inquiryLatestFailedMessage">—</div>
+                <div class="inquiry-latest-failed-grid">
+                    <div class="inquiry-latest-failed-block">
+                        <span class="inquiry-field-label">Failure Reason</span>
+                        <div class="inquiry-latest-failed-value" id="inquiryLatestFailedReason">—</div>
+                    </div>
+                </div>
             </div>
             <div class="inquiry-followup">
                 <div class="inquiry-followup-header">
@@ -911,7 +918,8 @@ if (document.readyState === 'loading') {
         'DEMO': 'Add specific notes about this demo...',
         'CONFIRMED': 'Add specific notes about this confirmation...',
         'COMPLETED': 'Add specific notes about this completion...',
-        'REWARDED': 'Add specific notes about this reward...'
+        'REWARDED': 'Add specific notes about this reward...',
+        'FAILED': 'Add specific notes about this failed inquiry...'
     };
     var dateTimeLabels = {
         'PENDING': { date: 'FOLLOW-UP DATE', time: 'FOLLOW-UP TIME' },
@@ -919,7 +927,8 @@ if (document.readyState === 'loading') {
         'DEMO': { date: 'DEMO DATE', time: 'DEMO TIME' },
         'CONFIRMED': { date: 'CONFIRMED DATE', time: 'CONFIRMED TIME' },
         'COMPLETED': { date: 'COMPLETED DATE', time: 'COMPLETED TIME' },
-        'REWARDED': { date: 'REWARD DATE', time: 'REWARD TIME' }
+        'REWARDED': { date: 'REWARD DATE', time: 'REWARD TIME' },
+        'FAILED': { date: 'FAILED DATE', time: 'FAILED TIME' }
     };
     var statusMap = {
         'PENDING': 'PENDING', 'FOLLOW UP': 'FOLLOW UP', 'FOLLOWUP': 'FOLLOW UP',
@@ -940,6 +949,16 @@ if (document.readyState === 'loading') {
     var latestMinTime = '';
     var currentReferralCode = '';
     var latestStatusRaw = '';
+    var latestNonFailedStatusRaw = '';
+
+    function escapeInquiryHtml(value) {
+        return String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     function hasReferralCode(value) {
         var normalized = String(value || '').trim();
@@ -974,10 +993,15 @@ if (document.readyState === 'loading') {
         return null;
     }
 
-    function getDisplayProgressionStatus(latestStatus) {
+    function getDisplayProgressionStatus(latestStatus, latestNonFailedStatus) {
         var normalizedLatest = normalizeStatus(latestStatus);
         if (normalizedLatest !== 'FAILED' && statusOrder.indexOf(normalizedLatest) >= 0) {
             return normalizedLatest;
+        }
+
+        var normalizedNonFailed = normalizeStatus(latestNonFailedStatus);
+        if (normalizedNonFailed !== 'FAILED' && statusOrder.indexOf(normalizedNonFailed) >= 0) {
+            return normalizedNonFailed;
         }
 
         for (var i = 0; i < cachedActivities.length; i++) {
@@ -992,18 +1016,86 @@ if (document.readyState === 'loading') {
 
     function renderLatestFailedNotice(activity) {
         var noticeEl = document.getElementById('inquiryLatestFailedNotice');
-        var messageEl = document.getElementById('inquiryLatestFailedMessage');
-        if (!noticeEl || !messageEl) return;
+        var reasonEl = document.getElementById('inquiryLatestFailedReason');
+        if (!noticeEl || !reasonEl) return;
 
         var shouldShow = normalizeStatus(latestStatusRaw) === 'FAILED' && !!activity;
         noticeEl.hidden = !shouldShow;
         if (!shouldShow) {
-            messageEl.textContent = '—';
+            reasonEl.textContent = '—';
             return;
         }
 
-        var message = String(activity.description || '').trim();
-        messageEl.textContent = message !== '' ? message : 'No failed message available.';
+        var parsed = parseFailedDescription(activity.description || '');
+        reasonEl.textContent = parsed.reason || 'No failure reason recorded.';
+    }
+
+    function parseFailedDescription(description) {
+        var raw = String(description || '').trim();
+        var parsed = {
+            reason: '',
+            detail: ''
+        };
+
+        if (raw === '') {
+            return parsed;
+        }
+
+        raw.split(/\r?\n+/).forEach(function(line) {
+            var text = String(line || '').trim();
+            var lower = text.toLowerCase();
+            if (text === '') {
+                return;
+            }
+            if (lower.indexOf('failure reason:') === 0) {
+                parsed.reason = text.slice('Failure reason:'.length).trim();
+                return;
+            }
+            if (lower.indexOf('additional details:') === 0) {
+                parsed.detail = text.slice('Additional details:'.length).trim();
+                return;
+            }
+            if (lower.indexOf('status changed to failed by ') === 0) {
+                var legacyText = text.replace(/^status changed to failed by [^.]+\.\s*/i, '').trim();
+                if (legacyText !== '') {
+                    parsed.reason = legacyText;
+                }
+                return;
+            }
+            if (parsed.reason === '') {
+                parsed.reason = text;
+                return;
+            }
+            parsed.detail += (parsed.detail ? '\n' : '') + text;
+        });
+
+        if (parsed.reason === '') {
+            parsed.reason = raw;
+        }
+
+        return parsed;
+    }
+
+    function getProgressionStep(stepName) {
+        if (!progressionSteps) return null;
+        return progressionSteps.querySelector('.inquiry-step[data-step="' + stepName + '"]');
+    }
+
+    function getProgressionConnector(nextStepName) {
+        if (!progressionSteps) return null;
+        return progressionSteps.querySelector('.inquiry-connector[data-next-step="' + nextStepName + '"]');
+    }
+
+    function isFailedLatestStatus() {
+        return normalizeStatus(latestStatusRaw) === 'FAILED';
+    }
+
+    function isFailedSelected() {
+        return isFailedLatestStatus() && selectedStatusIdx === -1;
+    }
+
+    function getSelectedStatusName() {
+        return isFailedSelected() ? 'FAILED' : (statusOrder[selectedStatusIdx] || 'PENDING');
     }
 
     function canSelectFutureStatus(fromStatus, toStatus) {
@@ -1054,22 +1146,37 @@ if (document.readyState === 'loading') {
     function refreshProgressionState() {
         if (!progressionSteps) return;
         var currentStatus = statusOrder[currentStatusIdx] || 'PENDING';
-        var highlightNewStatus = !viewMode && selectedStatusIdx > currentStatusIdx;
-        progressionSteps.querySelectorAll('.inquiry-step').forEach(function(step, i) {
-            step.classList.remove('inquiry-step--done', 'inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click', 'inquiry-step--viewable', 'inquiry-step--past-muted');
+        var highlightNewStatus = !viewMode && !isFailedSelected() && selectedStatusIdx > currentStatusIdx;
+        var failedLatest = isFailedLatestStatus();
+
+        progressionSteps.classList.toggle('inquiry-progression-steps--failed', failedLatest);
+
+        statusOrder.forEach(function(stepName, i) {
+            var step = getProgressionStep(stepName);
+            var connector = getProgressionConnector(stepName);
+            if (!step) return;
+            step.classList.remove('inquiry-step--done', 'inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click', 'inquiry-step--viewable', 'inquiry-step--past-muted', 'inquiry-step--failed-terminal');
+            step.hidden = false;
+            step.style.display = failedLatest && i > currentStatusIdx ? 'none' : 'flex';
+            step.style.order = String(i * 2);
+            if (connector) {
+                connector.hidden = false;
+                connector.style.display = failedLatest && i > currentStatusIdx ? 'none' : 'block';
+                connector.style.order = String((i * 2) - 1);
+            }
             var label = getStepDisplayLabel(i);
-            var displayText = label || step.dataset.step;
+            var displayText = label || stepName;
             var isDone = i <= currentStatusIdx;
             if (isDone) {
                 step.classList.add('inquiry-step--done', 'inquiry-step--viewable');
-                if (highlightNewStatus) step.classList.add('inquiry-step--past-muted');
+                if (highlightNewStatus || failedLatest) step.classList.add('inquiry-step--past-muted');
                 if (i === selectedStatusIdx && viewMode) step.classList.add('inquiry-step--selected');
-                step.innerHTML = '<i class="bi bi-check"></i><span>' + displayText + '</span>';
+                step.innerHTML = '<i class="bi bi-check"></i><span>' + escapeInquiryHtml(displayText) + '</span>';
                 return;
             }
 
-            var canClick = canSelectFutureStatus(currentStatus, statusOrder[i]);
-            step.innerHTML = '<span>' + displayText + '</span>';
+            var canClick = canSelectFutureStatus(currentStatus, stepName);
+            step.innerHTML = '<span>' + escapeInquiryHtml(displayText) + '</span>';
             if (i === selectedStatusIdx && canClick) {
                 step.classList.add('inquiry-step--active', 'inquiry-step--selected');
             } else if (canClick) {
@@ -1078,6 +1185,37 @@ if (document.readyState === 'loading') {
                 step.classList.add('inquiry-step--no-click');
             }
         });
+
+        var failedStep = getProgressionStep('FAILED');
+        var failedConnector = getProgressionConnector('FAILED');
+        if (failedStep) {
+            failedStep.classList.remove('inquiry-step--done', 'inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--clickable', 'inquiry-step--no-click', 'inquiry-step--viewable', 'inquiry-step--past-muted', 'inquiry-step--failed-terminal');
+            if (failedLatest) {
+                if (failedConnector) {
+                    failedConnector.hidden = false;
+                    failedConnector.style.display = 'block';
+                    failedConnector.style.order = String((currentStatusIdx * 2) + 1);
+                }
+                failedStep.hidden = false;
+                failedStep.style.display = 'flex';
+                failedStep.style.order = String((currentStatusIdx * 2) + 2);
+                if (isFailedSelected()) {
+                    failedStep.classList.add('inquiry-step--active', 'inquiry-step--selected', 'inquiry-step--viewable', 'inquiry-step--failed-terminal');
+                } else {
+                    failedStep.classList.add('inquiry-step--done', 'inquiry-step--viewable', 'inquiry-step--failed-terminal');
+                }
+                failedStep.innerHTML = '<i class="bi bi-x-lg"></i><span>FAILED</span>';
+            } else {
+                if (failedConnector) {
+                    failedConnector.hidden = true;
+                    failedConnector.style.display = 'none';
+                }
+                failedStep.hidden = true;
+                failedStep.style.display = 'none';
+                failedStep.classList.add('inquiry-step--no-click');
+                failedStep.innerHTML = '<span>FAILED</span>';
+            }
+        }
     }
 
     function validateFollowupDateTime() {
@@ -1124,17 +1262,19 @@ if (document.readyState === 'loading') {
     }
 
     function setProgression(currentStatus) {
-        var normalized = normalizeStatus(currentStatus);
+        var progressionStatus = getDisplayProgressionStatus(currentStatus, latestNonFailedStatusRaw);
+        var normalized = normalizeStatus(progressionStatus);
         var idx = statusOrder.indexOf(normalized);
         if (idx < 0) idx = 0;
         currentStatusIdx = idx;
         // In view mode, keep selection on the latest saved status.
         // In edit mode, select the first allowed next status.
-        selectedStatusIdx = viewMode ? idx : getDefaultSelectedStatusIdx(idx);
+        selectedStatusIdx = viewMode ? (isFailedLatestStatus() ? -1 : idx) : getDefaultSelectedStatusIdx(idx);
         refreshProgressionState();
+        var selectedStatus = getSelectedStatusName();
         var remarkEl = document.getElementById('inquiryRemark');
-        if (remarkEl) remarkEl.placeholder = remarkPlaceholders[statusOrder[selectedStatusIdx]] || remarkPlaceholders['PENDING'];
-        setDateTimeLabels(statusOrder[selectedStatusIdx]);
+        if (remarkEl) remarkEl.placeholder = remarkPlaceholders[selectedStatus] || remarkPlaceholders['PENDING'];
+        setDateTimeLabels(selectedStatus);
         toggleAddCalendarButton();
         toggleProductChecklist();
         toggleUpdateButton();
@@ -1156,7 +1296,7 @@ if (document.readyState === 'loading') {
     function toggleAddCalendarButton() {
         var btn = document.getElementById('inquiryModalAddCalendar');
         if (!btn) return;
-        var isDemo = statusOrder[selectedStatusIdx] === 'DEMO';
+        var isDemo = getSelectedStatusName() === 'DEMO';
         btn.style.display = isDemo ? '' : 'none';
         if (!isDemo) return;
 
@@ -1171,7 +1311,7 @@ if (document.readyState === 'loading') {
 
     function toggleProductChecklist() {
         var field = document.getElementById('inquiryProductsField');
-        var isCompleted = statusOrder[selectedStatusIdx] === 'COMPLETED' && !viewMode;
+        var isCompleted = getSelectedStatusName() === 'COMPLETED' && !viewMode;
         if (field) {
             field.style.display = isCompleted ? '' : 'none';
             if (!isCompleted) {
@@ -1185,7 +1325,7 @@ if (document.readyState === 'loading') {
         var isRewarded = currentStatusIdx === statusOrder.length - 1;
         // Disable when viewing, or when attempting to re-submit an older step.
         // Allow editing/re-submitting the CURRENT status, and submitting the NEXT status.
-        var selectedName = statusOrder[selectedStatusIdx] || '';
+        var selectedName = getSelectedStatusName();
         var isOlderStep = selectedStatusIdx < currentStatusIdx;
         var isBlockedFuture = selectedStatusIdx > currentStatusIdx && !canSelectFutureStatus(statusOrder[currentStatusIdx] || 'PENDING', selectedName);
         var disable = isRewarded || viewMode || isOlderStep || isBlockedFuture;
@@ -1214,7 +1354,7 @@ if (document.readyState === 'loading') {
         var stepName = statusOrder[stepIdx];
         if (stepIdx > currentStatusIdx) return stepName;
         var act = findActivityForStatus(stepName);
-        if (act && act.status) return String(act.status || '').toUpperCase().replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') || stepName;
+        if (act && act.status) return String(act.status || '').toUpperCase() || stepName;
         if (stepIdx === currentStatusIdx) return 'CURRENT';
         return stepName;
     }
@@ -1323,15 +1463,15 @@ if (document.readyState === 'loading') {
         activities.forEach(function(a) {
             var item = document.createElement('div');
             item.className = 'inquiry-activity-item';
-            var user = (a.user || 'System').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            var user = escapeInquiryHtml(a.user || 'System');
             var timeStr = formatActivityTime(a.created_at, now);
             var html = '<span class="inquiry-activity-bullet"></span><div class="inquiry-activity-content">';
             if (a.type === 'created') {
                 html += '<strong>' + user + '</strong> created inquiry <span class="inquiry-activity-link">#SQL-' + currentLeadId + '</span>';
             } else {
-                var subj = (a.subject || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                var desc = (a.description || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                var status = (a.status || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                var subj = escapeInquiryHtml(a.subject || '');
+                var desc = escapeInquiryHtml(a.description || '').replace(/\r?\n/g, '<br>');
+                var status = escapeInquiryHtml(a.status || '');
                 html += '<strong>' + user + '</strong> ' + (subj ? subj + ' ' : '');
                 if (status) html += 'changed status to <strong class="inquiry-activity-status">' + status + '</strong> ';
                 if (desc) html += '<span class="inquiry-activity-desc">' + desc + '</span> ';
@@ -1353,13 +1493,15 @@ if (document.readyState === 'loading') {
 
     function refreshStepLabels() {
         if (!progressionSteps) return;
-        progressionSteps.querySelectorAll('.inquiry-step').forEach(function(step, i) {
+        statusOrder.forEach(function(stepName, i) {
+            var step = getProgressionStep(stepName);
+            if (!step) return;
             var label = getStepDisplayLabel(i);
-            var text = label || step.dataset.step;
+            var text = label || stepName;
             if (step.classList.contains('inquiry-step--done')) {
-                step.innerHTML = '<i class="bi bi-check"></i><span>' + text + '</span>';
+                step.innerHTML = '<i class="bi bi-check"></i><span>' + escapeInquiryHtml(text) + '</span>';
             } else {
-                step.innerHTML = '<span>' + text + '</span>';
+                step.innerHTML = '<span>' + escapeInquiryHtml(text) + '</span>';
             }
         });
     }
@@ -1371,6 +1513,7 @@ if (document.readyState === 'loading') {
             .then(function(data) {
                 cachedActivities = data.activities || [];
                 latestStatusRaw = normalizeStatus(data && data.latest_status);
+                latestNonFailedStatusRaw = normalizeStatus(data && data.latest_non_failed_status);
                 renderActivity(cachedActivities);
                 refreshStepLabels();
                 renderLatestFailedNotice(findLatestFailedActivity());
@@ -1380,7 +1523,7 @@ if (document.readyState === 'loading') {
                 if (!userPickedStep) {
                     // Prefer server-computed latest (based on CREATIONDATE + LEAD_ACTID).
                     if (data && data.latest_status) {
-                        setProgression(getDisplayProgressionStatus(data.latest_status));
+                        setProgression(getDisplayProgressionStatus(data.latest_status, data.latest_non_failed_status));
                     }
 
                     // If opened from the edit icon, auto-select the NEXT status for editing.
@@ -1389,11 +1532,11 @@ if (document.readyState === 'loading') {
                         // (setProgression chooses next step when viewMode=false)
                         viewMode = false;
                         if (data && data.latest_status) {
-                            setProgression(getDisplayProgressionStatus(data.latest_status));
+                            setProgression(getDisplayProgressionStatus(data.latest_status, data.latest_non_failed_status));
                         }
                         setFieldsReadOnly(false);
-                        setRemarkPlaceholder(statusOrder[selectedStatusIdx]);
-                        setDateTimeLabels(statusOrder[selectedStatusIdx]);
+                        setRemarkPlaceholder(getSelectedStatusName());
+                        setDateTimeLabels(getSelectedStatusName());
 
                         var remarkEl = document.getElementById('inquiryRemark');
                         var dateEl = document.getElementById('inquiryFollowupDate');
@@ -1425,6 +1568,10 @@ if (document.readyState === 'loading') {
                     populateFormFromActivity(act);
                     setFieldsReadOnly(true);
                     setDateTimeLabels(cur);
+                } else if (modal && modal.classList.contains('inquiry-modal-open') && viewMode && isFailedSelected()) {
+                    populateFormFromActivity(findLatestFailedActivity());
+                    setFieldsReadOnly(true);
+                    setDateTimeLabels('FAILED');
                 }
 
                 var details = data.last_reward_details;
@@ -1440,6 +1587,7 @@ if (document.readyState === 'loading') {
             })
             .catch(function() {
                 latestStatusRaw = '';
+                latestNonFailedStatusRaw = '';
                 renderLatestFailedNotice(null);
                 renderActivity([]);
             });
@@ -1627,6 +1775,7 @@ if (document.readyState === 'loading') {
         openStartNext = !!startNext;
         cachedActivities = [];
         latestStatusRaw = normalizeStatus(status);
+        latestNonFailedStatusRaw = '';
         renderLatestFailedNotice(null);
         // Default: show the LAST submitted status details from DB (read-only).
         // Dealer must click the next step to create a new update.
@@ -1643,10 +1792,8 @@ if (document.readyState === 'loading') {
         var productBoxes = document.querySelectorAll('.inquiry-product-checkbox');
         if (productBoxes.length) productBoxes.forEach(function(b) { b.checked = false; });
         clearAttachmentPreviews();
-        // Select current (last submitted) step for viewing
-        selectedStatusIdx = currentStatusIdx;
         setFieldsReadOnly(true);
-        setDateTimeLabels(statusOrder[currentStatusIdx] || 'FOLLOW UP');
+        setDateTimeLabels(getSelectedStatusName());
         loadActivity(leadId);
         modal.setAttribute('aria-hidden', 'false');
         modal.classList.add('inquiry-modal-open');
@@ -1666,6 +1813,18 @@ if (document.readyState === 'loading') {
             if (!step) return;
             userPickedStep = true;
             if (step.classList.contains('inquiry-step--no-click')) return;
+            if (step.dataset.step === 'FAILED' && isFailedLatestStatus()) {
+                selectedStatusIdx = -1;
+                viewMode = true;
+                populateFormFromActivity(findLatestFailedActivity());
+                setFieldsReadOnly(true);
+                setDateTimeLabels('FAILED');
+                refreshProgressionState();
+                toggleAddCalendarButton();
+                toggleProductChecklist();
+                toggleUpdateButton();
+                return;
+            }
             var stepIdx = statusOrder.indexOf(step.dataset.step);
             if (stepIdx < 0) return;
             var isDoneStep = stepIdx <= currentStatusIdx;
@@ -1947,10 +2106,10 @@ if (document.readyState === 'loading') {
         // Allow submitting the selected step:
         // - current status: allowed (acts like "edit" by inserting a new LEAD_ACT row with same status)
         // - next/future status: allowed
-        var selectedName = statusOrder[selectedStatusIdx];
+        var selectedName = getSelectedStatusName();
         if (this.disabled) return;
         if (selectedStatusIdx < currentStatusIdx) return;
-        var toStatus = statusOrder[selectedStatusIdx];
+        var toStatus = getSelectedStatusName();
         var fromStatus = statusOrder[currentStatusIdx] || 'PENDING';
         if (selectedStatusIdx > currentStatusIdx && !canSelectFutureStatus(fromStatus, toStatus)) {
             showDealerInquiryToast(getBlockedStatusMessage(fromStatus, toStatus));
@@ -2032,7 +2191,7 @@ if (document.readyState === 'loading') {
                 viewMode = true;
                 selectedStatusIdx = currentStatusIdx;
                 setFieldsReadOnly(true);
-                setDateTimeLabels(statusOrder[currentStatusIdx] || 'FOLLOW UP');
+                setDateTimeLabels(getSelectedStatusName());
 
                 // Clear attachments UI and files (they are already saved)
                 clearAttachmentPreviews();

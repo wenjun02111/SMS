@@ -6,11 +6,37 @@
     $quickFilters = [];
     $individualUsers = [];
 
-    foreach ($scopeOptions as $scopeValue => $scopeLabel) {
+    $normalizeScopeOption = static function ($scopeOption): array {
+        if (is_array($scopeOption)) {
+            $label = trim((string) ($scopeOption['label'] ?? ''));
+            $search = trim((string) ($scopeOption['search'] ?? $label));
+
+            return [
+                'label' => $label !== '' ? $label : $search,
+                'search' => $search !== '' ? $search : $label,
+                'company' => trim((string) ($scopeOption['company'] ?? '')),
+                'alias' => trim((string) ($scopeOption['alias'] ?? '')),
+                'email' => trim((string) ($scopeOption['email'] ?? '')),
+            ];
+        }
+
+        $label = trim((string) $scopeOption);
+
+        return [
+            'label' => $label,
+            'search' => $label,
+            'company' => '',
+            'alias' => '',
+            'email' => '',
+        ];
+    };
+
+    foreach ($scopeOptions as $scopeValue => $scopeOption) {
+        $scopeMeta = $normalizeScopeOption($scopeOption);
         if (in_array($scopeValue, $quickFilterKeys, true)) {
-            $quickFilters[$scopeValue] = $scopeLabel;
+            $quickFilters[$scopeValue] = $scopeMeta;
         } else {
-            $individualUsers[$scopeValue] = $scopeLabel;
+            $individualUsers[$scopeValue] = $scopeMeta;
         }
     }
 @endphp
@@ -28,6 +54,34 @@
                         return option.dataset.scopeKind === 'quick';
                     }).map(function (option) {
                         return option.value;
+                    });
+                }
+
+                function getScopeOptionData(select) {
+                    return Array.prototype.map.call(select.options || [], function (option, index) {
+                        return {
+                            value: option.value,
+                            text: option.text,
+                            optgroup: option.parentElement && option.parentElement.tagName === 'OPTGROUP'
+                                ? option.parentElement.label
+                                : '',
+                            scope_kind: option.dataset.scopeKind || '',
+                            company: option.dataset.company || '',
+                            alias: option.dataset.alias || '',
+                            email: option.dataset.email || '',
+                            search_text: option.dataset.searchText || option.text || '',
+                            $order: index
+                        };
+                    });
+                }
+
+                function getScopeOptgroups(select) {
+                    return Array.prototype.map.call(select.querySelectorAll('optgroup'), function (group, index) {
+                        return {
+                            value: group.label,
+                            label: group.label,
+                            $order: index
+                        };
                     });
                 }
 
@@ -99,6 +153,8 @@
                         if (select.tomselect) return;
 
                         var quickValues = getQuickFilterValues(select);
+                        var optionData = getScopeOptionData(select);
+                        var optgroupData = getScopeOptgroups(select);
 
                         new TomSelect(select, {
                             maxItems: 1,
@@ -106,8 +162,14 @@
                             create: false,
                             hideSelected: false,
                             allowEmptyOption: false,
+                            options: optionData,
+                            optgroups: optgroupData,
+                            optgroupField: 'optgroup',
+                            optgroupValueField: 'value',
+                            optgroupLabelField: 'label',
+                            lockOptgroupOrder: true,
                             sortField: [{ field: '$order' }],
-                            searchField: ['text'],
+                            searchField: ['search_text', 'company', 'alias', 'email', 'text'],
                             copyClassesToDropdown: false,
                             reportQuickValues: quickValues,
                             controlInput: '<input type="text" autocomplete="off" placeholder="Type Company Name or Alias">',
@@ -164,18 +226,34 @@
     >
         @if (!empty($quickFilters))
             <optgroup label="Quick Filters">
-                @foreach ($quickFilters as $scopeValue => $scopeLabel)
-                    <option value="{{ $scopeValue }}" data-scope-kind="quick" {{ $scopeSelected === $scopeValue ? 'selected' : '' }}>
-                        {{ $scopeLabel }}
+                @foreach ($quickFilters as $scopeValue => $scopeMeta)
+                    <option
+                        value="{{ $scopeValue }}"
+                        data-scope-kind="quick"
+                        data-company="{{ $scopeMeta['company'] ?? '' }}"
+                        data-alias="{{ $scopeMeta['alias'] ?? '' }}"
+                        data-email="{{ $scopeMeta['email'] ?? '' }}"
+                        data-search-text="{{ $scopeMeta['search'] ?? ($scopeMeta['label'] ?? '') }}"
+                        {{ $scopeSelected === $scopeValue ? 'selected' : '' }}
+                    >
+                        {{ $scopeMeta['label'] ?? $scopeValue }}
                     </option>
                 @endforeach
             </optgroup>
         @endif
 
         @if (!empty($individualUsers))
-            @foreach ($individualUsers as $scopeValue => $scopeLabel)
-                <option value="{{ $scopeValue }}" data-scope-kind="individual" {{ $scopeSelected === $scopeValue ? 'selected' : '' }}>
-                    {{ $scopeLabel }}
+            @foreach ($individualUsers as $scopeValue => $scopeMeta)
+                <option
+                    value="{{ $scopeValue }}"
+                    data-scope-kind="individual"
+                    data-company="{{ $scopeMeta['company'] ?? '' }}"
+                    data-alias="{{ $scopeMeta['alias'] ?? '' }}"
+                    data-email="{{ $scopeMeta['email'] ?? '' }}"
+                    data-search-text="{{ $scopeMeta['search'] ?? ($scopeMeta['label'] ?? '') }}"
+                    {{ $scopeSelected === $scopeValue ? 'selected' : '' }}
+                >
+                    {{ $scopeMeta['label'] ?? $scopeValue }}
                 </option>
             @endforeach
         @endif

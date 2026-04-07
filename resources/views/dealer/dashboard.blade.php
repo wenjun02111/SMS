@@ -2,7 +2,7 @@
 @section('title', 'Dashboard – SQL LMS Dealer Console')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/dealer-dashboard.css') }}?v=20260401-02">
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-dashboard.css') }}?v=20260407-01">
 @endpush
 
 @section('content')
@@ -105,16 +105,25 @@
                             $displayStatus = $status;
                             $rowPage = (int) floor($i / ($inquiriesPerPage ?? 8)) + 1;
                             
-                            // Customer name truncation limit to 24 characters
-                            $customerFull = trim(($r->COMPANYNAME ?? '') . ' ' . ($r->CONTACTNAME ?? '')) ?: '—';
-                            $customerShort = \Illuminate\Support\Str::limit($customerFull, 24, '...');
+                            // Customer label: Company - Contact, with clean fallback if one side is missing.
+                            $customerCompany = trim((string) ($r->COMPANYNAME ?? ''));
+                            $customerContact = trim((string) ($r->CONTACTNAME ?? ''));
+                            if ($customerCompany !== '' && $customerContact !== '') {
+                                $customerFull = $customerCompany . ' - ' . $customerContact;
+                            } elseif ($customerCompany !== '') {
+                                $customerFull = $customerCompany;
+                            } elseif ($customerContact !== '') {
+                                $customerFull = $customerContact;
+                            } else {
+                                $customerFull = '—';
+                            }
                         @endphp
                         <a href="{{ route('dealer.inquiries', ['lead' => $r->LEADID, 'action' => 'update']) }}"
                            class="dealer-table-row dealer-inquiry-row dealer-inquiry-row-link"
                            data-page="{{ $rowPage }}"
                            aria-label="Open inquiry #SQL-{{ $r->LEADID }} and update status">
                             <span class="dealer-inquiry-id">#SQL-{{ $r->LEADID }}</span>
-                            <span title="{{ $customerFull !== '—' ? $customerFull : '' }}">{{ $customerShort }}</span>
+                            <span title="{{ $customerFull !== '—' ? $customerFull : '' }}">{{ $customerFull }}</span>
                             <span>{{ $r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED)) : '—' }}</span>
                             <div class="dealer-progress-cell">
                                 <span class="dealer-progress-text">{{ $displayStatus }}</span>

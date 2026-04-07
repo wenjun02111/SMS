@@ -360,8 +360,12 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
-    gap: 8px;
+    gap: 8px 10px;
     align-items: stretch;
+  }
+
+  .rrp-filter-form .report-scope-field {
+    grid-column: 1 / -1;
   }
 
   .rrp-filter-select,
@@ -376,6 +380,11 @@
     box-sizing: border-box;
   }
 
+  .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single .ts-control,
+  .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
+    border-radius: 12px;
+  }
+
   .rrp-filter-check {
     padding: 0 10px;
   }
@@ -384,7 +393,18 @@
     grid-column: 1 / -1;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 92px;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .rrp-filter-actions .report-filter-apply,
+  .rrp-filter-actions .report-filter-clear {
+    margin: 0;
+  }
+
+  .rrp-filter-actions .report-filter-clear {
+    min-width: 0;
   }
 
   .rrp-top-grid {
@@ -437,6 +457,11 @@
 
   .rrp-filter-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .rrp-filter-actions {
+    grid-template-columns: minmax(0, 1fr) 88px;
   }
 
   .rrp-filter-select,

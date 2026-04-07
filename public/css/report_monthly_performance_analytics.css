@@ -767,9 +767,18 @@
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
-    gap: 10px;
+    gap: 8px 10px;
     align-items: stretch;
     padding: 0;
+  }
+
+  .reports-period-form-compact .reports-period-select--month,
+  .reports-period-form-compact .reports-period-select--year {
+    width: 100%;
+  }
+
+  .reports-period-form-compact .report-scope-field {
+    grid-column: 1 / -1;
   }
 
   .reports-period-select,
@@ -785,6 +794,11 @@
     box-sizing: border-box;
   }
 
+  .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single .ts-control,
+  .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
+    border-radius: 12px;
+  }
+
   .reports-period-check {
     justify-content: flex-start;
     padding: 0 12px;
@@ -794,7 +808,18 @@
     grid-column: 1 / -1;
     width: 100%;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 98px;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .reports-period-actions .report-filter-apply,
+  .reports-period-actions .report-filter-clear {
+    margin: 0;
+  }
+
+  .reports-period-actions .report-filter-clear {
+    min-width: 0;
   }
 
   .reports-page .dashboard-metrics-grid {
@@ -873,6 +898,11 @@
 
   .reports-period-form-compact {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .reports-period-actions {
+    grid-template-columns: minmax(0, 1fr) 92px;
   }
 
   .reports-page .dashboard-metric-card {

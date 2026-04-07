@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Pending Payouts - SQL LMS Dealer Console')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/dealer-payouts.css') }}?v=20260401-17">
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-payouts.css') }}?v=20260407-01">
 @endpush
 @section('content')
 @php

@@ -316,6 +316,33 @@
   }
 }
 
+@media (min-width: 1280px) and (min-height: 900px) {
+  #completedPanel > .dealer-payouts-panel.inquiries-mgmt-panel,
+  #rewardedPanel > .dealer-payouts-panel.inquiries-mgmt-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #completedPanel > .dealer-payouts-panel.inquiries-mgmt-panel > .inquiries-table-wrap,
+  #rewardedPanel > .dealer-payouts-panel.inquiries-mgmt-panel > .inquiries-table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .dealer-payouts-panel .inquiries-table-scroll.inquiries-table-scroll-empty {
+    min-height: clamp(420px, calc(100vh - 280px), 620px) !important;
+  }
+
+  .dealer-payouts-panel .inquiries-table-scroll.inquiries-table-scroll-short {
+    min-height: clamp(440px, calc(100vh - 300px), 620px) !important;
+  }
+
+  .dealer-payouts-panel .inquiries-assigned-pagination {
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+}
+
 #completedTable,
 #rewardedTable {
   width: max-content;

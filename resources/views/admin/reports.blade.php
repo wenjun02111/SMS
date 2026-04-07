@@ -2,7 +2,7 @@
 @section('title', 'Report - Monthly Performance Analytics')
 @push('styles')
     <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260402-8">
-    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260406-3">
+    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260406-4">
     <style>
         .reports-page .dashboard-panels-two-column {
             display: grid;

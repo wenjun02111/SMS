@@ -1309,10 +1309,14 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'LEADID' => 'required|integer|min:1',
-            'DESCRIPTION' => 'required|string|max:4000',
+            'FAIL_REASON' => 'nullable|string|max:255|required_without:DESCRIPTION',
+            'FAIL_DETAIL' => 'nullable|string|max:4000',
+            'DESCRIPTION' => 'nullable|string|max:4000|required_without:FAIL_REASON',
         ]);
         $leadId = (int) $validated['LEADID'];
-        $reason = trim((string) ($validated['DESCRIPTION'] ?? ''));
+        $reason = trim((string) ($validated['FAIL_REASON'] ?? ''));
+        $detail = trim((string) ($validated['FAIL_DETAIL'] ?? ''));
+        $legacyDescription = trim((string) ($validated['DESCRIPTION'] ?? ''));
         $userId = trim((string) ($request->session()->get('user_id') ?? ''));
 
         $latest = DB::selectOne(
@@ -1324,7 +1328,16 @@ class AdminController extends Controller
             return back()->with('error', 'Cannot mark as Failed: lead is already ' . $currentStatus . '.');
         }
 
-        $message = 'Status changed to Failed by ' . ($userId !== '' ? $userId : 'Admin') . '. ' . $reason;
+        if ($reason !== '') {
+            $parts = ['Failure reason: ' . $reason];
+            if ($detail !== '') {
+                $parts[] = 'Additional details: ' . $detail;
+            }
+            $message = implode(PHP_EOL, $parts);
+        } else {
+            $message = $legacyDescription;
+        }
+
         try {
             DB::beginTransaction();
             DB::update(
@@ -2179,9 +2192,18 @@ class AdminController extends Controller
     {
         return QueryCache::remember('admin_report_scope_options', function () {
             $options = [
-                'all' => 'All',
-                'all_dealers' => 'All Dealers (No E Stream)',
-                'estream' => 'All E Stream',
+                'all' => [
+                    'label' => 'All',
+                    'search' => 'all',
+                ],
+                'all_dealers' => [
+                    'label' => 'All Dealers (No E Stream)',
+                    'search' => 'all dealers no estream no e stream',
+                ],
+                'estream' => [
+                    'label' => 'All E Stream',
+                    'search' => 'all estream all e stream',
+                ],
             ];
 
             try {
@@ -2224,7 +2246,21 @@ class AdminController extends Controller
                     $label = $dealerId;
                 }
 
-                $options['dealer:' . $dealerId] = $label;
+                $searchTerms = array_filter([
+                    $label,
+                    $company,
+                    $alias,
+                    $email,
+                    $dealerId,
+                ], static fn ($value) => trim((string) $value) !== '');
+
+                $options['dealer:' . $dealerId] = [
+                    'label' => $label,
+                    'company' => $company,
+                    'alias' => $alias,
+                    'email' => $email,
+                    'search' => implode(' ', $searchTerms),
+                ];
             }
 
             return $options;
