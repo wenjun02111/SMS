@@ -29,7 +29,7 @@ class LeadEnricher
         // Extract lead IDs
         $leadIds = [];
         foreach ($rows as $r) {
-            $lid = (int) ($r->LEADID ?? 0);
+            $lid = StringHelper::toInteger($r->LEADID ?? 0);
             if ($lid > 0) {
                 $leadIds[$lid] = true;
             }
@@ -73,14 +73,14 @@ class LeadEnricher
 
         $statusMap = [];
         foreach ($acts as $a) {
-            $lid = (int) ($a->LEADID ?? 0);
+            $lid = StringHelper::toInteger($a->LEADID ?? 0);
             if ($lid > 0) {
-                $statusMap[$lid] = trim((string) ($a->STATUS ?? ''));
+                $statusMap[$lid] = StringHelper::normalize($a->STATUS ?? '');
             }
         }
 
         foreach ($rows as $r) {
-            $lid = (int) ($r->LEADID ?? 0);
+            $lid = StringHelper::toInteger($r->LEADID ?? 0);
             if ($lid > 0 && isset($statusMap[$lid]) && $statusMap[$lid] !== '') {
                 $r->CURRENTSTATUS = $statusMap[$lid];
             }

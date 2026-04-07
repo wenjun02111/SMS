@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AppConstants;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +17,7 @@ class ApiController extends Controller
     public function login(Request $request): JsonResponse
     {
         return response()->json([
-            'error' => 'API login is not available. Use the web app passkey flow instead.',
+            'error' => AppConstants::ERR_API_LOGIN_NOT_AVAILABLE,
         ], 410);
     }
 

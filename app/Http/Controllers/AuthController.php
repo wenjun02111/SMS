@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesConsoleRedirects;
 use App\Http\Controllers\Concerns\UsesSetupLinkStore;
+use App\Support\AppConstants;
+use App\Support\StringHelper;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,11 +19,11 @@ class AuthController extends Controller
     public function showLoginForm(Request $request): View|RedirectResponse
     {
         $request->session()->forget([
-            'login_fail_counts',
+            AppConstants::SESSION_LOGIN_FAIL_COUNTS,
         ]);
 
-        if ($request->session()->has('user_id') && $request->session()->get('passkey_setup_required')) {
-            $role = (string) $request->session()->get('user_role', '');
+        if ($request->session()->has(AppConstants::SESSION_USER_ID) && $request->session()->get(AppConstants::SESSION_PASSKEY_SETUP_REQUIRED)) {
+            $role = StringHelper::normalize($request->session()->get(AppConstants::SESSION_USER_ROLE));
 
             return view('auth.login', [
                 'show_register_passkey' => true,
@@ -30,9 +32,9 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($request->session()->has('user_role')) {
-            $role = $request->session()->get('user_role');
-            return redirect($this->dashboardPathForRole($request, (string) $role));
+        if ($request->session()->has(AppConstants::SESSION_USER_ROLE)) {
+            $role = $request->session()->get(AppConstants::SESSION_USER_ROLE);
+            return redirect($this->dashboardPathForRole($request, StringHelper::normalize($role)));
         }
 
         return view('auth.login');

@@ -8,11 +8,13 @@ use App\Http\Controllers\Concerns\UsesSetupLinkStore;
 use App\Mail\InquiryAssignedToDealer;
 use App\Mail\PayoutCompletedNotification;
 use App\Mail\UserPasskeySetupLink;
+use App\Support\AppConstants;
 use App\Support\AttachmentUrlBuilder;
 use App\Support\DealerStatsAggregator;
 use App\Support\LeadEnricher;
 use App\Support\ProductConstants;
 use App\Support\QueryCache;
+use App\Support\StringHelper;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -34,8 +36,9 @@ class AdminController extends Controller
         $rows = DB::select(
             'SELECT "USERID","EMAIL","POSTCODE","CITY","ISACTIVE","COMPANY","ALIAS"
              FROM "USERS"
-             WHERE TRIM("SYSTEMROLE") = \'Dealer\'
-             ORDER BY "USERID"'
+             WHERE TRIM("SYSTEMROLE") = ?
+             ORDER BY "USERID"',
+            [AppConstants::ROLE_DEALER]
         );
 
         $leadStats = [];
@@ -44,37 +47,40 @@ class AdminController extends Controller
                 'SELECT
                     TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) AS UID,
                     COUNT(*) AS TOTAL_LEAD,
-                    SUM(CASE WHEN UPPER(TRIM("CURRENTSTATUS")) = \'ONGOING\' THEN 1 ELSE 0 END) AS TOTAL_ONGOING,
+                    SUM(CASE WHEN UPPER(TRIM("CURRENTSTATUS")) = ? THEN 1 ELSE 0 END) AS TOTAL_ONGOING,
                     SUM(CASE WHEN "CURRENTSTATUS" = \'Closed\' THEN 1 ELSE 0 END) AS TOTAL_CLOSED,
-                    SUM(CASE WHEN UPPER(TRIM("CURRENTSTATUS")) = \'FAILED\' THEN 1 ELSE 0 END) AS TOTAL_FAILED
+                    SUM(CASE WHEN UPPER(TRIM("CURRENTSTATUS")) = ? THEN 1 ELSE 0 END) AS TOTAL_FAILED
                  FROM "LEAD"
                  WHERE "ASSIGNED_TO" IS NOT NULL AND TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50))) <> \'\'
-                 GROUP BY TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50)))'
+                 GROUP BY TRIM(CAST("ASSIGNED_TO" AS VARCHAR(50)))',
+                [AppConstants::STATUS_ONGOING, AppConstants::STATUS_FAILED]
             );
 
             foreach ($statsRows as $sr) {
-                $uid = trim((string) ($sr->UID ?? $sr->uid ?? ''));
+                $uid = StringHelper::normalize($sr->UID ?? $sr->uid ?? '');
                 if ($uid === '') {
                     continue;
                 }
 
                 $leadStats[$uid] = [
-                    'totalLead' => (int) ($sr->TOTAL_LEAD ?? $sr->total_lead ?? 0),
-                    'totalOngoing' => (int) ($sr->TOTAL_ONGOING ?? $sr->total_ongoing ?? 0),
-                    'totalClosed' => (int) ($sr->TOTAL_CLOSED ?? $sr->total_closed ?? 0),
-                    'totalFailed' => (int) ($sr->TOTAL_FAILED ?? $sr->total_failed ?? 0),
+                    'totalLead' => StringHelper::toInteger($sr->TOTAL_LEAD ?? $sr->total_lead ?? ''),
+                    'totalOngoing' => StringHelper::toInteger($sr->TOTAL_ONGOING ?? $sr->total_ongoing ?? ''),
+                    'totalClosed' => StringHelper::toInteger($sr->TOTAL_CLOSED ?? $sr->total_closed ?? ''),
+                    'totalFailed' => StringHelper::toInteger($sr->TOTAL_FAILED ?? $sr->total_failed ?? ''),
                 ];
             }
         } catch (\Throwable $e) {
-            // Leave stats empty if the aggregation fails.
+            \Log::warning('Failed to aggregate dealer stats: ' . $e->getMessage());
+            // Leave stats empty if aggregation fails
         }
 
         return array_map(function ($r) use ($leadStats) {
-            $uid = trim((string) ($r->USERID ?? ''));
-            $totalLead = $leadStats[$uid]['totalLead'] ?? 0;
-            $totalOngoing = $leadStats[$uid]['totalOngoing'] ?? 0;
-            $totalClosed = $leadStats[$uid]['totalClosed'] ?? 0;
-            $totalFailed = $leadStats[$uid]['totalFailed'] ?? 0;
+            $uid = StringHelper::normalize($r->USERID ?? '');
+            $stats = $leadStats[$uid] ?? [];
+            $totalLead = $stats['totalLead'] ?? 0;
+            $totalOngoing = $stats['totalOngoing'] ?? 0;
+            $totalClosed = $stats['totalClosed'] ?? 0;
+            $totalFailed = $stats['totalFailed'] ?? 0;
             $conversion = $totalLead > 0 ? ($totalClosed / $totalLead) * 100 : 0;
 
             $r->TOTAL_LEAD = $totalLead;
@@ -89,7 +95,7 @@ class AdminController extends Controller
 
     private function loadInquiryPostcodeCityLookup(): array
     {
-        return QueryCache::remember('postcode_city_lookup', function () {
+        return QueryCache::remember(AppConstants::CACHE_KEY_POSTCODE_LOOKUP, function () {
             static $lookup = null;
 
             if (is_array($lookup)) {
@@ -105,6 +111,7 @@ class AdminController extends Controller
             try {
                 $decoded = json_decode((string) file_get_contents($path), true);
             } catch (\Throwable $e) {
+                \Log::warning('Failed to load postcode lookup file: ' . $e->getMessage());
                 return $lookup;
             }
 
@@ -122,14 +129,14 @@ class AdminController extends Controller
                         continue;
                     }
 
-                    $cityName = trim((string) ($city['name'] ?? ''));
+                    $cityName = StringHelper::normalize($city['name'] ?? '');
                     if ($cityName === '') {
                         continue;
                     }
 
                     foreach (($city['postcode'] ?? []) as $postcode) {
-                        $normalizedPostcode = preg_replace('/\D+/', '', (string) $postcode);
-                        if ($normalizedPostcode === null || strlen($normalizedPostcode) !== 5 || isset($lookup[$normalizedPostcode])) {
+                        $normalizedPostcode = StringHelper::digitsOnly((string) $postcode);
+                        if (strlen($normalizedPostcode) !== 5 || isset($lookup[$normalizedPostcode])) {
                             continue;
                         }
 
@@ -180,7 +187,7 @@ class AdminController extends Controller
             return [];
         }
 
-        $cacheKey = 'latest_assignment:' . md5(implode(',', $leadIds));
+        $cacheKey = AppConstants::CACHE_KEY_LATEST_ASSIGNMENT . md5(implode(',', $leadIds));
         
         return QueryCache::remember($cacheKey, function () use ($leadIds) {
             $placeholders = implode(',', array_fill(0, count($leadIds), '?'));
@@ -189,25 +196,25 @@ class AdminController extends Controller
                  FROM "LEAD_ACT"
                  WHERE "LEADID" IN (' . $placeholders . ')
                    AND (
-                       UPPER(TRIM(COALESCE("SUBJECT", \'\'))) STARTING WITH \'LEAD ASSIGNED\'
-                       OR UPPER(TRIM(COALESCE("DESCRIPTION", \'\'))) STARTING WITH \'LEAD ASSIGNED\'
+                       UPPER(TRIM(COALESCE("SUBJECT", \'\'))) STARTING WITH ?
+                       OR UPPER(TRIM(COALESCE("DESCRIPTION", \'\'))) STARTING WITH ?
                    )
                  ORDER BY "LEADID" ASC, "CREATIONDATE" DESC, "LEAD_ACTID" DESC',
-                $leadIds
+                array_merge($leadIds, [AppConstants::ACTIVITY_STATUS_LEAD_ASSIGNED, AppConstants::ACTIVITY_STATUS_LEAD_ASSIGNED])
             );
 
             $map = [];
             foreach ($rows as $row) {
-                $leadId = (int) ($row->LEADID ?? 0);
+                $leadId = StringHelper::toInteger($row->LEADID ?? 0);
                 if ($leadId <= 0 || array_key_exists($leadId, $map)) {
                     continue;
                 }
 
-                $userId = trim((string) ($row->USERID ?? ''));
+                $userId = StringHelper::normalize($row->USERID ?? '');
                 if ($userId === '') {
-                    $desc = trim((string) ($row->DESCRIPTION ?? ''));
+                    $desc = StringHelper::normalize($row->DESCRIPTION ?? '');
                     if ($desc !== '' && preg_match('/Lead Assigned by\s+(\S+)\s+to\s+(\S+)/i', $desc, $m)) {
-                        $userId = trim((string) ($m[1] ?? ''));
+                        $userId = StringHelper::normalize($m[1] ?? '');
                     }
                 }
 
@@ -223,7 +230,7 @@ class AdminController extends Controller
     private function userDisplayMaps(array $userIds): array
     {
         $userIds = array_values(array_unique(array_filter(array_map(
-            static fn ($id) => trim((string) $id),
+            static fn ($id) => StringHelper::normalize($id),
             $userIds
         ), static fn ($id) => $id !== '')));
 
@@ -231,7 +238,7 @@ class AdminController extends Controller
             return ['assignedToMap' => [], 'actorMap' => []];
         }
 
-        $cacheKey = 'user_display_maps:' . md5(implode(',', $userIds));
+        $cacheKey = AppConstants::CACHE_KEY_USER_DISPLAY_MAPS . md5(implode(',', $userIds));
         
         return QueryCache::remember($cacheKey, function () use ($userIds) {
             $placeholders = implode(',', array_fill(0, count($userIds), '?'));
@@ -246,36 +253,13 @@ class AdminController extends Controller
             $actorMap = [];
 
             foreach ($users as $u) {
-                $uid = trim((string) ($u->USERID ?? ''));
+                $uid = StringHelper::normalize($u->USERID ?? '');
                 if ($uid === '') {
                     continue;
                 }
 
-                $role = trim((string) ($u->SYSTEMROLE ?? ''));
-                $company = trim((string) ($u->COMPANY ?? ''));
-                $alias = trim((string) ($u->ALIAS ?? ''));
-                $email = trim((string) ($u->EMAIL ?? ''));
-                $fallback = $email !== '' ? $email : $uid;
-
-                if ($company !== '' && $alias !== '') {
-                    $assignedToMap[$uid] = $company . '- ' . $alias;
-                } elseif ($company !== '') {
-                    $assignedToMap[$uid] = $company;
-                } elseif ($alias !== '') {
-                    $assignedToMap[$uid] = $alias;
-                } else {
-                    $assignedToMap[$uid] = $fallback;
-                }
-
-                if ($role !== '' && $alias !== '') {
-                    $actorMap[$uid] = $role . '- ' . $alias;
-                } elseif ($role !== '') {
-                    $actorMap[$uid] = $role . '- ' . ($company !== '' ? $company : ($email !== '' ? $email : $uid));
-                } elseif ($alias !== '') {
-                    $actorMap[$uid] = $alias;
-                } else {
-                    $actorMap[$uid] = $fallback;
-                }
+                $assignedToMap[$uid] = StringHelper::buildUserDisplayName($u, AppConstants::SEPARATOR_DISPLAY);
+                $actorMap[$uid] = StringHelper::buildUserActorName($u, AppConstants::SEPARATOR_DISPLAY);
             }
 
             return ['assignedToMap' => $assignedToMap, 'actorMap' => $actorMap];
@@ -301,9 +285,9 @@ class AdminController extends Controller
             [$leadId]
         );
 
-        $assignedTo = trim((string) ($lead->ASSIGNED_TO ?? ''));
-        $leadStatus = strtoupper(trim((string) ($lead->CURRENTSTATUS ?? '')));
-        $latestStatus = strtoupper(trim((string) ($latest->STATUS ?? '')));
+        $assignedTo = StringHelper::normalize($lead->ASSIGNED_TO ?? '');
+        $leadStatus = strtoupper(StringHelper::normalize($lead->CURRENTSTATUS ?? ''));
+        $latestStatus = strtoupper(StringHelper::normalize($latest->STATUS ?? ''));
 
         return [
             'assigned_to' => $assignedTo,
@@ -317,21 +301,21 @@ class AdminController extends Controller
     {
         $state = $this->getLeadCurrentActionState($leadId);
         if ($state === null) {
-            return 'Lead not found.';
+            return AppConstants::ERR_INQUIRY_NOT_FOUND;
         }
 
-        $assignedTo = trim((string) ($state['assigned_to'] ?? ''));
+        $assignedTo = StringHelper::normalize($state['assigned_to'] ?? '');
         if ($assignedTo !== '') {
             $maps = $this->userDisplayMaps([$assignedTo]);
             $assignedToMap = $maps['assignedToMap'] ?? [];
             $assignedLabel = $assignedToMap[$assignedTo] ?? $assignedTo;
 
-            return 'This inquiry is already assigned to ' . $assignedLabel . '. Please sync and try again.';
+            return sprintf(AppConstants::ERR_INQUIRY_ALREADY_ASSIGNED, $assignedLabel);
         }
 
-        $status = strtoupper(trim((string) ($state['status'] ?? '')));
-        if ($status !== '' && !in_array($status, ['OPEN', 'CREATED'], true)) {
-            return 'This inquiry is already ' . $status . '. Please sync and try again.';
+        $status = strtoupper(StringHelper::normalize($state['status'] ?? ''));
+        if ($status !== '' && !in_array($status, [AppConstants::STATUS_OPEN, AppConstants::STATUS_CREATED], true)) {
+            return sprintf(AppConstants::ERR_INQUIRY_ALREADY_PROCESSED, $status);
         }
 
         return null;
