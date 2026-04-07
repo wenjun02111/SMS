@@ -10,6 +10,7 @@ Route::get('/', fn () => redirect()->route('login'));
 
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login/testing/{role}', [AuthController::class, 'testingLogin'])->name('login.testing');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/passkey/setup', [AuthController::class, 'showPasskeySetupForm'])->name('passkey.setup.form');

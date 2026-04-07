@@ -132,6 +132,22 @@
                             Sign in with your passkey. For first-time setup, use the passkey setup link sent by your administrator.
                         </p>
 
+                        @if (!empty($show_test_login_shortcuts))
+                            <div class="login-test-shortcuts">
+                                <div class="login-test-shortcuts-title">Testing Mode</div>
+                                <div class="login-test-shortcuts-buttons">
+                                    <form method="POST" action="{{ route('login.testing', ['role' => 'admin']) }}">
+                                        @csrf
+                                        <button type="submit" class="login-test-shortcut-btn">Login to admin</button>
+                                    </form>
+                                    <form method="POST" action="{{ route('login.testing', ['role' => 'dealer']) }}">
+                                        @csrf
+                                        <button type="submit" class="login-test-shortcut-btn login-test-shortcut-btn-secondary">Login to dealer</button>
+                                    </form>
+                                </div>
+                            </div>
+                        @endif
+
                     </div>
                 @endif
             </div>

@@ -361,11 +361,65 @@ body {
 }
 
 .login-passkey-note {
-  margin-top: 14px;
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--text-muted);
-  text-align: center;
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+.login-test-shortcuts {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(99, 99, 99, 0.16);
+}
+
+.login-test-shortcuts-title {
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7b7f8f;
+    text-align: center;
+}
+
+.login-test-shortcuts-buttons {
+    display: grid;
+    gap: 10px;
+}
+
+.login-test-shortcuts-buttons form {
+    margin: 0;
+}
+
+.login-test-shortcut-btn {
+    width: 100%;
+    min-height: 42px;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #6d3df5 0%, #8158ff 100%);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 20px rgba(109, 61, 245, 0.24);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.login-test-shortcut-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 24px rgba(109, 61, 245, 0.3);
+}
+
+.login-test-shortcut-btn-secondary {
+    background: #636363;
+    box-shadow: none;
+}
+
+.login-test-shortcut-btn-secondary:hover {
+    box-shadow: none;
+    background: #555555;
 }
 
 .login-passkey-countdown {
