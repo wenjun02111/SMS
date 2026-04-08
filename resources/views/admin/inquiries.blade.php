@@ -767,31 +767,17 @@
             <div class="inquiries-assign-title" id="markFailedModalTitle">Mark as Failed — Lead #SQL-<span id="markFailedModalLeadId"></span></div>
             <button type="button" class="inquiries-assign-close" aria-label="Close" data-markfailed-close="1">&times;</button>
         </div>
-        <form id="markFailedForm" method="POST" action="{{ route('admin.inquiries.mark-failed') }}" class="inquiries-assign-body">
-            @csrf
-            <input type="hidden" name="LEADID" id="markFailedLeadId">
-            <div class="inquiries-assign-row">
-                <label class="inquiries-assign-label" for="markFailedReason">Failure reason <span class="required">*</span></label>
-                <select id="markFailedReason" name="FAIL_REASON" class="inquiries-assign-select" required>
-                    <option value="" selected disabled>Select a failure reason</option>
-                    <option value="Customer not interested">Customer not interested</option>
-                    <option value="Customer asked to stop follow-up">Customer asked to stop follow-up</option>
-                    <option value="Budget / pricing issue">Budget / pricing issue</option>
-                    <option value="Duplicate inquiry">Duplicate inquiry</option>
-                    <option value="Invalid lead / contact">Invalid lead / contact</option>
-                    <option value="No response from customer">No response from customer</option>
-                    <option value="Competitor chosen">Competitor chosen</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-            <div class="inquiries-assign-row">
-                <label class="inquiries-assign-label" for="markFailedDetail">Additional details</label>
-                <textarea id="markFailedDetail" name="FAIL_DETAIL" class="inquiry-form-input" rows="4" maxlength="4000" placeholder="Optional extra context for why this inquiry failed."></textarea>
-            </div>
-            <div class="inquiries-assign-actions">
-                <button type="button" class="inquiries-btn inquiries-btn-secondary" data-markfailed-close="1">Cancel</button>
-                <button type="submit" class="inquiries-btn inquiries-btn-primary">Mark As Failed</button>
-            </div>
+            <form id="markFailedForm" method="POST" action="{{ route('admin.inquiries.mark-failed') }}" class="inquiries-assign-body">
+                @csrf
+                <input type="hidden" name="LEADID" id="markFailedLeadId">
+                <div class="inquiries-assign-row">
+                    <label class="inquiries-assign-label" for="markFailedReason">Failure reason <span class="required">*</span></label>
+                    <textarea id="markFailedReason" name="FAIL_REASON" class="inquiry-form-input" rows="4" maxlength="4000" placeholder="Type why this inquiry failed." required></textarea>
+                </div>
+                <div class="inquiries-assign-actions">
+                    <button type="button" class="inquiries-btn inquiries-btn-secondary" data-markfailed-close="1">Cancel</button>
+                    <button type="submit" class="inquiries-btn inquiries-btn-primary">Mark As Failed</button>
+                </div>
         </form>
     </div>
 </div>
@@ -975,13 +961,11 @@ document.addEventListener('DOMContentLoaded', function() {
         var form = document.getElementById('markFailedForm');
         var input = document.getElementById('markFailedLeadId');
         var titleLeadId = document.getElementById('markFailedModalLeadId');
-        var reasonSelect = document.getElementById('markFailedReason');
-        var detailTextarea = document.getElementById('markFailedDetail');
+        var reasonField = document.getElementById('markFailedReason');
         if (!modal || !form || !input) return;
         function close() {
             modal.hidden = true;
-            if (reasonSelect) reasonSelect.value = '';
-            if (detailTextarea) detailTextarea.value = '';
+            if (reasonField) reasonField.value = '';
         }
         document.addEventListener('click', function(e) {
             var btn = e.target && e.target.closest ? e.target.closest('.inquiries-mark-failed-btn') : null;
@@ -995,10 +979,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (leadId) {
                     input.value = leadId;
                     if (titleLeadId) titleLeadId.textContent = leadId;
-                    if (reasonSelect) reasonSelect.value = '';
-                    if (detailTextarea) detailTextarea.value = '';
+                    if (reasonField) reasonField.value = '';
                     modal.hidden = false;
-                    if (reasonSelect) reasonSelect.focus();
+                    if (reasonField) reasonField.focus();
                 }
                 return;
             }

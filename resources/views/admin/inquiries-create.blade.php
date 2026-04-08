@@ -120,100 +120,6 @@
         .inquiry-create-panel #inquiryFormGrid > .referral-code { grid-column: 1 / span 12 !important; }
         .inquiry-create-panel #inquiryFormGrid > .message { grid-column: 1 / span 12 !important; }
 
-        .inquiry-create-panel--edit {
-            max-width: 1240px;
-        }
-
-        .inquiry-create-panel--edit .dashboard-panel-body.inquiry-create-body {
-            padding: 20px 24px !important;
-        }
-
-        .inquiry-create-panel--edit .inquiry-create-layout {
-            gap: 18px !important;
-        }
-
-        .inquiry-create-panel--edit .inquiry-create-main {
-            flex: 1 1 auto;
-            min-width: 0;
-        }
-
-        .inquiry-create-panel--edit .inquiry-create-fox {
-            flex: 0 0 124px !important;
-            padding-top: 6px;
-        }
-
-        .inquiry-create-panel--edit .inquiry-create-fox-img {
-            max-width: 124px !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .company-name,
-        .inquiry-create-panel--edit #inquiryFormGrid > .address1,
-        .inquiry-create-panel--edit #inquiryFormGrid > .address2,
-        .inquiry-create-panel--edit #inquiryFormGrid > .product-interested {
-            grid-column: 1 / -1 !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .existing-software {
-            grid-column: 5 / span 4 !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .user-count {
-            grid-column: 9 / span 1 !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .demo-mode {
-            grid-column: 10 / span 3 !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .post-code {
-            grid-column: 1 / span 3 !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .city {
-            grid-column: 4 / span 5 !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .referral-code {
-            grid-column: 1 / span 4 !important;
-            max-width: none !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .message {
-            grid-column: 5 / span 8 !important;
-        }
-
-        .inquiry-create-panel--edit #inquiryFormGrid > .inquiry-actions-field {
-            width: 100% !important;
-            margin-right: 0 !important;
-            padding-right: 0 !important;
-        }
-
-        @media (max-width: 1360px) and (min-width: 1101px) {
-            .inquiry-create-panel--edit #inquiryFormGrid {
-                gap: 10px 12px !important;
-            }
-
-            .inquiry-create-panel--edit #inquiryFormGrid > .business-nature {
-                grid-column: 1 / span 4 !important;
-            }
-
-            .inquiry-create-panel--edit #inquiryFormGrid > .existing-software {
-                grid-column: 5 / span 3 !important;
-            }
-
-            .inquiry-create-panel--edit #inquiryFormGrid > .user-count {
-                grid-column: 8 / span 2 !important;
-            }
-
-            .inquiry-create-panel--edit #inquiryFormGrid > .demo-mode {
-                grid-column: 10 / span 3 !important;
-            }
-
-            .inquiry-create-panel--edit #inquiryFormGrid .inquiry-form-label-title {
-                white-space: normal;
-            }
-        }
-
         .inquiry-create-panel #inquiryFormGrid > .company-name,
         .inquiry-create-panel #inquiryFormGrid > .email,
         .inquiry-create-panel #inquiryFormGrid > .contact-name,
@@ -716,20 +622,8 @@
     </style>
 @endpush
 @section('content')
-@if ($isEdit)
-<header class="dashboard-header inquiry-create-header">
-    <div class="inquiry-create-header-main">
-        <h1 class="dashboard-title">Edit inquiry</h1>
-        <p class="dashboard-subtitle">Update lead #SQL-{{ $inquiry->LEADID ?? '' }}</p>
-    </div>
-    <a href="{{ route('admin.inquiries') }}" class="dashboard-panel-link inquiry-create-back-link">&larr; Back to leads</a>
-</header>
-@endif
-
-<section class="dashboard-panel dashboard-table-panel inquiry-create-panel{{ $isEdit ? ' inquiry-create-panel--edit' : ' inquiry-create-panel--new' }}">
-    @unless($isEdit)
-        <div class="vertical-title" aria-hidden="true">ADD INQUIRY</div>
-    @endunless
+<section class="dashboard-panel dashboard-table-panel inquiry-create-panel{{ $isEdit ? '' : ' inquiry-create-panel--new' }}">
+    <div class="vertical-title" aria-hidden="true">{{ $isEdit ? 'EDIT INQUIRY - #SQL-' . ($inquiry->LEADID ?? '') : 'ADD INQUIRY' }}</div>
     <div class="dashboard-panel-body inquiry-create-body">
         <div class="inquiry-create-layout">
             <div class="inquiry-create-main">

@@ -18,7 +18,7 @@
         })();
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260408-14">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260408-20">
     <script src="{{ asset('js/passkey-registration.js') }}"></script>
     <script>
         // Apply sidebar state ASAP (prevents flicker on page navigation)
@@ -92,11 +92,17 @@
                             @if(session('user_alias'))
                                 <div class="dashboard-profile-alias">{{ strtoupper(session('user_alias')) }}</div>
                             @endif
-                            <button type="button" class="dashboard-profile-passkey-link" id="profileRegisterPasskeyBtn">Register passkey</button>
-                            <form action="{{ route('logout') }}" method="POST" class="dashboard-profile-signout-form">
-                                @csrf
-                                <button type="submit" class="dashboard-profile-signout-btn">Sign out</button>
-                            </form>
+                            <div class="dashboard-profile-actions">
+                                <button type="button" class="dashboard-profile-passkey-link" id="profileRegisterPasskeyBtn">
+                                    <span>Register passkey</span>
+                                </button>
+                                <form action="{{ route('logout') }}" method="POST" class="dashboard-profile-signout-form">
+                                    @csrf
+                                    <button type="submit" class="dashboard-profile-signout-btn">
+                                        <span>Sign out</span>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>

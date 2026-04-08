@@ -1293,13 +1293,12 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'LEADID' => 'required|integer|min:1',
-            'FAIL_REASON' => 'nullable|string|max:255|required_without:DESCRIPTION',
+            'FAIL_REASON' => 'nullable|string|max:4000|required_without:DESCRIPTION',
             'FAIL_DETAIL' => 'nullable|string|max:4000',
             'DESCRIPTION' => 'nullable|string|max:4000|required_without:FAIL_REASON',
         ]);
         $leadId = (int) $validated['LEADID'];
         $reason = trim((string) ($validated['FAIL_REASON'] ?? ''));
-        $detail = trim((string) ($validated['FAIL_DETAIL'] ?? ''));
         $legacyDescription = trim((string) ($validated['DESCRIPTION'] ?? ''));
         $userId = trim((string) ($request->session()->get('user_id') ?? ''));
 
@@ -1313,11 +1312,7 @@ class AdminController extends Controller
         }
 
         if ($reason !== '') {
-            $parts = ['Failure reason: ' . $reason];
-            if ($detail !== '') {
-                $parts[] = 'Additional details: ' . $detail;
-            }
-            $message = implode(PHP_EOL, $parts);
+            $message = $reason;
         } else {
             $message = $legacyDescription;
         }
