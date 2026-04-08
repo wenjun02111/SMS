@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260402-03">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260408-01">
     <script src="{{ asset('js/passkey-registration.js') }}"></script>
 </head>
 <body>
@@ -136,14 +136,8 @@
                             <div class="login-test-shortcuts">
                                 <div class="login-test-shortcuts-title">Testing Mode</div>
                                 <div class="login-test-shortcuts-buttons">
-                                    <form method="POST" action="{{ route('login.testing', ['role' => 'admin']) }}">
-                                        @csrf
-                                        <button type="submit" class="login-test-shortcut-btn">Login to admin</button>
-                                    </form>
-                                    <form method="POST" action="{{ route('login.testing', ['role' => 'dealer']) }}">
-                                        @csrf
-                                        <button type="submit" class="login-test-shortcut-btn login-test-shortcut-btn-secondary">Login to dealer</button>
-                                    </form>
+                                    <a href="{{ route('login.testing', ['role' => 'admin']) }}" class="login-test-shortcut-btn">Login to admin</a>
+                                    <a href="{{ route('login.testing', ['role' => 'dealer']) }}" class="login-test-shortcut-btn login-test-shortcut-btn-secondary">Login to dealer</a>
                                 </div>
                             </div>
                         @endif

@@ -100,6 +100,11 @@
             <div class="reports-metric-value">{{ $statusCounts['REWARDED'] ?? 0 }}</div>
             <div class="reports-metric-label">REWARDED</div>
         </div>
+        <div class="reports-metric-card">
+            <div class="reports-metric-icon reports-metric-icon-failed"><i class="bi bi-x-circle"></i></div>
+            <div class="reports-metric-value">{{ $statusCounts['FAILED'] ?? 0 }}</div>
+            <div class="reports-metric-label">FAILED</div>
+        </div>
     </section>
 
     @php
@@ -110,6 +115,7 @@
             ['label' => 'Confirmed', 'value' => (int) ($statusCounts['CONFIRMED'] ?? 0), 'color' => '#84cc16'],
             ['label' => 'Completed', 'value' => (int) ($statusCounts['COMPLETED'] ?? 0), 'color' => '#22c55e'],
             ['label' => 'Rewarded', 'value' => (int) ($statusCounts['REWARDED'] ?? 0), 'color' => '#15803d'],
+            ['label' => 'Failed', 'value' => (int) ($statusCounts['FAILED'] ?? 0), 'color' => '#111827'],
         ];
         $totalStatus = max(array_sum(array_column($statusReportData, 'value')), 1);
         $statusSegments = [];

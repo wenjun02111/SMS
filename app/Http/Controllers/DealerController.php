@@ -1852,6 +1852,7 @@ class DealerController extends Controller
         'DEMO' => 'DEMO', 'Demo' => 'DEMO',
         'CONFIRMED' => 'CONFIRMED', 'Confirmed' => 'CONFIRMED', 'CASE CONFIRMED' => 'CONFIRMED',
         'COMPLETED' => 'COMPLETED', 'Completed' => 'COMPLETED', 'CASE COMPLETED' => 'COMPLETED',
+        'FAILED' => 'FAILED', 'Failed' => 'FAILED',
         'REWARDED' => 'REWARDED', 'Rewarded' => 'REWARDED', 'REWARD' => 'REWARDED', 'REWARD DISTRIBUTED' => 'REWARDED', 'Reward Distributed' => 'REWARDED',
     ];
     $buildStatusCounts = function (?Carbon $rangeStart = null, ?Carbon $rangeEnd = null) use ($dealerId, $statusMap) {
@@ -1861,38 +1862,56 @@ class DealerController extends Controller
             'DEMO' => 0,
             'CONFIRMED' => 0,
             'COMPLETED' => 0,
+            'FAILED' => 0,
             'REWARDED' => 0,
         ];
         if (!$dealerId) {
             return $counts;
         }
 
-        $query = 'SELECT l."LEADID",
-                COALESCE(
-                    (SELECT FIRST 1 la."STATUS"
-                       FROM "LEAD_ACT" la
-                      WHERE la."LEADID" = l."LEADID"
-                      ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC),
-                    l."CURRENTSTATUS",
-                    \'Pending\'
-                ) AS "LATEST_STATUS"
-            FROM "LEAD" l
-            WHERE l."ASSIGNED_TO" = ?';
-        $bindings = [$dealerId];
-
         if ($rangeStart && $rangeEnd) {
-            $query .= ' AND l."CREATEDAT" >= ? AND l."CREATEDAT" <= ?';
-            $bindings[] = $rangeStart->format('Y-m-d H:i:s');
-            $bindings[] = $rangeEnd->format('Y-m-d H:i:s');
+            $rangeStartValue = $rangeStart->format('Y-m-d H:i:s');
+            $rangeEndValue = $rangeEnd->format('Y-m-d H:i:s');
+            $query = 'SELECT l."LEADID",
+                    COALESCE(
+                        (SELECT FIRST 1 la."STATUS"
+                           FROM "LEAD_ACT" la
+                          WHERE la."LEADID" = l."LEADID"
+                            AND la."CREATIONDATE" >= ?
+                            AND la."CREATIONDATE" <= ?
+                          ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC),
+                        l."CURRENTSTATUS",
+                        \'Pending\'
+                    ) AS "LATEST_STATUS"
+                FROM "LEAD" l
+                WHERE l."ASSIGNED_TO" = ?
+                  AND EXISTS (
+                      SELECT 1
+                      FROM "LEAD_ACT" lae
+                      WHERE lae."LEADID" = l."LEADID"
+                        AND lae."CREATIONDATE" >= ?
+                        AND lae."CREATIONDATE" <= ?
+                  )';
+            $bindings = [$rangeStartValue, $rangeEndValue, $dealerId, $rangeStartValue, $rangeEndValue];
+        } else {
+            $query = 'SELECT l."LEADID",
+                    COALESCE(
+                        (SELECT FIRST 1 la."STATUS"
+                           FROM "LEAD_ACT" la
+                          WHERE la."LEADID" = l."LEADID"
+                          ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC),
+                        l."CURRENTSTATUS",
+                        \'Pending\'
+                    ) AS "LATEST_STATUS"
+                FROM "LEAD" l
+                WHERE l."ASSIGNED_TO" = ?';
+            $bindings = [$dealerId];
         }
 
         $rows = DB::select($query, $bindings);
 
         foreach ($rows as $row) {
             $raw = trim($row->LATEST_STATUS ?? '');
-            if (strtoupper($raw) === 'FAILED') {
-                continue;
-            }
             $normalized = $statusMap[strtoupper($raw)] ?? $statusMap[$raw] ?? 'PENDING';
             if (isset($counts[$normalized])) {
                 $counts[$normalized]++;
@@ -1910,6 +1929,7 @@ class DealerController extends Controller
         'DEMO' => 0,
         'CONFIRMED' => 0,
         'COMPLETED' => 0,
+        'FAILED' => 0,
         'REWARDED' => 0,
     ];
     $totalInquiry = 0;
