@@ -2,7 +2,7 @@
 @section('title', 'Dashboard – SQL LMS Dealer Console')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/dealer-dashboard.css') }}?v=20260410-04">
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-dashboard.css') }}?v=20260410-05">
 @endpush
 
 @section('content')
@@ -347,6 +347,11 @@
     var monthData = @json($closedMonthData);
     var yearLabels = @json($closedYearLabels);
     var yearData = @json($closedYearData);
+    var closedCaseNow = {
+        year: {{ now()->year }},
+        month: {{ now()->month }},
+        day: {{ now()->day }}
+    };
     var monthWeekRange = buildClosedCaseMonthRange(monthLabels, monthData);
 
     var ranges = {
@@ -413,7 +418,30 @@
 
             bucketLabels.push('Week ' + weekNumber);
             bucketData.push(rangeTotal);
-            bucketTooltips.push('Days ' + labels[startIndex] + ' - ' + labels[endIndex]);
+            var rangeStartDate = new Date(Date.UTC(
+                closedCaseNow.year,
+                closedCaseNow.month - 1,
+                parseInt(labels[startIndex], 10)
+            ));
+            var rangeEndDate = new Date(Date.UTC(
+                closedCaseNow.year,
+                closedCaseNow.month - 1,
+                parseInt(labels[endIndex], 10)
+            ));
+            bucketTooltips.push(
+                rangeStartDate.toLocaleDateString('en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    timeZone: 'UTC'
+                }) + ' - ' +
+                rangeEndDate.toLocaleDateString('en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    timeZone: 'UTC'
+                })
+            );
 
             startIndex = endIndex + 1;
         }
@@ -423,6 +451,56 @@
             data: bucketData,
             tooltipLabels: bucketTooltips
         };
+    }
+
+    function getClosedCaseWeekTooltipDate(index) {
+        var today = new Date(Date.UTC(
+            closedCaseNow.year,
+            closedCaseNow.month - 1,
+            closedCaseNow.day
+        ));
+        var weekday = today.getUTCDay();
+        var mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+        var monday = new Date(today);
+        monday.setUTCDate(today.getUTCDate() + mondayOffset);
+        monday.setUTCDate(monday.getUTCDate() + index);
+        return monday;
+    }
+
+    function formatClosedCaseTooltipTitle(item, range) {
+        var scaleRange = range || activeClosedCaseRange || 'week';
+        if (!item) {
+            return '';
+        }
+
+        if (scaleRange === 'week' && Number.isInteger(item.dataIndex)) {
+            var fullDate = getClosedCaseWeekTooltipDate(item.dataIndex);
+            return fullDate.toLocaleDateString('en-US', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                timeZone: 'UTC'
+            });
+        }
+
+        if (scaleRange === 'month') {
+            return ranges.month.tooltipLabels[item.dataIndex] || ranges.month.labels[item.dataIndex] || '';
+        }
+
+        if (scaleRange === 'year') {
+            var monthIndex = item.dataIndex;
+            if (Number.isInteger(monthIndex) && monthIndex >= 0 && monthIndex < 12) {
+                var monthDate = new Date(Date.UTC(closedCaseNow.year, monthIndex, 1));
+                return monthDate.toLocaleDateString('en-US', {
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'UTC'
+                });
+            }
+        }
+
+        return ranges[scaleRange].labels[item.dataIndex] || '';
     }
 
     function getClosedCaseTickConfig(range, theme) {
@@ -467,6 +545,14 @@
         return {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            hover: {
+                mode: 'index',
+                intersect: false
+            },
             layout: {
                 padding: {
                     top: 4,
@@ -482,20 +568,15 @@
                     cornerRadius: 10,
                     padding: 10,
                     callbacks: {
-                        title: function(items) {
-                            if (!items || !items.length) {
-                                return '';
-                            }
-
-                            var item = items[0];
-                            if (scaleRange === 'month') {
-                                return ranges.month.tooltipLabels[item.dataIndex] || ranges.month.labels[item.dataIndex];
-                            }
-
-                            return ranges[scaleRange].labels[item.dataIndex] || '';
+                    title: function(items) {
+                        if (!items || !items.length) {
+                            return '';
                         }
+
+                        return formatClosedCaseTooltipTitle(items[0], scaleRange);
                     }
                 }
+            }
             },
             scales: {
                 x: {

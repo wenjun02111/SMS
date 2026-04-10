@@ -1387,12 +1387,11 @@ if (document.readyState === 'loading') {
 
     function toggleUpdateButton() {
         var isRewarded = currentStatusIdx === statusOrder.length - 1;
-        // Disable when viewing, or when attempting to re-submit an older step.
-        // Allow editing/re-submitting the CURRENT status, and submitting the NEXT status.
+        // Only allow submitting a real future step.
         var selectedName = getSelectedStatusName();
-        var isOlderStep = selectedStatusIdx < currentStatusIdx;
+        var isCurrentOrOlderStep = selectedStatusIdx <= currentStatusIdx;
         var isBlockedFuture = selectedStatusIdx > currentStatusIdx && !canSelectFutureStatus(statusOrder[currentStatusIdx] || 'PENDING', selectedName);
-        var disable = isRewarded || viewMode || isOlderStep || isBlockedFuture;
+        var disable = isRewarded || viewMode || isCurrentOrOlderStep || isBlockedFuture;
         updateBtn.disabled = disable;
         updateBtn.classList.toggle('inquiry-btn-update--disabled', disable);
     }
@@ -1590,24 +1589,27 @@ if (document.readyState === 'loading') {
                         setProgression(getDisplayProgressionStatus(data.latest_status, data.latest_non_failed_status));
                     }
 
-                    // If opened from the edit icon, auto-select the NEXT status for editing.
+                    // If opened from the edit icon, auto-select only a real NEXT status for editing.
                     if (openStartNext) {
-                        // Switch to edit mode and re-run progression so the NEXT step becomes active.
-                        // (setProgression chooses next step when viewMode=false)
-                        viewMode = false;
-                        if (data && data.latest_status) {
-                            setProgression(getDisplayProgressionStatus(data.latest_status, data.latest_non_failed_status));
-                        }
-                        setFieldsReadOnly(false);
-                        setRemarkPlaceholder(getSelectedStatusName());
-                        setDateTimeLabels(getSelectedStatusName());
+                        var nextStatusIdx = getDefaultSelectedStatusIdx(currentStatusIdx);
+                        if (nextStatusIdx > currentStatusIdx) {
+                            // Switch to edit mode and re-run progression so the NEXT step becomes active.
+                            // (setProgression chooses next step when viewMode=false)
+                            viewMode = false;
+                            if (data && data.latest_status) {
+                                setProgression(getDisplayProgressionStatus(data.latest_status, data.latest_non_failed_status));
+                            }
+                            setFieldsReadOnly(false);
+                            setRemarkPlaceholder(getSelectedStatusName());
+                            setDateTimeLabels(getSelectedStatusName());
 
-                        var remarkEl = document.getElementById('inquiryRemark');
-                        var dateEl = document.getElementById('inquiryFollowupDate');
-                        var timeEl = document.getElementById('inquiryFollowupTime');
-                        if (remarkEl) remarkEl.value = '';
-                        if (dateEl) dateEl.value = getDefaultDate();
-                        if (timeEl) timeEl.value = getDefaultTime();
+                            var remarkEl = document.getElementById('inquiryRemark');
+                            var dateEl = document.getElementById('inquiryFollowupDate');
+                            var timeEl = document.getElementById('inquiryFollowupTime');
+                            if (remarkEl) remarkEl.value = '';
+                            if (dateEl) dateEl.value = getDefaultDate();
+                            if (timeEl) timeEl.value = getDefaultTime();
+                        }
 
                         // One-shot behavior per open.
                         openStartNext = false;
@@ -2167,12 +2169,12 @@ if (document.readyState === 'loading') {
     }
 
     updateBtn.addEventListener('click', function() {
-        // Allow submitting the selected step:
-        // - current status: allowed (acts like "edit" by inserting a new LEAD_ACT row with same status)
-        // - next/future status: allowed
-        var selectedName = getSelectedStatusName();
         if (this.disabled) return;
-        if (selectedStatusIdx < currentStatusIdx) return;
+        if (selectedStatusIdx <= currentStatusIdx) {
+            var currentStatus = statusOrder[currentStatusIdx] || 'PENDING';
+            showDealerInquiryToast('Status is already ' + formatStatusLabel(currentStatus) + '. Please choose the next available status.');
+            return;
+        }
         var toStatus = getSelectedStatusName();
         var fromStatus = statusOrder[currentStatusIdx] || 'PENDING';
         if (selectedStatusIdx > currentStatusIdx && !canSelectFutureStatus(fromStatus, toStatus)) {

@@ -203,6 +203,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const referralWeekData = @json($referralWeekData);
     const referralMonthData = @json($referralMonthData);
     const referralYearData = @json($referralYearData);
+    const dashboardChartNow = {
+        year: {{ now()->year }},
+        month: {{ now()->month }},
+        day: {{ now()->day }}
+    };
 
     const ranges = {
         week: { labels: weekLabels, data: weekData },
@@ -210,6 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
         year: { labels: yearLabels, data: yearData },
     };
 
+    let activeRange = 'week';
     let closedChart = null;
     let referralChart = null;
 
@@ -247,6 +253,60 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
 
+    function getDashboardWeekTooltipDate(index) {
+        const today = new Date(Date.UTC(
+            dashboardChartNow.year,
+            dashboardChartNow.month - 1,
+            dashboardChartNow.day
+        ));
+        const weekday = today.getUTCDay();
+        const mondayOffset = weekday === 0 ? -6 : 1 - weekday;
+        const monday = new Date(today);
+        monday.setUTCDate(today.getUTCDate() + mondayOffset);
+        monday.setUTCDate(monday.getUTCDate() + index);
+        return monday;
+    }
+
+    function formatDashboardTooltipTitle(label, range, dataIndex) {
+        if (range === 'week' && Number.isInteger(dataIndex)) {
+            const fullDate = getDashboardWeekTooltipDate(dataIndex);
+            return fullDate.toLocaleDateString('en-US', {
+                weekday: 'short',
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric',
+                timeZone: 'UTC'
+            });
+        }
+
+        if (range === 'month') {
+            const day = parseInt(String(label), 10);
+            if (Number.isFinite(day)) {
+                const fullDate = new Date(Date.UTC(dashboardChartNow.year, dashboardChartNow.month - 1, day));
+                return fullDate.toLocaleDateString('en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                    timeZone: 'UTC'
+                });
+            }
+        }
+
+        if (range === 'year') {
+            const monthIndex = yearLabels.indexOf(String(label));
+            if (monthIndex >= 0) {
+                const fullDate = new Date(Date.UTC(dashboardChartNow.year, monthIndex, 1));
+                return fullDate.toLocaleDateString('en-US', {
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'UTC'
+                });
+            }
+        }
+
+        return String(label);
+    }
+
     function buildTooltipOptions(palette) {
         return {
             backgroundColor: palette.tooltipBg,
@@ -256,7 +316,17 @@ document.addEventListener('DOMContentLoaded', function() {
             borderWidth: 1,
             cornerRadius: 10,
             padding: 10,
-            displayColors: false
+            displayColors: false,
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+                title: function(items) {
+                    const firstItem = Array.isArray(items) && items.length ? items[0] : null;
+                    const label = firstItem ? firstItem.label : '';
+                    const dataIndex = firstItem && Number.isInteger(firstItem.dataIndex) ? firstItem.dataIndex : null;
+                    return formatDashboardTooltipTitle(label, activeRange, dataIndex);
+                }
+            }
         };
     }
 
@@ -286,6 +356,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 border: { display: false }
             }
+        };
+    }
+
+    function buildLineInteractionOptions() {
+        return {
+            mode: 'index',
+            intersect: false
         };
     }
 
@@ -339,6 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: buildLineInteractionOptions(),
                 plugins: {
                     legend: { display: false },
                     tooltip: buildTooltipOptions(palette)
@@ -370,11 +448,19 @@ document.addEventListener('DOMContentLoaded', function() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: buildLineInteractionOptions(),
+                hover: buildLineInteractionOptions(),
                 plugins: {
                     legend: { display: false },
                     tooltip: buildTooltipOptions(palette)
                 },
-                scales: buildScaleOptions(palette)
+                scales: buildScaleOptions(palette),
+                elements: {
+                    point: {
+                        hitRadius: 18,
+                        hoverRadius: 5
+                    }
+                }
             }
         });
     }
@@ -384,6 +470,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const range = btn.getAttribute('data-range');
             if (!range || !ranges[range]) return;
 
+            activeRange = range;
             document.querySelectorAll('#closedCaseRangeTabs .dashboard-chart-tab[data-range]').forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
