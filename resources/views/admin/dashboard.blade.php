@@ -209,10 +209,65 @@ document.addEventListener('DOMContentLoaded', function() {
         day: {{ now()->day }}
     };
 
+    function buildDashboardMonthRange(labels, data) {
+        const bucketLabels = [];
+        const bucketData = [];
+        const bucketTooltips = [];
+        let weekNumber = 1;
+
+        for (let index = 0; index < labels.length; index += 7) {
+            const labelSlice = labels.slice(index, index + 7);
+            const dataSlice = data.slice(index, index + 7);
+            const firstDay = parseInt(String(labelSlice[0] ?? ''), 10);
+            const lastDay = parseInt(String(labelSlice[labelSlice.length - 1] ?? ''), 10);
+            const rangeTotal = dataSlice.reduce((sum, value) => sum + (Number(value) || 0), 0);
+
+            bucketLabels.push('Week ' + weekNumber);
+            bucketData.push(rangeTotal);
+
+            if (Number.isFinite(firstDay) && Number.isFinite(lastDay)) {
+                const startDate = new Date(Date.UTC(dashboardChartNow.year, dashboardChartNow.month - 1, firstDay));
+                const endDate = new Date(Date.UTC(dashboardChartNow.year, dashboardChartNow.month - 1, lastDay));
+                bucketTooltips.push(
+                    startDate.toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        timeZone: 'UTC'
+                    }) + ' - ' + endDate.toLocaleDateString('en-US', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        timeZone: 'UTC'
+                    })
+                );
+            } else {
+                bucketTooltips.push('Week ' + weekNumber);
+            }
+
+            weekNumber++;
+        }
+
+        return {
+            labels: bucketLabels,
+            data: bucketData,
+            tooltipTitles: bucketTooltips
+        };
+    }
+
+    const closedMonthRange = buildDashboardMonthRange(monthLabels, monthData);
+    const referralMonthRange = buildDashboardMonthRange(monthLabels, referralMonthData);
+
     const ranges = {
         week: { labels: weekLabels, data: weekData },
-        month: { labels: monthLabels, data: monthData },
+        month: closedMonthRange,
         year: { labels: yearLabels, data: yearData },
+    };
+
+    const referralRanges = {
+        week: { labels: weekLabels, data: referralWeekData },
+        month: referralMonthRange,
+        year: { labels: yearLabels, data: referralYearData },
     };
 
     let activeRange = 'week';
@@ -279,17 +334,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        if (range === 'month') {
-            const day = parseInt(String(label), 10);
-            if (Number.isFinite(day)) {
-                const fullDate = new Date(Date.UTC(dashboardChartNow.year, dashboardChartNow.month - 1, day));
-                return fullDate.toLocaleDateString('en-US', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric',
-                    timeZone: 'UTC'
-                });
-            }
+        if (range === 'month' && Number.isInteger(dataIndex)) {
+            return closedMonthRange.tooltipTitles[dataIndex] || String(label);
         }
 
         if (range === 'year') {
@@ -474,17 +520,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('#closedCaseRangeTabs .dashboard-chart-tab[data-range]').forEach((b) => b.classList.remove('active'));
             btn.classList.add('active');
 
-            const refMap = { week: referralWeekData, month: referralMonthData, year: referralYearData };
-            const refData = refMap[range] ?? referralWeekData;
-
             if (closedChart) {
                 closedChart.data.labels = ranges[range].labels;
                 closedChart.data.datasets[0].data = ranges[range].data;
                 closedChart.update();
             }
             if (referralChart) {
-                referralChart.data.labels = ranges[range].labels;
-                referralChart.data.datasets[0].data = refData;
+                referralChart.data.labels = referralRanges[range].labels;
+                referralChart.data.datasets[0].data = referralRanges[range].data;
                 referralChart.update();
             }
         });

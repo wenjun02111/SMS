@@ -413,9 +413,51 @@ function initDealerReportsPage() {
                 }
                 return normalized;
             });
-            var showAllDayTicks = reportPeriod === 'month';
-            var showAllMonthTicks = reportPeriod === 'year';
-            var showAllPeriodTicks = showAllDayTicks || showAllMonthTicks;
+
+            function buildMonthlyWeekBuckets(labels, values) {
+                var bucketLabels = [];
+                var bucketValues = [];
+                var bucketTooltips = [];
+                var weekNumber = 1;
+
+                for (var i = 0; i < labels.length; i += 7) {
+                    var labelSlice = labels.slice(i, i + 7);
+                    var valueSlice = values.slice(i, i + 7);
+                    var firstDay = parseInt(String(labelSlice[0] || ''), 10);
+                    var lastDay = parseInt(String(labelSlice[labelSlice.length - 1] || ''), 10);
+                    var total = valueSlice.reduce(function(sum, value) {
+                        return sum + (Number(value) || 0);
+                    }, 0);
+
+                    bucketLabels.push('Week ' + weekNumber);
+                    bucketValues.push(total);
+
+                    if (Number.isFinite(firstDay) && Number.isFinite(lastDay)) {
+                        bucketTooltips.push(currentMonthName + ' ' + firstDay + ' - ' + currentMonthName + ' ' + lastDay);
+                    } else {
+                        bucketTooltips.push('Week ' + weekNumber);
+                    }
+
+                    weekNumber++;
+                }
+
+                return {
+                    labels: bucketLabels,
+                    values: bucketValues,
+                    tooltips: bucketTooltips
+                };
+            }
+
+            if (reportPeriod === 'month') {
+                var monthBuckets = buildMonthlyWeekBuckets(inquiryLabels, inquiryValues);
+                inquiryLabels = monthBuckets.labels;
+                inquiryValues = monthBuckets.values;
+                tooltipLabels = monthBuckets.tooltips;
+            }
+
+            var showAllMonthWeekTicks = reportPeriod === 'month';
+            var showAllYearTicks = reportPeriod === 'year';
+            var showAllPeriodTicks = showAllMonthWeekTicks || showAllYearTicks;
             var maxTickCount = inquiryLabels.length > 24 ? 11 : (inquiryLabels.length > 14 ? 9 : (inquiryLabels.length > 7 ? 7 : inquiryLabels.length));
             var tickStep = inquiryLabels.length > 24 ? 3 : (inquiryLabels.length > 14 ? 2 : 1);
             var maxInquiryValue = inquiryValues.length ? Math.max.apply(null, inquiryValues) : 0;
@@ -633,7 +675,7 @@ function initDealerReportsPage() {
                                 color: tickColor,
                                 padding: 4,
                                 font: {
-                                    size: showAllDayTicks ? 8 : (showAllMonthTicks ? 10 : (inquiryLabels.length > 10 ? 10 : 11)),
+                                    size: showAllMonthWeekTicks ? 10 : (showAllYearTicks ? 10 : (inquiryLabels.length > 10 ? 10 : 11)),
                                     weight: '500'
                                 },
                                 autoSkip: !showAllPeriodTicks,
@@ -651,8 +693,8 @@ function initDealerReportsPage() {
                                     }
                                     return '';
                                 },
-                                maxRotation: showAllDayTicks ? 50 : (showAllMonthTicks ? 0 : (inquiryLabels.length > 7 ? 35 : 0)),
-                                minRotation: showAllDayTicks ? 50 : (showAllMonthTicks ? 0 : (inquiryLabels.length > 7 ? 35 : 0))
+                                maxRotation: showAllMonthWeekTicks ? 0 : (showAllYearTicks ? 0 : (inquiryLabels.length > 7 ? 35 : 0)),
+                                minRotation: showAllMonthWeekTicks ? 0 : (showAllYearTicks ? 0 : (inquiryLabels.length > 7 ? 35 : 0))
                             }
                         },
                         y: {
