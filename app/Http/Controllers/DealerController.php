@@ -1101,12 +1101,57 @@ class DealerController extends Controller
         $remark = trim((string) ($request->input('remark') ?? ''));
         $activityDate = trim((string) ($request->input('activity_date') ?? ''));
         $activityTime = trim((string) ($request->input('activity_time') ?? ''));
+        $requestNow = now();
 
-        $creationDate = now()->format('Y-m-d H:i:s');
+        $formatTimestampForDb = static function (Carbon $dt): string {
+            return $dt->format('Y-m-d H:i:s') . '.' . substr($dt->format('u'), 0, 3);
+        };
+
+        $parseFlexibleTimestamp = static function ($value): ?Carbon {
+            if ($value instanceof \DateTimeInterface) {
+                return Carbon::instance($value);
+            }
+
+            $str = is_scalar($value) ? trim((string) $value) : '';
+            if ($str === '') {
+                return null;
+            }
+
+            foreach ([
+                'd.m.Y H:i:s.v',
+                'd.m.Y H:i:s.u',
+                'd.m.Y H:i:s',
+                'Y-m-d H:i:s.v',
+                'Y-m-d H:i:s.u',
+                'Y-m-d H:i:s',
+            ] as $format) {
+                try {
+                    $parsed = Carbon::createFromFormat($format, $str);
+                    if ($parsed !== false) {
+                        return $parsed;
+                    }
+                } catch (\Throwable $e) {
+                    // try next format
+                }
+            }
+
+            try {
+                return Carbon::parse($str);
+            } catch (\Throwable $e) {
+                return null;
+            }
+        };
+
+        $creationDate = $formatTimestampForDb($requestNow);
         if ($activityDate !== '' && $activityTime !== '') {
             try {
-                $parsed = Carbon::parse($activityDate . ' ' . $activityTime);
-                $creationDate = $parsed->format('Y-m-d H:i:s');
+                $timeForSave = preg_match('/^\d{2}:\d{2}$/', $activityTime)
+                    ? ($activityTime . ':' . $requestNow->format('s'))
+                    : $activityTime;
+                $parsed = Carbon::createFromFormat('Y-m-d H:i:s', $activityDate . ' ' . $timeForSave);
+                if ($parsed !== false) {
+                    $creationDate = $parsed->format('Y-m-d H:i:s') . '.' . substr($requestNow->format('u'), 0, 3);
+                }
             } catch (\Throwable $e) {
                 // keep default
             }
@@ -1147,13 +1192,15 @@ class DealerController extends Controller
         );
         $fromStatus = $lastAct ? trim($lastAct->STATUS ?? '') : 'Pending';
         $lastCreationDate = $lastAct ? ($lastAct->CREATIONDATE ?? null) : null;
-        $lastCreationDateRaw = is_scalar($lastCreationDate) ? trim((string) $lastCreationDate) : null;
 
         // Enforce chronological order: user cannot set a status datetime earlier than the latest saved status.
         if ($lastCreationDate) {
             try {
-                $lastDt = Carbon::parse($lastCreationDate);
-                $newDt = Carbon::parse($creationDate);
+                $lastDt = $parseFlexibleTimestamp($lastCreationDate);
+                $newDt = $parseFlexibleTimestamp($creationDate);
+                if (!$lastDt || !$newDt) {
+                    throw new \RuntimeException('Unable to parse status timestamps.');
+                }
                 $lastComparableDt = $lastDt->copy()->startOfMinute();
                 $newComparableDt = $newDt->copy()->startOfMinute();
 
@@ -1166,12 +1213,10 @@ class DealerController extends Controller
 
                 // The UI only captures time to the minute. If the dealer saves another
                 // status within the same minute, preserve the previous row's exact
-                // raw timestamp (including milliseconds when Firebird stores them),
+                // timestamp (including milliseconds),
                 // so the newer LEAD_ACTID becomes the real latest activity.
                 if ($newComparableDt->equalTo($lastComparableDt) && $newDt->lt($lastDt)) {
-                    $creationDate = $lastCreationDateRaw !== null && $lastCreationDateRaw !== ''
-                        ? $lastCreationDateRaw
-                        : $lastDt->format('Y-m-d H:i:s.u');
+                    $creationDate = $formatTimestampForDb($lastDt);
                 }
             } catch (\Throwable $e) {
                 // If parsing fails, skip this validation.
