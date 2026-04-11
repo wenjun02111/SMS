@@ -986,6 +986,21 @@ if (document.readyState === 'loading') {
         return statusMap[key] || key || 'PENDING';
     }
 
+    function getInquiryActivityTimestamp(activity) {
+        if (!activity || !activity.created_at) return 0;
+        var ts = Date.parse(activity.created_at);
+        return isNaN(ts) ? 0 : ts;
+    }
+
+    function sortInquiryActivitiesLatestFirst(activities) {
+        return (activities || []).slice().sort(function(a, b) {
+            var timeCompare = getInquiryActivityTimestamp(b) - getInquiryActivityTimestamp(a);
+            if (timeCompare !== 0) return timeCompare;
+
+            return (parseInt(b && b.lead_act_id, 10) || 0) - (parseInt(a && a.lead_act_id, 10) || 0);
+        });
+    }
+
     function findLatestFailedActivity() {
         for (var i = 0; i < cachedActivities.length; i++) {
             var activity = cachedActivities[i];
@@ -1574,7 +1589,7 @@ if (document.readyState === 'loading') {
         fetch(url, { headers: { 'Accept': 'application/json' } })
             .then(function(r) { return r.json(); })
             .then(function(data) {
-                cachedActivities = data.activities || [];
+                cachedActivities = sortInquiryActivitiesLatestFirst(data.activities || []);
                 latestStatusRaw = normalizeStatus(data && data.latest_status);
                 latestNonFailedStatusRaw = normalizeStatus(data && data.latest_non_failed_status);
                 renderActivity(cachedActivities);

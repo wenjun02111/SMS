@@ -914,6 +914,7 @@ class DealerController extends Controller
 
             $activities[] = [
                 'type' => 'activity',
+                'lead_act_id' => (int) ($r->LEAD_ACTID ?? 0),
                 'user' => $userDisplay,
                 'user_id' => trim((string) ($r->USERID ?? '')),
                 'subject' => trim($r->SUBJECT ?? ''),
@@ -926,7 +927,12 @@ class DealerController extends Controller
         }
 
         usort($activities, function ($a, $b) {
-            return strtotime($b['created_at']) <=> strtotime($a['created_at']);
+            $timeCompare = strtotime($b['created_at']) <=> strtotime($a['created_at']);
+            if ($timeCompare !== 0) {
+                return $timeCompare;
+            }
+
+            return ((int) ($b['lead_act_id'] ?? 0)) <=> ((int) ($a['lead_act_id'] ?? 0));
         });
 
         // Latest status by latest CREATIONDATE (and LEAD_ACTID tie-breaker)
@@ -962,7 +968,7 @@ class DealerController extends Controller
         $lastRow = DB::selectOne(
             'SELECT FIRST 1 la."CREATIONDATE", la."DESCRIPTION" FROM "LEAD_ACT" la
              WHERE la."LEADID" = ? AND UPPER(TRIM(COALESCE(la."STATUS", \'\'))) IN (\'REWARDED\', \'REWARD DISTRIBUTED\')
-             ORDER BY la."CREATIONDATE" DESC',
+             ORDER BY la."CREATIONDATE" DESC, la."LEAD_ACTID" DESC',
             [$leadId]
         );
         if ($lastRow && $lastRow->CREATIONDATE) {
