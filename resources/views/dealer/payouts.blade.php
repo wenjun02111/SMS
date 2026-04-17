@@ -439,6 +439,49 @@ function initDealerPendingPayoutsPage() {
         });
     }
 
+    function measurePayoutRowHeight(table, row) {
+        if (!table || !row) return 0;
+        var directHeight = Math.round(row.getBoundingClientRect().height || row.offsetHeight || 0);
+        if (directHeight > 0) {
+            return directHeight;
+        }
+
+        var host = document.createElement('div');
+        host.style.position = 'absolute';
+        host.style.left = '-10000px';
+        host.style.top = '0';
+        host.style.visibility = 'hidden';
+        host.style.pointerEvents = 'none';
+        host.style.width = Math.round((table.getBoundingClientRect().width || 0)) > 0
+            ? Math.round(table.getBoundingClientRect().width || 0) + 'px'
+            : '1400px';
+
+        var measureTable = document.createElement('table');
+        measureTable.className = table.className || 'inquiries-table';
+        measureTable.style.width = '100%';
+
+        var measureBody = document.createElement('tbody');
+        var clone = row.cloneNode(true);
+        clone.style.display = '';
+        measureBody.appendChild(clone);
+        measureTable.appendChild(measureBody);
+        host.appendChild(measureTable);
+        document.body.appendChild(host);
+
+        var measuredHeight = Math.round(clone.getBoundingClientRect().height || clone.offsetHeight || 0);
+        host.remove();
+        return measuredHeight > 0 ? measuredHeight : 0;
+    }
+
+    function getPayoutReferenceRowHeight(table, tbody) {
+        if (!table || !tbody) return 0;
+        var visibleRow = Array.prototype.slice.call(tbody.querySelectorAll('tr.payouts-row')).find(function(row) {
+            return window.getComputedStyle(row).display !== 'none';
+        });
+        var referenceRow = visibleRow || tbody.querySelector('tr.payouts-row');
+        return measurePayoutRowHeight(table, referenceRow);
+    }
+
     var completedPayoutSort = { col: null, dir: 1 };
 
     function getCompletedPayoutSortValue(row, col) {
@@ -537,9 +580,8 @@ function initDealerPendingPayoutsPage() {
         var allRows = Array.prototype.slice.call(table.querySelectorAll('tbody tr.payouts-row'));
         var allowZeroFill = allRows.length > 0;
         var useShortHeight = (visibleDataCount > 0 && visibleDataCount < perPage) || (visibleDataCount === 0 && allowZeroFill);
-        var targetRows = window.matchMedia('(max-width: 1366px), (max-height: 900px)').matches
-            ? Math.min(perPage, 6)
-            : perPage;
+        var targetRows = perPage;
+        var placeholderRowHeight = getPayoutReferenceRowHeight(table, tbody);
 
         if (tbody && visibleDataCount < targetRows && (visibleDataCount > 0 || allowZeroFill)) {
             var visibleHeaderCount = Array.prototype.slice.call(table.querySelectorAll('thead tr:first-child th')).filter(function(cell) {
@@ -554,6 +596,11 @@ function initDealerPendingPayoutsPage() {
                 var cell = document.createElement('td');
                 cell.className = 'inquiries-placeholder-cell';
                 cell.colSpan = visibleHeaderCount;
+                if (placeholderRowHeight > 0) {
+                    row.style.height = placeholderRowHeight + 'px';
+                    cell.style.height = placeholderRowHeight + 'px';
+                    cell.style.minHeight = placeholderRowHeight + 'px';
+                }
 
                 row.appendChild(cell);
                 tbody.appendChild(row);

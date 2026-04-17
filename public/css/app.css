@@ -1309,28 +1309,285 @@ body {
   }
 }
 
-@media (max-width: 480px) {
-  .login-card {
-    padding: 36px 24px 32px;
-    border-radius: 20px;
+@media (max-width: 768px) {
+  .login-root {
+    min-height: 100svh;
   }
 
   .login-header {
-    padding: 0 16px;
+    min-height: 56px;
+    height: auto;
+    padding: 10px 16px;
+  }
+
+  .login-header-left {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .login-header-logo-img {
+    height: 24px;
+  }
+
+  .login-logo-text {
+    max-width: 170px;
+    font-size: 12px;
+    line-height: 1.18;
+  }
+
+  .login-header-right {
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .login-theme-toggle {
+    width: 36px;
+    height: 36px;
+  }
+
+  .login-help-link,
+  .login-bell {
+    font-size: 13px;
+  }
+
+  .login-main {
+    align-items: flex-start;
+    padding: 12px 12px 24px;
+  }
+
+  .login-main-layout,
+  .login-root-passkey-setup .login-main-layout {
+    width: min(100%, 420px);
+  }
+
+  .login-card,
+  .login-main-layout .login-card,
+  .login-root-passkey-setup .login-card {
+    width: 100%;
+    max-width: none;
+    border-radius: 22px;
+    padding: 28px 24px 24px;
+  }
+
+  .login-card-passkey-login {
+    padding-top: 28px;
+    padding-bottom: 24px;
+  }
+
+  .login-logo-img {
+    max-width: 180px;
+  }
+
+  .login-logo-lms {
+    font-size: 17px;
+    letter-spacing: 0.14em;
+  }
+
+  .login-subtitle {
+    margin: 8px 0 16px;
+    font-size: 12px;
+    letter-spacing: 0.13em;
+  }
+
+  .login-form {
+    gap: 14px;
+  }
+
+  .login-form-passkey-login,
+  .login-card-passkey-login .login-form-passkey-login,
+  .login-root-passkey-setup .login-form-passkey-login {
+    margin-top: 24px;
+  }
+
+  .login-card-passkey-login .login-logo {
+    margin-top: 0;
+  }
+
+  .login-card-passkey-login .login-subtitle {
+    margin: 8px 0 0;
+  }
+
+  .login-root-passkey-setup .login-passkey-note {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .login-primary-btn {
+    margin-top: 0;
+    padding: 12px 0;
+    font-size: 15px;
+  }
+
+  .login-passkey-btn {
+    font-size: 14px;
+  }
+
+  .login-passkey-note {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .login-test-shortcuts {
+    margin-top: 16px;
+    padding-top: 12px;
+  }
+
+  .login-test-shortcuts-title {
+    margin-bottom: 10px;
+  }
+
+  .login-test-shortcut-btn {
+    min-height: 40px;
+    font-size: 14px;
+  }
+
+  .login-splash {
+    inset: 56px 0 0;
+    min-height: calc(100svh - 56px);
+    align-items: flex-start;
+    padding: 12px 12px 24px;
   }
 
   .login-splash-panel {
-    padding: 36px 24px 32px;
-    border-radius: 20px;
+    width: min(100%, 420px);
+    border-radius: 22px;
+    gap: 8px;
+    padding: 30px 24px 24px;
+  }
+
+  .login-splash-panel::before {
+    inset: 14px;
+    border-radius: 18px;
   }
 
   .login-splash-hero {
     gap: 8px;
-    margin-top: 30px;
+    margin-top: 16px;
   }
 
   .login-splash-logo {
-    width: min(170px, 70%);
+    width: min(160px, 62%);
+  }
+
+  .login-splash-wordmark span {
+    font-size: clamp(22px, 7.5vw, 38px);
+  }
+
+  .login-splash-typing-text {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+
+  .login-splash-moon {
+    width: 58px;
+    height: 58px;
+    top: 20px;
+    right: 18px;
+  }
+
+  .login-splash-moon-cut {
+    top: 8px;
+    left: 24px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .login-splash-illustration {
+    width: min(100%, 220px);
+    margin-top: -18px;
+    left: 0;
+  }
+
+  .login-splash-credits {
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-card,
+  .login-main-layout .login-card,
+  .login-root-passkey-setup .login-card {
+    padding: 24px 18px 20px;
+    border-radius: 18px;
+  }
+
+  .login-header {
+    min-height: 52px;
+    padding: 8px 12px;
+  }
+
+  .login-logo-text {
+    max-width: 150px;
+    font-size: 11px;
+  }
+
+  .login-header-right {
+    gap: 8px;
+  }
+
+  .login-main {
+    padding: 10px 10px 20px;
+  }
+
+  .login-main-layout,
+  .login-root-passkey-setup .login-main-layout {
+    width: min(100%, 360px);
+  }
+
+  .login-card-passkey-login {
+    padding-top: 24px;
+    padding-bottom: 20px;
+  }
+
+  .login-logo-img {
+    max-width: 160px;
+  }
+
+  .login-logo-lms {
+    font-size: 15px;
+  }
+
+  .login-subtitle {
+    font-size: 11px;
+  }
+
+  .login-form-passkey-login,
+  .login-card-passkey-login .login-form-passkey-login,
+  .login-root-passkey-setup .login-form-passkey-login {
+    margin-top: 18px;
+  }
+
+  .login-primary-btn {
+    padding: 11px 0;
+    font-size: 14px;
+  }
+
+  .login-passkey-note,
+  .login-root-passkey-setup .login-passkey-note {
+    font-size: 13px;
+  }
+
+  .login-test-shortcut-btn {
+    min-height: 38px;
+    font-size: 13px;
+  }
+
+  .login-splash-panel {
+    padding: 24px 18px 20px;
+    border-radius: 18px;
+  }
+
+  .login-splash-hero {
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .login-splash-logo {
+    width: min(146px, 64%);
   }
 
   .login-splash-wordmark {
@@ -1338,39 +1595,39 @@ body {
   }
 
   .login-splash-wordmark span {
-    font-size: clamp(24px, 8vw, 42px);
+    font-size: clamp(20px, 7.5vw, 34px);
   }
 
   .login-splash-typing-text {
-    font-size: 12px;
-    letter-spacing: 0.16em;
+    font-size: 10px;
+    letter-spacing: 0.13em;
   }
 
   .login-splash-moon {
-    width: 64px;
-    height: 64px;
-    top: 30px;
-    right: 20px;
+    width: 52px;
+    height: 52px;
+    top: 18px;
+    right: 14px;
   }
 
   .login-splash-moon-cut {
-    top: 10px;
-    width: 38px;
-    height: 38px;
-    left: 26px;
+    top: 8px;
+    width: 31px;
+    height: 31px;
+    left: 21px;
   }
 
   .login-splash-illustration {
-    width: min(100%, 266px);
-    margin-top: -34px;
-    left: 4px;
+    width: min(100%, 190px);
+    margin-top: -12px;
+    left: 0;
   }
 
   .login-splash-credits {
-    left: 18px;
-    right: 18px;
-    bottom: 22px;
-    font-size: 14px;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    font-size: 12px;
   }
 }
 /* === Admin Dashboard === */
@@ -7668,6 +7925,54 @@ html.theme-dark .inquiries-status-timeline-wrap .inquiry-activity-attachment-lin
 }
 
 @media (max-width: 768px) {
+  .dashboard-root:has(.dealer-dashboard-page) {
+    min-height: 100svh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-root:has(.dealer-dashboard-page) .dashboard-main {
+    min-height: 100svh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-root:has(.dealer-dashboard-page) .dashboard-main-body {
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .dashboard-root:has(.dealer-dashboard-page) .dashboard-content.dealer-dashboard-content {
+    flex: 0 0 auto;
+    min-height: max-content;
+    overflow: visible;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) {
+    min-height: 100svh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-main {
+    min-height: 100svh;
+    height: auto;
+    overflow: visible;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-main-body {
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-content.inquiries-page-wrap {
+    flex: 0 0 auto;
+    min-height: max-content;
+    overflow: visible;
+  }
+
   .dashboard-main-body {
     padding: 14px 12px 18px;
     gap: 14px;
@@ -7812,6 +8117,26 @@ html.theme-dark .inquiries-status-timeline-wrap .inquiry-activity-attachment-lin
 }
 
 @media (max-width: 480px) {
+  .dashboard-root:has(.dealer-dashboard-page) {
+    min-height: 100svh;
+    height: auto;
+  }
+
+  .dashboard-root:has(.dealer-dashboard-page) .dashboard-main {
+    min-height: 100svh;
+    height: auto;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) {
+    min-height: 100svh;
+    height: auto;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-main {
+    min-height: 100svh;
+    height: auto;
+  }
+
   .dashboard-main-body {
     padding: 12px 10px 16px;
   }

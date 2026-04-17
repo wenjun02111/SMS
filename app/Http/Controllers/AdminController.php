@@ -2625,6 +2625,7 @@ class AdminController extends Controller
             'Demo' => $percentChange($activityStatus['Demo'] ?? 0, $lastMonthActivity['Demo'] ?? 0),
             'Confirmed' => $percentChange($activityStatus['Confirmed'] ?? 0, $lastMonthActivity['Confirmed'] ?? 0),
             'Completed' => $percentChange($activityStatus['Completed'] ?? 0, $lastMonthActivity['Completed'] ?? 0),
+            'Failed' => $percentChange($activityStatus['Failed'] ?? 0, $lastMonthActivity['Failed'] ?? 0),
             'Rewarded' => $percentChange($activityStatus['reward'] ?? 0, $lastMonthActivity['reward'] ?? 0),
         ];
 

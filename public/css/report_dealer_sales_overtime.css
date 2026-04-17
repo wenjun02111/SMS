@@ -762,7 +762,7 @@ html.theme-dark .rv2-page-ellipsis {
 
   .rv2-filters {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -776,6 +776,11 @@ html.theme-dark .rv2-page-ellipsis {
     min-width: 0;
     padding: 8px 9px;
     box-sizing: border-box;
+  }
+
+  .rv2-filters-form > .rv2-filter:nth-child(3),
+  .rv2-filters-form > .rv2-filter-apply {
+    grid-column: 1 / -1;
   }
 
   .report-scope-field,

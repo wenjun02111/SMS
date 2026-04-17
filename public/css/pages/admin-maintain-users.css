@@ -712,7 +712,7 @@
 }
 
 .maintain-users-table-wrap .dashboard-table-wrapper {
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
@@ -888,7 +888,7 @@
 
 .maintain-users-table.dashboard-table .maintain-users-placeholder-cell {
   padding: 0 !important;
-  border-top: 1px solid #f3f4f6 !important;
+  border-top: none !important;
   border-bottom: none !important;
   background: #ffffff !important;
   box-shadow: none !important;
@@ -990,7 +990,7 @@ html.theme-dark .maintain-users-table.dashboard-table tbody tr.maintain-users-pl
 }
 
 html.theme-dark .maintain-users-table.dashboard-table .maintain-users-placeholder-cell {
-  border-top: 1px solid rgba(54, 68, 95, 0.44) !important;
+  border-top: none !important;
 }
 
 html.theme-dark .maintain-users-pill-role-admin {

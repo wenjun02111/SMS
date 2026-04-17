@@ -479,7 +479,23 @@ html.theme-dark .rrp-pill-purple {
 
   .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single .ts-control,
   .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 12px;
+    padding: 0 14px;
+  }
+
+  .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single .ts-control > .item,
+  .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single .ts-control > input {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    line-height: 1.2;
+    text-align: center;
   }
 
   .rrp-filter-check {

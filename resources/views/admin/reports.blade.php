@@ -18,7 +18,7 @@
 
         .reports-page .reports-metrics--admin {
             display: grid;
-            grid-template-columns: repeat(7, minmax(0, 1fr));
+            grid-template-columns: repeat(8, minmax(0, 1fr));
             gap: 16px;
             margin-bottom: 2px;
         }
@@ -509,24 +509,12 @@
 
         @media (max-width: 1440px) {
             .reports-page .reports-metrics--admin {
-                grid-template-columns: repeat(12, minmax(0, 1fr));
+                grid-template-columns: repeat(4, minmax(0, 1fr));
                 gap: 12px;
             }
 
             .reports-page .reports-metrics--admin > * {
-                grid-column: span 3;
-            }
-
-            .reports-page .reports-metrics--admin > *:nth-child(5) {
-                grid-column: 2 / span 3;
-            }
-
-            .reports-page .reports-metrics--admin > *:nth-child(6) {
-                grid-column: 5 / span 3;
-            }
-
-            .reports-page .reports-metrics--admin > *:nth-child(7) {
-                grid-column: 8 / span 3;
+                grid-column: span 1;
             }
 
             .reports-page .reports-metric-card--admin,
@@ -541,15 +529,64 @@
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
-            .reports-page .reports-metrics--admin > *,
-            .reports-page .reports-metrics--admin > *:nth-child(5),
-            .reports-page .reports-metrics--admin > *:nth-child(6),
-            .reports-page .reports-metrics--admin > *:nth-child(7) {
+            .reports-page .reports-metrics--admin > * {
                 grid-column: span 1;
             }
         }
 
         @media (max-width: 768px) {
+            .reports-page .reports-tabs-nav {
+                align-items: stretch;
+                text-align: center;
+            }
+
+            .reports-page .reports-tab-link {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+            }
+
+            .reports-page .reports-period-form-compact {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .reports-page .reports-period-select {
+                text-align: center;
+                text-align-last: center;
+            }
+
+            .reports-page .report-scope-field .report-scope-ts-wrapper.single .ts-control,
+            .reports-page .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0 14px;
+            }
+
+            .reports-page .report-scope-field .report-scope-ts-wrapper.single .ts-control > .item,
+            .reports-page .report-scope-field .report-scope-ts-wrapper.single .ts-control > input {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 100%;
+                min-height: 100%;
+                margin: 0;
+                line-height: 1.2;
+                text-align: center;
+            }
+
+            .reports-page .report-filter-actions {
+                justify-content: center;
+            }
+
+            .reports-page .report-filter-apply,
+            .reports-page .report-filter-clear {
+                justify-content: center;
+                text-align: center;
+            }
+
             .reports-page .reports-metric-card--admin,
             .reports-page .report-metric-link--admin {
                 min-height: 160px;
@@ -589,6 +626,15 @@
 
             .reports-page .reports-inquiry-meta {
                 justify-content: flex-start;
+            }
+
+            .reports-page .report-legend {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px 12px;
+            }
+
+            .reports-page .report-legend li {
+                min-width: 0;
             }
         }
     </style>
@@ -655,6 +701,13 @@
             'icon' => 'bi bi-gift',
             'icon_class' => 'reports-metric-icon-reward',
         ],
+        [
+            'key' => 'Failed',
+            'label' => 'FAILED',
+            'value' => $metricActivityStatus['Failed'] ?? 0,
+            'icon' => 'bi bi-x-octagon',
+            'icon_class' => 'reports-metric-icon-failed',
+        ],
     ];
 @endphp
 
@@ -667,6 +720,7 @@
         ['label' => 'Confirmed', 'value' => (int) ($activityStatus['Confirmed'] ?? 0), 'color' => '#84cc16'],
         ['label' => 'Completed', 'value' => (int) ($activityStatus['Completed'] ?? 0), 'color' => '#22c55e'],
         ['label' => 'Rewarded', 'value' => (int) ($activityStatus['reward'] ?? 0), 'color' => '#15803d'],
+        ['label' => 'Failed', 'value' => (int) ($activityStatus['Failed'] ?? 0), 'color' => '#374151'],
     ];
     $totalStatus = max(array_sum(array_column($statusReportData, 'value')), 1);
     $selectedDays = max((int) ($selectedDaysInMonth ?? now()->daysInMonth), 1);

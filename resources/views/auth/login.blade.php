@@ -20,7 +20,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Public+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260416-03">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260417-01">
     <script src="{{ asset('js/passkey-registration.js') }}"></script>
 </head>
 <body>
