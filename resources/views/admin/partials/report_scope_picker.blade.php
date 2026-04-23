@@ -39,6 +39,11 @@
             $individualUsers[$scopeValue] = $scopeMeta;
         }
     }
+
+    $quickFilters = array_replace(
+        array_intersect_key(array_flip($quickFilterKeys), $quickFilters),
+        $quickFilters
+    );
 @endphp
 
 @once
@@ -98,6 +103,33 @@
                     }
 
                     return '';
+                }
+
+                function resetScopeQuery(instance) {
+                    if (!instance) return;
+
+                    if (typeof instance.setTextboxValue === 'function') {
+                        instance.setTextboxValue('');
+                    }
+
+                    var dropdownInput = instance.dropdown ? instance.dropdown.querySelector('.dropdown-input') : null;
+                    if (dropdownInput) {
+                        dropdownInput.value = '';
+                    }
+
+                    if (instance.control_input) {
+                        instance.control_input.value = '';
+                    }
+                }
+
+                function showScopeQuickFilters(instance) {
+                    resetScopeQuery(instance);
+
+                    syncScopeOptgroups(instance, '');
+
+                    window.requestAnimationFrame(function () {
+                        syncScopeOptgroups(instance, '');
+                    });
                 }
 
                 function syncScopeOptgroups(instance, forcedQuery) {
@@ -193,12 +225,13 @@
                                     this.control_input.setAttribute('placeholder', 'Type Company Name or Alias');
                                     this.control_input.focus();
                                 }
-                                syncScopeOptgroups(this);
+                                showScopeQuickFilters(this);
                             },
                             onType: function (value) {
                                 syncScopeOptgroups(this, value);
                             },
                             onDropdownClose: function () {
+                                resetScopeQuery(this);
                                 syncScopeOptgroups(this, '');
                             }
                         });

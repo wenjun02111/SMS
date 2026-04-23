@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Dealers – Admin')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260415-07">
+<link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260421-04">
 <style>
 .dealers-page-wrap {
     padding: 15px;

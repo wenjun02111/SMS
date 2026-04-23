@@ -18,7 +18,7 @@
         })();
     </script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260420-05">
+    <link rel="stylesheet" href="{{ asset('css/app.css') }}?v=20260422-04">
     <script src="{{ asset('js/passkey-registration.js') }}"></script>
     <script>
         // Apply sidebar state ASAP (prevents flicker on page navigation)
@@ -44,6 +44,7 @@
         ? [
             [
                 'id' => 'register-passkey',
+                'group' => 'Must know first',
                 'icon' => 'bi-key-fill',
                 'label' => 'Register passkey',
                 'subtitle' => 'Security setup',
@@ -70,6 +71,7 @@
             ],
             [
                 'id' => 'create-inquiry',
+                'group' => 'Must know first',
                 'icon' => 'bi-plus-square-fill',
                 'label' => 'Create inquiry',
                 'subtitle' => 'Lead capture',
@@ -93,6 +95,7 @@
             ],
             [
                 'id' => 'assign-dealer',
+                'group' => 'Must know first',
                 'icon' => 'bi-person-check-fill',
                 'label' => 'Assign dealer',
                 'subtitle' => 'Routing work',
@@ -116,6 +119,7 @@
             ],
             [
                 'id' => 'update-status',
+                'group' => 'Daily work',
                 'icon' => 'bi-pencil-square',
                 'label' => 'Update inquiry status',
                 'subtitle' => 'Progress tracking',
@@ -139,6 +143,7 @@
             ],
             [
                 'id' => 'table-tools',
+                'group' => 'Daily work',
                 'icon' => 'bi-funnel-fill',
                 'label' => 'Use table tools',
                 'subtitle' => 'Filters and sorting',
@@ -162,6 +167,7 @@
             ],
             [
                 'id' => 'reports-overview',
+                'group' => 'Reports',
                 'icon' => 'bi-bar-chart-fill',
                 'label' => 'Read reports',
                 'subtitle' => 'Monthly performance',
@@ -185,6 +191,7 @@
             ],
             [
                 'id' => 'maintain-users',
+                'group' => 'Setup',
                 'icon' => 'bi-people-fill',
                 'label' => 'Maintain users',
                 'subtitle' => 'Admin setup',
@@ -210,6 +217,7 @@
         : [
             [
                 'id' => 'register-passkey',
+                'group' => 'Must know first',
                 'icon' => 'bi-key-fill',
                 'label' => 'Register passkey',
                 'subtitle' => 'Security setup',
@@ -236,6 +244,7 @@
             ],
             [
                 'id' => 'my-inquiries',
+                'group' => 'Must know first',
                 'icon' => 'bi-journal-text',
                 'label' => 'My inquiries',
                 'subtitle' => 'Daily queue',
@@ -259,6 +268,7 @@
             ],
             [
                 'id' => 'update-progress',
+                'group' => 'Daily work',
                 'icon' => 'bi-arrow-repeat',
                 'label' => 'Update progress',
                 'subtitle' => 'Status tracking',
@@ -282,6 +292,7 @@
             ],
             [
                 'id' => 'pending-payouts',
+                'group' => 'Daily work',
                 'icon' => 'bi-cash-stack',
                 'label' => 'Pending payouts',
                 'subtitle' => 'Dealer earnings',
@@ -305,6 +316,7 @@
             ],
             [
                 'id' => 'table-tools',
+                'group' => 'Daily work',
                 'icon' => 'bi-funnel-fill',
                 'label' => 'Use table tools',
                 'subtitle' => 'Filters and sorting',
@@ -328,6 +340,7 @@
             ],
             [
                 'id' => 'dealer-reports',
+                'group' => 'Reports',
                 'icon' => 'bi-graph-up-arrow',
                 'label' => 'Read reports',
                 'subtitle' => 'Performance view',
@@ -351,6 +364,7 @@
             ],
             [
                 'id' => 'dealer-dashboard',
+                'group' => 'Dashboard',
                 'icon' => 'bi-speedometer2',
                 'label' => 'Use dashboard',
                 'subtitle' => 'Quick monitoring',
@@ -380,6 +394,19 @@
         }));
     }
 
+    $guideTopicGroups = [];
+    foreach ($guideTopics as $index => $topic) {
+        $groupLabel = $topic['group'] ?? 'More guides';
+        if (!isset($guideTopicGroups[$groupLabel])) {
+            $guideTopicGroups[$groupLabel] = [];
+        }
+
+        $guideTopicGroups[$groupLabel][] = [
+            'index' => $index,
+            'topic' => $topic,
+        ];
+    }
+
     $firstGuideTopic = $guideTopics[0];
 @endphp
 
@@ -392,71 +419,7 @@
   
 
     <main class="dashboard-main">
-        <header class="dashboard-topbar" data-scroll-anchor>
-            <button type="button" class="dashboard-topbar-toggle" id="topbarSidebarToggle" aria-label="Toggle navigation">
-                <span class="dashboard-topbar-toggle-inner"></span>
-            </button>
-            <div class="dashboard-topbar-actions">
-                <div class="dashboard-topbar-actions-cluster">
-                    <button type="button" class="dashboard-icon-btn top-right-btn dashboard-topbar-icon-btn dashboard-bookmark-btn" id="guideCatalogTrigger" title="Guide" aria-label="Guide" aria-expanded="false" aria-haspopup="dialog">
-                        <i class="bi bi-bookmark-fill dashboard-topbar-icon-symbol" aria-hidden="true"></i>
-                    </button>
-                    <button type="button" class="dashboard-icon-btn top-right-btn dashboard-topbar-icon-btn dashboard-theme-toggle" data-theme-toggle aria-label="Enable dark mode" title="Enable dark mode">
-                        <i class="bi bi-moon-fill dashboard-topbar-icon-symbol" data-theme-icon aria-hidden="true"></i>
-                    </button>
-                    @if (session('user_role') === 'dealer')
-                        <div class="dashboard-notifications">
-                            <button type="button" class="dashboard-icon-btn top-right-btn dashboard-topbar-icon-btn dashboard-bell-btn" id="dealerNotificationsTrigger" aria-expanded="false" aria-haspopup="true" title="Notifications" aria-label="Notifications">
-                                <i class="bi bi-bell-fill dashboard-topbar-icon-symbol" aria-hidden="true"></i>
-                                <span class="dashboard-notifications-dot" id="dealerNotificationsDot" hidden></span>
-                            </button>
-                            <div class="dashboard-notifications-menu" id="dealerNotificationsMenu" hidden>
-                                <div class="dashboard-notifications-header">
-                                    <span>Notifications</span>
-                                    <button type="button" class="dashboard-notifications-mark-read" id="dealerMarkAllReadBtn">Mark all as read</button>
-                                </div>
-                                <div class="dashboard-notifications-list" id="dealerNotificationsList">
-                                    <div class="dashboard-notifications-empty">Loading...</div>
-                                </div>
-                            </div>
-                        </div>
-                    @else
-                        <button type="button" class="dashboard-icon-btn top-right-btn dashboard-topbar-icon-btn dashboard-bell-btn" title="Notifications" aria-label="Notifications">
-                            <i class="bi bi-bell-fill dashboard-topbar-icon-symbol" aria-hidden="true"></i>
-                        </button>
-                    @endif
-                    @php
-                        $avatarInitial = strtoupper(substr(session('user_email', 'U'), 0, 1));
-                        $avatarLetter = (ctype_alpha($avatarInitial) ? $avatarInitial : 'U');
-                    @endphp
-                    <div class="dashboard-profile-dropdown">
-                        <button type="button" class="dashboard-profile-btn dashboard-topbar-avatar-btn" id="profileDropdownTrigger" aria-expanded="false" aria-haspopup="true" title="{{ session('user_email', '') }}">
-                            <div class="dashboard-user-avatar dashboard-avatar-{{ $avatarLetter }}">{{ $avatarInitial }}</div>
-                        </button>
-                        <div class="dashboard-profile-menu" id="profileDropdownMenu" hidden>
-                            <div class="dashboard-profile-card">
-                                <div class="dashboard-profile-avatar-lg dashboard-avatar-{{ $avatarLetter }}">{{ $avatarInitial }}</div>
-                                <div class="dashboard-profile-email">{{ session('user_email', '') }}</div>
-                                @if(session('user_alias'))
-                                    <div class="dashboard-profile-alias">{{ strtoupper(session('user_alias')) }}</div>
-                                @endif
-                                <div class="dashboard-profile-actions">
-                                    <button type="button" class="dashboard-profile-passkey-link" id="profileRegisterPasskeyBtn">
-                                        <span>Register passkey</span>
-                                    </button>
-                                    <form action="{{ route('logout') }}" method="POST" class="dashboard-profile-signout-form">
-                                        @csrf
-                                        <button type="submit" class="dashboard-profile-signout-btn">
-                                            <span>Sign out</span>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
+        @include('partials.dashboard-topbar')
 
         @if (session('error'))
             <div class="login-message login-error" style="margin:16px;" data-flash-message="1">{{ session('error') }}</div>
@@ -495,20 +458,32 @@
                     <aside class="dashboard-guide-nav">
                         <span class="dashboard-guide-nav-label">Guide</span>
                         <h3 class="dashboard-guide-nav-title">Topic catalogue</h3>
-                        <div class="dashboard-guide-topic-list">
-                            @foreach ($guideTopics as $index => $topic)
-                                <button
-                                    type="button"
-                                    class="dashboard-guide-topic-btn{{ $index === 0 ? ' is-active' : '' }}"
-                                    data-guide-topic-index="{{ $index }}"
-                                    aria-current="{{ $index === 0 ? 'true' : 'false' }}"
-                                >
-                                    <span class="dashboard-guide-topic-icon"><i class="bi {{ $topic['icon'] }}" aria-hidden="true"></i></span>
-                                    <span class="dashboard-guide-topic-copy">
-                                        <strong>{{ $topic['label'] }}</strong>
-                                        <small>{{ $topic['subtitle'] }}</small>
-                                    </span>
-                                </button>
+                        <p class="dashboard-guide-nav-text">Start with <strong>Must know first</strong>, then move to the next group when you are ready.</p>
+                        <div class="dashboard-guide-topic-groups">
+                            @foreach ($guideTopicGroups as $groupLabel => $groupItems)
+                                <section class="dashboard-guide-topic-group" aria-label="{{ $groupLabel }}">
+                                    <div class="dashboard-guide-topic-group-label">{{ $groupLabel }}</div>
+                                    <div class="dashboard-guide-topic-list">
+                                        @foreach ($groupItems as $groupItem)
+                                            @php
+                                                $topic = $groupItem['topic'];
+                                                $index = $groupItem['index'];
+                                            @endphp
+                                            <button
+                                                type="button"
+                                                class="dashboard-guide-topic-btn{{ $index === 0 ? ' is-active' : '' }}"
+                                                data-guide-topic-index="{{ $index }}"
+                                                aria-current="{{ $index === 0 ? 'true' : 'false' }}"
+                                            >
+                                                <span class="dashboard-guide-topic-icon"><i class="bi {{ $topic['icon'] }}" aria-hidden="true"></i></span>
+                                                <span class="dashboard-guide-topic-copy">
+                                                    <strong>{{ $topic['label'] }}</strong>
+                                                    <small>{{ $topic['subtitle'] }}</small>
+                                                </span>
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                </section>
                             @endforeach
                         </div>
                     </aside>
@@ -737,9 +712,14 @@
     var guideTipsHeading = document.getElementById('guideCatalogTipsHeading');
     var guideTips = document.getElementById('guideCatalogTips');
     var guideNote = document.getElementById('guideCatalogNote');
+    var guideContent = document.querySelector('.dashboard-guide-content');
+    var guideDesktopParent = guideContent ? guideContent.parentNode : null;
+    var guideDesktopNextSibling = guideContent ? guideContent.nextSibling : null;
+    var guideMobileQuery = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
     var guideTopicButtons = Array.prototype.slice.call(document.querySelectorAll('[data-guide-topic-index]'));
     var guideTopics = @json($guideTopics);
     var activeGuideTopicIndex = 0;
+    var isGuideMobileContentOpen = false;
     var trigger = document.getElementById('profileDropdownTrigger');
     var menu = document.getElementById('profileDropdownMenu');
     var passkeyTrigger = document.getElementById('profileRegisterPasskeyBtn');
@@ -777,7 +757,40 @@
         }).join('');
     }
 
-    function renderGuideTopic(index) {
+    function isGuideMobileLayout() {
+        return guideMobileQuery ? guideMobileQuery.matches : false;
+    }
+
+    function placeGuideContent() {
+        if (!guideContent) return;
+
+        if (isGuideMobileLayout()) {
+            var activeButton = guideTopicButtons.find(function(button) {
+                return Number(button.getAttribute('data-guide-topic-index')) === activeGuideTopicIndex;
+            });
+
+            if (activeButton && activeButton.parentNode && guideContent.previousElementSibling !== activeButton) {
+                activeButton.insertAdjacentElement('afterend', guideContent);
+            }
+
+            guideContent.classList.add('is-mobile-inline');
+            guideContent.hidden = !isGuideMobileContentOpen;
+            return;
+        }
+
+        if (guideDesktopParent) {
+            if (guideDesktopNextSibling && guideDesktopNextSibling.parentNode === guideDesktopParent) {
+                guideDesktopParent.insertBefore(guideContent, guideDesktopNextSibling);
+            } else {
+                guideDesktopParent.appendChild(guideContent);
+            }
+        }
+
+        guideContent.classList.remove('is-mobile-inline');
+        guideContent.hidden = false;
+    }
+
+    function renderGuideTopic(index, mobileContentOpen) {
         if (!guideTopics || !guideTopics.length) {
             return;
         }
@@ -785,6 +798,14 @@
         var safeIndex = index >= 0 && index < guideTopics.length ? index : 0;
         var topic = guideTopics[safeIndex];
         activeGuideTopicIndex = safeIndex;
+
+        if (isGuideMobileLayout()) {
+            if (typeof mobileContentOpen === 'boolean') {
+                isGuideMobileContentOpen = mobileContentOpen;
+            }
+        } else {
+            isGuideMobileContentOpen = true;
+        }
 
         if (guideHeroIcon) {
             guideHeroIcon.innerHTML = '<i class="bi ' + escapeGuideHtml(topic.icon || 'bi-bookmark-fill') + '" aria-hidden="true"></i>';
@@ -809,7 +830,10 @@
             var isActive = buttonIndex === safeIndex;
             button.classList.toggle('is-active', isActive);
             button.setAttribute('aria-current', isActive ? 'true' : 'false');
+            button.setAttribute('aria-expanded', isActive && isGuideMobileLayout() && isGuideMobileContentOpen ? 'true' : 'false');
         });
+
+        placeGuideContent();
     }
 
     function setGuideModalOpen(open) {
@@ -817,7 +841,7 @@
         guideModal.hidden = !open;
         guideTrigger.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (open) {
-            renderGuideTopic(activeGuideTopicIndex);
+            renderGuideTopic(activeGuideTopicIndex, false);
         }
         syncDashboardOverlayLock();
     }
@@ -1017,9 +1041,30 @@
 
     guideTopicButtons.forEach(function(button) {
         button.addEventListener('click', function() {
-            renderGuideTopic(Number(button.getAttribute('data-guide-topic-index')));
+            var clickedIndex = Number(button.getAttribute('data-guide-topic-index'));
+
+            if (isGuideMobileLayout()) {
+                var isSameTopic = clickedIndex === activeGuideTopicIndex;
+                renderGuideTopic(clickedIndex, isSameTopic ? !isGuideMobileContentOpen : true);
+                return;
+            }
+
+            renderGuideTopic(clickedIndex, true);
         });
     });
+
+    function handleGuideLayoutChange() {
+        isGuideMobileContentOpen = !isGuideMobileLayout();
+        renderGuideTopic(activeGuideTopicIndex, isGuideMobileContentOpen);
+    }
+
+    if (guideMobileQuery) {
+        if (typeof guideMobileQuery.addEventListener === 'function') {
+            guideMobileQuery.addEventListener('change', handleGuideLayoutChange);
+        } else if (typeof guideMobileQuery.addListener === 'function') {
+            guideMobileQuery.addListener(handleGuideLayoutChange);
+        }
+    }
 
     if (guideCloseBtn) {
         guideCloseBtn.addEventListener('click', function() {
@@ -1597,6 +1642,294 @@
             }
         }, 5000);
     }
+})();
+</script>
+<script>
+(function () {
+    function collectExportHeadMarkup() {
+        return Array.prototype.map.call(document.querySelectorAll('link[rel="stylesheet"], style'), function (node) {
+            return node.outerHTML;
+        }).join('\n');
+    }
+
+    function replaceExportCanvases(sourceRoot, cloneRoot) {
+        var sourceCanvases = sourceRoot.querySelectorAll('canvas');
+        var cloneCanvases = cloneRoot.querySelectorAll('canvas');
+
+        Array.prototype.forEach.call(sourceCanvases, function (sourceCanvas, index) {
+            var cloneCanvas = cloneCanvases[index];
+            if (!cloneCanvas) return;
+
+            var image = document.createElement('img');
+            image.className = 'report-export-canvas-image';
+            image.alt = '';
+
+            try {
+                image.src = sourceCanvas.toDataURL('image/png');
+            } catch (error) {
+                return;
+            }
+
+            var rect = sourceCanvas.getBoundingClientRect();
+            if (rect.width > 0) {
+                image.style.width = rect.width + 'px';
+                image.style.maxWidth = '100%';
+            } else {
+                image.style.width = '100%';
+            }
+            image.style.height = 'auto';
+
+            cloneCanvas.replaceWith(image);
+        });
+    }
+
+    function pruneExportClone(root) {
+        [
+            '.reports-tabs-row',
+            '.reports-period-row',
+            '.reports-header',
+            '.reports-header-actions',
+            '.rv2-filtered-layer-head',
+            '.rrp-filter-row',
+            '.report-filter-actions',
+            '[data-export-report-pdf]'
+        ].forEach(function (selector) {
+            root.querySelectorAll(selector).forEach(function (node) {
+                node.remove();
+            });
+        });
+    }
+
+    function resolveExportTarget(button) {
+        var selector = button.getAttribute('data-export-target') || '';
+        if (selector) {
+            try {
+                var selected = document.querySelector(selector);
+                if (selected) return selected;
+            } catch (error) {}
+        }
+
+        return button.closest('.dashboard-content.reports-page, .reports-page, .rv2-page, .rrp-page');
+    }
+
+    function buildExportWindow(printWindow, title, generatedLabel) {
+        var isMonthlyPerformance = title.indexOf('Monthly Performance Report') === 0;
+        var isDealerPerformance = title.indexOf('Dealer Performance Report') === 0;
+        var isDealerSalesOvertime = title.indexOf('Dealer Sales Overtime Report') === 0;
+        var isDealerRevenueProduction = title.indexOf('Dealer Revenue Production Report') === 0;
+        var printedBy = @json(session('user_alias') ?: session('user_email') ?: session('user_role') ?: 'User');
+        var exportStyles = [
+            '@page{size:A4 landscape;margin:8mm;}',
+            'html,body{background:#fff;color:#0f172a;font-family:"Public Sans",sans-serif;}',
+            'body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}',
+            '.report-export-shell{padding:20px 24px 28px;}',
+            '.report-export-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #e5e7eb;}',
+            '.report-export-title{margin:0;font-size:24px;line-height:1.15;font-weight:800;color:#0f172a;}',
+            '.report-export-meta{font-size:12px;font-weight:600;color:#64748b;text-align:right;}',
+            '.report-export-content{background:#fff;}',
+            '.report-export-content .dashboard-content.reports-page,.report-export-content .reports-page,.report-export-content .rv2-page,.report-export-content .rrp-page{padding:0 !important;margin:0 !important;width:auto !important;min-height:0 !important;zoom:1 !important;transform:none !important;background:#fff !important;overflow:visible !important;}',
+            '.report-export-content .reports-page-layout{width:100% !important;padding:0 !important;zoom:1 !important;transform:none !important;gap:14px !important;}',
+            '.report-export-content .dashboard-panel,.report-export-content .reports-product-section,.report-export-content .reports-inquiry-section,.report-export-content .reports-status-section,.report-export-content .dealer-reports-status-section,.report-export-content .rv2-panel,.report-export-content .rrp-panel,.report-export-content .rrp-metric-card{break-inside:avoid;page-break-inside:avoid;}',
+            '.report-export-content .dashboard-topbar,.report-export-content .dashboard-sidebar,.report-export-content .dashboard-bottombar{display:none !important;}',
+            '.report-export-canvas-image{display:block;max-width:100%;height:auto;}',
+            '.report-export-monthly-performance .report-export-shell{box-sizing:border-box;padding:5mm 6mm !important;}',
+            '.report-export-monthly-performance .report-export-heading{gap:10px;margin-bottom:8px;padding-bottom:6px;}',
+            '.report-export-monthly-performance .report-export-title{font-size:18px;line-height:1.1;}',
+            '.report-export-monthly-performance .report-export-meta{font-size:9px;}',
+            '.report-export-monthly-performance .report-export-content .reports-page:not(.dealer-reports-page){zoom:.86 !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-page:not(.dealer-reports-page) .reports-page-layout{gap:7px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-page:not(.dealer-reports-page) .reports-metrics--admin{display:grid !important;grid-template-columns:repeat(8,minmax(0,1fr)) !important;gap:7px !important;margin:0 0 7px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-page:not(.dealer-reports-page) .reports-metric-card--admin,.report-export-monthly-performance .report-export-content .reports-page:not(.dealer-reports-page) .report-metric-link--admin{min-height:68px !important;padding:7px 8px !important;border-radius:10px !important;box-shadow:none !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-admin-metric-top{margin-bottom:7px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-admin-metric-link-indicator{display:none !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-metric-icon{width:28px !important;height:28px !important;border-radius:8px !important;font-size:14px !important;box-shadow:none !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-metric-value{font-size:21px !important;line-height:1 !important;margin:0 0 5px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-metric-label{font-size:9px !important;line-height:1.05 !important;letter-spacing:.08em !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-admin-metric-trend{font-size:8px !important;line-height:1.1 !important;margin-top:6px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-admin-metric-trend-icon{width:10px !important;height:10px !important;}',
+            '.report-export-monthly-performance .report-export-content .dashboard-panels-two-column{display:grid !important;grid-template-columns:minmax(0,1.28fr) minmax(0,.88fr) !important;gap:7px !important;margin:0 !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-inquiry-section,.report-export-monthly-performance .report-export-content .reports-status-section,.report-export-monthly-performance .report-export-content .reports-product-section{border-radius:10px !important;box-shadow:none !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-inquiry-section .dashboard-panel-header,.report-export-monthly-performance .report-export-content .reports-status-section .dashboard-panel-header,.report-export-monthly-performance .report-export-content .reports-product-section .dashboard-panel-header{padding:9px 10px 5px !important;gap:8px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-inquiry-section .dashboard-panel-body,.report-export-monthly-performance .report-export-content .reports-status-section .dashboard-panel-body,.report-export-monthly-performance .report-export-content .reports-product-section .dashboard-panel-body{padding:0 10px 9px !important;}',
+            '.report-export-monthly-performance .report-export-content .dashboard-panel-title{font-size:14px !important;line-height:1.1 !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-inquiry-subtitle,.report-export-monthly-performance .report-export-content .reports-status-subtitle,.report-export-monthly-performance .report-export-content .reports-product-subtitle{font-size:9px !important;line-height:1.15 !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-inquiry-chip{padding:5px 10px !important;font-size:9px !important;}',
+            '.report-export-monthly-performance .report-export-content .dealer-reports-card,.report-export-monthly-performance .report-export-content .dealer-reports-status-card,.report-export-monthly-performance .report-export-content .reports-product-card{padding:7px !important;border-radius:9px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-inquiry-section .dealer-reports-chart-wrapper{height:188px !important;min-height:188px !important;padding:0 !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-inquiry-section .report-export-canvas-image{width:100% !important;height:188px !important;object-fit:contain !important;}',
+            '.report-export-monthly-performance .report-export-content .admin-inquiry-trend-legend{margin-top:4px !important;gap:12px !important;font-size:9px !important;}',
+            '.report-export-monthly-performance .report-export-content .report-status-body{display:grid !important;grid-template-columns:minmax(0,.78fr) minmax(0,1fr) !important;align-items:center !important;gap:8px !important;}',
+            '.report-export-monthly-performance .report-export-content .dealer-reports-status-card{min-height:178px !important;display:flex !important;align-items:center !important;justify-content:center !important;border:0 !important;background:transparent !important;box-shadow:none !important;}',
+            '.report-export-monthly-performance .report-export-content .report-donut-wrapper{height:168px !important;min-height:168px !important;display:flex !important;align-items:center !important;justify-content:center !important;}',
+            '.report-export-monthly-performance .report-export-content .report-donut{width:146px !important;height:146px !important;filter:saturate(1.18) contrast(1.05);box-shadow:inset 0 0 0 1px rgba(15,23,42,.08),0 8px 18px rgba(15,23,42,.08) !important;}',
+            '.report-export-monthly-performance .report-export-content .report-donut-center{inset:50% auto auto 50% !important;width:82px !important;height:82px !important;transform:translate(-50%,-50%) !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:2px !important;text-align:center !important;box-shadow:0 3px 10px rgba(15,23,42,.06) !important;}',
+            '.report-export-monthly-performance .report-export-content .report-donut-total{display:block !important;font-size:22px !important;line-height:.95 !important;margin:0 !important;}',
+            '.report-export-monthly-performance .report-export-content .report-donut-label{display:block !important;font-size:8px !important;line-height:1 !important;margin:0 !important;}',
+            '.report-export-monthly-performance .report-export-content .report-legend{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:4px 12px !important;margin:0 !important;font-size:9px !important;line-height:1.15 !important;}',
+            '.report-export-monthly-performance .report-export-content .report-legend li{min-width:0 !important;gap:5px !important;}',
+            '.report-export-monthly-performance .report-export-content .report-legend-color{width:8px !important;height:8px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-product-section{margin-top:7px !important;break-inside:auto !important;page-break-inside:auto !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-product-scale{gap:6px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-product-scale-chip{font-size:8px !important;padding:3px 7px !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-product-chart-wrapper{height:126px !important;min-height:126px !important;padding:0 !important;}',
+            '.report-export-monthly-performance .report-export-content .reports-product-section .report-export-canvas-image{width:100% !important;height:126px !important;object-fit:contain !important;}',
+            '.report-export-monthly-performance .report-export-content .dealer-reports-empty,.report-export-monthly-performance .report-export-content .reports-product-empty{font-size:10px !important;padding:28px 10px !important;}',
+            '.report-export-dealer-performance .report-export-shell{box-sizing:border-box;padding:5mm 6mm !important;}',
+            '.report-export-dealer-performance .report-export-heading{gap:10px;margin-bottom:8px;padding-bottom:6px;}',
+            '.report-export-dealer-performance .report-export-title{font-size:18px;line-height:1.1;}',
+            '.report-export-dealer-performance .report-export-meta{font-size:9px;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page{padding:0 !important;margin:0 !important;gap:7px !important;zoom:.86 !important;overflow:visible !important;background:#fff !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-header{display:none !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-metrics{display:grid !important;grid-template-columns:repeat(7,minmax(0,1fr)) !important;gap:7px !important;margin:0 0 7px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-metric-card{min-height:68px !important;padding:7px 8px !important;border-radius:10px !important;box-shadow:none !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-metric-icon{width:28px !important;height:28px !important;margin:0 0 7px !important;border-radius:8px !important;font-size:14px !important;box-shadow:none !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-metric-icon::before{display:none !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-metric-value{font-size:21px !important;line-height:1 !important;margin:0 0 5px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-metric-label{font-size:9px !important;line-height:1.05 !important;letter-spacing:.08em !important;margin:0 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .dashboard-panels-two-column{display:grid !important;grid-template-columns:minmax(0,1.28fr) minmax(0,.88fr) !important;gap:7px !important;margin:0 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-inquiry-section,.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-status-section,.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-section{border-radius:10px !important;box-shadow:none !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-inquiry-section .dashboard-panel-header,.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-status-section .dashboard-panel-header,.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-section .dashboard-panel-header{padding:9px 10px 5px !important;gap:8px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-inquiry-section .dashboard-panel-body,.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-status-section .dashboard-panel-body,.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-section .dashboard-panel-body{padding:0 10px 9px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .dashboard-panel-title{font-size:14px !important;line-height:1.1 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-inquiry-subtitle,.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-status-subtitle,.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-subtitle{font-size:9px !important;line-height:1.15 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-inquiry-chip{padding:5px 10px !important;font-size:9px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-card,.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-status-card,.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-card{padding:7px !important;border-radius:9px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-inquiry-section .dealer-reports-chart-wrapper{height:188px !important;min-height:188px !important;padding:0 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-inquiry-section .report-export-canvas-image{width:100% !important;height:188px !important;object-fit:contain !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-status-body{display:grid !important;grid-template-columns:minmax(0,.78fr) minmax(0,1fr) !important;align-items:center !important;gap:8px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-status-card{min-height:178px !important;display:flex !important;align-items:center !important;justify-content:center !important;border:0 !important;background:transparent !important;box-shadow:none !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-donut-wrapper{height:168px !important;min-height:168px !important;display:flex !important;align-items:center !important;justify-content:center !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-donut{width:146px !important;height:146px !important;filter:saturate(1.18) contrast(1.05);box-shadow:inset 0 0 0 1px rgba(15,23,42,.08),0 8px 18px rgba(15,23,42,.08) !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-donut-center{inset:50% auto auto 50% !important;width:82px !important;height:82px !important;transform:translate(-50%,-50%) !important;display:flex !important;flex-direction:column !important;align-items:center !important;justify-content:center !important;gap:2px !important;text-align:center !important;box-shadow:0 3px 10px rgba(15,23,42,.06) !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-donut-total{display:block !important;font-size:22px !important;line-height:.95 !important;margin:0 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-donut-label{display:block !important;font-size:8px !important;line-height:1 !important;margin:0 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-legend{display:grid !important;grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:4px 12px !important;margin:0 !important;padding:0 !important;font-size:9px !important;line-height:1.15 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-legend li{min-width:0 !important;gap:5px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .report-legend-color{width:8px !important;height:8px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-section{margin-top:7px !important;break-inside:auto !important;page-break-inside:auto !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-scale{gap:6px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-scale-chip{font-size:8px !important;padding:3px 7px !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-chart-wrapper{height:126px !important;min-height:126px !important;padding:0 !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-section .report-export-canvas-image{width:100% !important;height:126px !important;object-fit:contain !important;}',
+            '.report-export-dealer-performance .report-export-content .dealer-reports-page .dealer-reports-empty,.report-export-dealer-performance .report-export-content .dealer-reports-page .reports-product-empty{font-size:10px !important;padding:28px 10px !important;}',
+            '.report-export-dealer-sales-overtime .report-export-shell{box-sizing:border-box;padding:5mm 6mm !important;}',
+            '.report-export-dealer-sales-overtime .report-export-heading{gap:10px;margin-bottom:8px;padding-bottom:6px;}',
+            '.report-export-dealer-sales-overtime .report-export-title{font-size:18px;line-height:1.1;}',
+            '.report-export-dealer-sales-overtime .report-export-meta{font-size:9px;}',
+            '.report-export-dealer-revenue-production .report-export-shell{box-sizing:border-box;padding:5mm 6mm !important;}',
+            '.report-export-dealer-revenue-production .report-export-heading{gap:10px;margin-bottom:8px;padding-bottom:6px;}',
+            '.report-export-dealer-revenue-production .report-export-title{font-size:18px;line-height:1.1;}',
+            '.report-export-dealer-revenue-production .report-export-meta{font-size:9px;}',
+            '.report-export-dealer-revenue-production .report-export-content .rrp-page{zoom:.86 !important;}',
+            '@media print{.report-export-shell{padding:0;}.report-export-monthly-performance .report-export-shell,.report-export-dealer-performance .report-export-shell,.report-export-dealer-sales-overtime .report-export-shell,.report-export-dealer-revenue-production .report-export-shell{padding:5mm 6mm !important;}.report-export-monthly-performance .report-export-heading,.report-export-dealer-performance .report-export-heading,.report-export-dealer-sales-overtime .report-export-heading,.report-export-dealer-revenue-production .report-export-heading{margin-bottom:6px;}.report-export-monthly-performance .report-export-content .reports-page:not(.dealer-reports-page),.report-export-dealer-performance .report-export-content .dealer-reports-page,.report-export-dealer-revenue-production .report-export-content .rrp-page{zoom:.76 !important;}}'
+        ].join(' ');
+
+        printWindow.document.open();
+        printWindow.document.write('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title></title>' + collectExportHeadMarkup() + '<style>' + exportStyles + '</style></head><body><div class="report-export-shell"><div class="report-export-heading"><div class="report-export-title"></div><div class="report-export-meta"></div></div><div class="report-export-content"></div></div></body></html>');
+        printWindow.document.close();
+        printWindow.document.title = title;
+        if (isMonthlyPerformance) {
+            printWindow.document.body.classList.add('report-export-monthly-performance');
+        }
+        if (isDealerPerformance) {
+            printWindow.document.body.classList.add('report-export-dealer-performance');
+        }
+        if (isDealerSalesOvertime) {
+            printWindow.document.body.classList.add('report-export-dealer-sales-overtime');
+        }
+        if (isDealerRevenueProduction) {
+            printWindow.document.body.classList.add('report-export-dealer-revenue-production');
+        }
+        printWindow.document.querySelector('.report-export-title').textContent = title;
+        printWindow.document.querySelector('.report-export-meta').innerHTML =
+            '<div>Generated on ' + generatedLabel + '</div>' +
+            '<div>Printed by ' + printedBy + '</div>';
+    }
+
+    function exportReportPdf(trigger) {
+        if (!trigger) return false;
+
+        var target = resolveExportTarget(trigger);
+        if (!target) {
+            window.alert('Report content not found. Please refresh the page and try again.');
+            return false;
+        }
+
+        var printFrame = document.createElement('iframe');
+        printFrame.setAttribute('title', 'Report PDF export');
+        printFrame.style.position = 'fixed';
+        printFrame.style.left = '-10000px';
+        printFrame.style.top = '0';
+        printFrame.style.width = '1280px';
+        printFrame.style.height = '900px';
+        printFrame.style.opacity = '0';
+        printFrame.style.pointerEvents = 'none';
+        printFrame.style.border = '0';
+        document.body.appendChild(printFrame);
+
+        var printWindow = printFrame.contentWindow;
+        if (!printWindow || !printWindow.document) {
+            printFrame.remove();
+            window.alert('Unable to prepare the report print view. Please refresh and try again.');
+            return false;
+        }
+
+        var clone = target.cloneNode(true);
+        pruneExportClone(clone);
+        replaceExportCanvases(target, clone);
+
+        var title = trigger.getAttribute('data-export-title') || document.title || 'Report';
+        var generatedLabel = new Date().toLocaleString();
+
+        buildExportWindow(printWindow, title, generatedLabel);
+
+        var mount = printWindow.document.querySelector('.report-export-content');
+        if (mount) {
+            mount.appendChild(printWindow.document.importNode(clone, true));
+        }
+
+        var didTriggerPrint = false;
+        var didCleanupFrame = false;
+        var cleanupFrame = function () {
+            if (didCleanupFrame) return;
+            didCleanupFrame = true;
+            window.setTimeout(function () {
+                if (printFrame.parentNode) {
+                    printFrame.parentNode.removeChild(printFrame);
+                }
+            }, 1000);
+        };
+
+        if (printWindow.addEventListener) {
+            printWindow.addEventListener('afterprint', cleanupFrame, { once: true });
+        }
+
+        var triggerPrint = function () {
+            if (didTriggerPrint) return;
+            didTriggerPrint = true;
+            window.setTimeout(function () {
+                try {
+                    printWindow.focus();
+                    printWindow.print();
+                } catch (error) {}
+                window.setTimeout(cleanupFrame, 60000);
+            }, 350);
+        };
+
+        printFrame.onload = triggerPrint;
+        window.setTimeout(triggerPrint, 900);
+        return false;
+    }
+
+    window.SQLSMSExportReportPdf = exportReportPdf;
+
+    document.addEventListener('click', function (event) {
+        var trigger = event.target && event.target.closest ? event.target.closest('[data-export-report-pdf]') : null;
+        if (!trigger) return;
+
+        event.preventDefault();
+        exportReportPdf(trigger);
+    });
 })();
 </script>
 @endpush

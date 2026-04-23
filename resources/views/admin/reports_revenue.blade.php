@@ -1,14 +1,14 @@
 @extends('layouts.app')
 @section('title', 'Report - Dealer Revenue Production')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260409-1">
-    <link rel="stylesheet" href="{{ asset('css/report_dealer_revenue_production.css') }}?v=20260417-01">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260423-4">
+    <link rel="stylesheet" href="{{ asset('css/report_dealer_revenue_production.css') }}?v=20260423-1">
 @endpush
 @section('content')
 <div class="rrp-page">
     @php
         $reportTabQuery = [];
-        $currentReportScope = trim((string) ($selectedReportScope ?? request('report_scope', '')));
+        $currentReportScope = trim((string) ($selectedReportScope ?? request('report_scope', 'all')));
         if ($currentReportScope !== '') {
             $reportTabQuery['report_scope'] = $currentReportScope;
         }
@@ -31,34 +31,33 @@
     </div>
 
     <div class="rrp-filter-row">
-        @php
-            $currentQuarter = 'Q' . (int) ceil(((int) now()->format('n')) / 3);
-            $clearRevenueFiltersUrl = route('admin.reports.revenue', [
-                'quarter' => $currentQuarter,
-                'year' => (int) now()->format('Y'),
-                'report_scope' => 'all',
-            ]);
-        @endphp
-        <form method="GET" class="rrp-filter-form">
-            <select name="quarter" class="rrp-filter-select">
-                @foreach (['Q1', 'Q2', 'Q3', 'Q4'] as $q)
-                    <option value="{{ $q }}" {{ ($selectedQuarter ?? 'Q1') === $q ? 'selected' : '' }}>{{ $q }}</option>
-                @endforeach
-            </select>
-            <select name="year" class="rrp-filter-select">
-                @foreach (($yearOptions ?? []) as $y)
-                    <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>{{ $y }}</option>
-                @endforeach
-            </select>
+        <form method="GET" class="rrp-filter-form" data-auto-submit-report-filters>
+            <div class="rrp-period-date-group" aria-label="Report date filter">
+                <select name="quarter" class="rrp-filter-select rrp-filter-select--quarter" aria-label="Select quarter">
+                    @foreach (['Q1', 'Q2', 'Q3', 'Q4'] as $q)
+                        <option value="{{ $q }}" {{ ($selectedQuarter ?? 'Q1') === $q ? 'selected' : '' }}>{{ $q }}</option>
+                    @endforeach
+                </select>
+                <select name="year" class="rrp-filter-select rrp-filter-select--year" aria-label="Select year">
+                    @foreach (($yearOptions ?? []) as $y)
+                        <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>{{ $y }}</option>
+                    @endforeach
+                </select>
+            </div>
             @include('admin.partials.report_scope_picker', [
                 'options' => $reportScopeOptions ?? [],
                 'selected' => $selectedReportScope ?? 'all',
             ])
             @include('admin.partials.report_filter_actions', [
-                'clearUrl' => $clearRevenueFiltersUrl,
                 'wrapperClass' => 'rrp-filter-actions report-filter-actions',
                 'applyClass' => 'report-filter-apply',
+                'exportClass' => 'report-filter-export',
                 'clearClass' => 'report-filter-clear',
+                'showApply' => false,
+                'showExport' => true,
+                'showClear' => false,
+                'exportTitle' => 'Dealer Revenue Production Report',
+                'exportTarget' => '.rrp-page',
             ])
         </form>
     </div>
@@ -188,6 +187,64 @@
                     if (e.key === 'Escape') closeDropdown();
                 });
             }
+
+            const autoSubmitReportForms = document.querySelectorAll('[data-auto-submit-report-filters]');
+            autoSubmitReportForms.forEach(function (form) {
+                if (!form || form.dataset.autoSubmitReady === '1') {
+                    return;
+                }
+
+                form.dataset.autoSubmitReady = '1';
+                let autoSubmitTimer = null;
+
+                const markReportFiltersSubmitting = function () {
+                    form.classList.add('is-report-filter-submitting');
+
+                    form.querySelectorAll('select[name="report_scope"]').forEach(function (select) {
+                        if (select.tomselect && typeof select.tomselect.blur === 'function') {
+                            select.tomselect.blur();
+                        }
+                    });
+
+                    if (document.activeElement && form.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+                        document.activeElement.blur();
+                    }
+                };
+
+                form.addEventListener('submit', markReportFiltersSubmitting);
+
+                const submitReportFilters = function () {
+                    window.clearTimeout(autoSubmitTimer);
+                    autoSubmitTimer = window.setTimeout(function () {
+                        markReportFiltersSubmitting();
+
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                            return;
+                        }
+
+                        form.submit();
+                    }, 80);
+                };
+
+                form.querySelectorAll('select[name="quarter"], select[name="year"], select[name="report_scope"]').forEach(function (select) {
+                    select.addEventListener('change', submitReportFilters);
+
+                    const bindTomSelectChange = function () {
+                        if (!select.tomselect || select.dataset.autoSubmitTomSelectReady === '1') {
+                            return;
+                        }
+
+                        select.dataset.autoSubmitTomSelectReady = '1';
+                        select.tomselect.on('change', submitReportFilters);
+                    };
+
+                    bindTomSelectChange();
+                    window.setTimeout(bindTomSelectChange, 120);
+                    window.setTimeout(bindTomSelectChange, 360);
+                });
+            });
+
             const labels = @json($chartLabels);
             const volume = @json($chartVolume);
             const closed = @json($chartClosed);

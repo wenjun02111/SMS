@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Report - Dealer Sales Overtime')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260409-1">
-    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}?v=20260417-01">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260423-4">
+    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}?v=20260420-01">
     <link rel="stylesheet" href="{{ asset('css/pages/admin-reports-v2.css') }}?v=20260324-9">
 @endpush
 @section('content')
@@ -10,7 +10,7 @@
     <header class="rv2-header">
         @php
             $reportTabQuery = [];
-            $currentReportScope = trim((string) ($selectedReportScope ?? request('report_scope', '')));
+            $currentReportScope = trim((string) ($selectedReportScope ?? request('report_scope', 'all')));
             if ($currentReportScope !== '') {
                 $reportTabQuery['report_scope'] = $currentReportScope;
             }
@@ -35,14 +35,7 @@
 
     <div class="rv2-filtered-layer">
         <div class="rv2-filtered-layer-head">
-            @php
-                $clearSalesOvertimeFiltersUrl = route('admin.reports.v2', [
-                    'days' => 90,
-                    'compare_days' => 30,
-                    'report_scope' => 'all',
-                ]);
-            @endphp
-            <form method="GET" class="rv2-filters rv2-filters-form">
+            <form method="GET" class="rv2-filters rv2-filters-form" data-auto-submit-report-filters>
                 @foreach(request()->query() as $key => $val)
                     @if($key !== 'days' && $key !== 'compare_days' && $key !== 'page' && $key !== 'primary_from' && $key !== 'primary_to' && $key !== 'compare_from' && $key !== 'compare_to' && $key !== 'include_dealer' && $key !== 'include_estream' && $key !== 'report_scope')
                         <input type="hidden" name="{{ $key }}" value="{{ $val }}">
@@ -87,10 +80,15 @@
                 </div>
                 <div class="rv2-filter rv2-filter-apply">
                     @include('admin.partials.report_filter_actions', [
-                        'clearUrl' => $clearSalesOvertimeFiltersUrl,
                         'wrapperClass' => 'rv2-filter-actions report-filter-actions',
                         'applyClass' => 'report-filter-apply',
+                        'exportClass' => 'report-filter-export',
                         'clearClass' => 'report-filter-clear',
+                        'showApply' => false,
+                        'showExport' => true,
+                        'showClear' => false,
+                        'exportTitle' => 'Dealer Sales Overtime Report',
+                        'exportTarget' => '.rv2-page',
                     ])
                 </div>
             </form>
@@ -300,15 +298,118 @@
                 });
             })();
 
-            // Toggle custom date ranges when "Custom range..." is selected
-            document.querySelectorAll('.rv2-filter-select').forEach(function (sel) {
-                function syncRange() {
-                    var wrapper = sel.closest('.rv2-filter')?.querySelector('.rv2-date-range');
-                    if (!wrapper) return;
-                    wrapper.style.display = sel.value === 'custom' ? 'flex' : 'none';
+            const autoSubmitReportForms = document.querySelectorAll('[data-auto-submit-report-filters]');
+            autoSubmitReportForms.forEach(function (form) {
+                if (!form || form.dataset.autoSubmitReady === '1') {
+                    return;
                 }
-                sel.addEventListener('change', syncRange);
-                syncRange();
+
+                form.dataset.autoSubmitReady = '1';
+                let autoSubmitTimer = null;
+
+                const markReportFiltersSubmitting = function () {
+                    form.classList.add('is-report-filter-submitting');
+
+                    form.querySelectorAll('select[name="report_scope"]').forEach(function (select) {
+                        if (select.tomselect && typeof select.tomselect.blur === 'function') {
+                            select.tomselect.blur();
+                        }
+                    });
+
+                    if (document.activeElement && form.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+                        document.activeElement.blur();
+                    }
+                };
+
+                form.addEventListener('submit', markReportFiltersSubmitting);
+
+                const getRangeWrapper = function (select) {
+                    const filter = select.closest('.rv2-filter');
+                    return filter ? filter.querySelector('.rv2-date-range') : null;
+                };
+
+                const syncRange = function (select) {
+                    const wrapper = getRangeWrapper(select);
+                    if (!wrapper) {
+                        return;
+                    }
+
+                    const isCustom = select.value === 'custom';
+                    wrapper.style.display = isCustom ? 'flex' : 'none';
+                    wrapper.querySelectorAll('input[type="date"]').forEach(function (input) {
+                        input.disabled = !isCustom;
+                        input.required = isCustom;
+                        if (!isCustom) {
+                            input.value = '';
+                        }
+                    });
+                };
+
+                const isFormReadyToSubmit = function () {
+                    return Array.prototype.every.call(form.querySelectorAll('select[name="days"], select[name="compare_days"]'), function (select) {
+                        const wrapper = getRangeWrapper(select);
+                        if (!wrapper || select.value !== 'custom') {
+                            return true;
+                        }
+
+                        const inputs = wrapper.querySelectorAll('input[type="date"]');
+                        const from = inputs[0] ? inputs[0].value : '';
+                        const to = inputs[1] ? inputs[1].value : '';
+
+                        return from !== '' && to !== '' && from <= to;
+                    });
+                };
+
+                const submitReportFilters = function () {
+                    window.clearTimeout(autoSubmitTimer);
+
+                    if (!isFormReadyToSubmit()) {
+                        return;
+                    }
+
+                    autoSubmitTimer = window.setTimeout(function () {
+                        markReportFiltersSubmitting();
+
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                            return;
+                        }
+
+                        form.submit();
+                    }, 80);
+                };
+
+                form.querySelectorAll('select[name="days"], select[name="compare_days"], select[name="report_scope"]').forEach(function (select) {
+                    if (select.name === 'days' || select.name === 'compare_days') {
+                        syncRange(select);
+                    }
+
+                    select.addEventListener('change', function () {
+                        if (select.name === 'days' || select.name === 'compare_days') {
+                            syncRange(select);
+                        }
+
+                        submitReportFilters();
+                    });
+
+                    const bindTomSelectChange = function () {
+                        if (!select.tomselect || select.dataset.autoSubmitTomSelectReady === '1') {
+                            return;
+                        }
+
+                        select.dataset.autoSubmitTomSelectReady = '1';
+                        select.tomselect.on('change', submitReportFilters);
+                    };
+
+                    bindTomSelectChange();
+                    window.setTimeout(bindTomSelectChange, 120);
+                    window.setTimeout(bindTomSelectChange, 360);
+                });
+
+                form.querySelectorAll('input[type="date"]').forEach(function (input) {
+                    input.addEventListener('change', submitReportFilters);
+                    input.addEventListener('input', submitReportFilters);
+                });
             });
 
             // ——— Top 10 Failed / Top 10 Closed bar charts (side by side) ———

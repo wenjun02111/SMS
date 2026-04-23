@@ -38,69 +38,254 @@
 .reports-period-row {
   display: flex;
   justify-content: flex-end;
+  position: relative;
+  z-index: 40;
   margin: 0 0 10px;
 }
 .reports-period-form-compact {
-  display: grid;
-  grid-template-columns: 120px 104px minmax(220px, 320px) auto;
-  gap: 8px;
-  align-items: center;
-  width: min(100%, 760px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 16px;
+  width: min(100%, 710px);
+  margin-left: auto;
+  margin-right: -14px;
   padding: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  --report-scope-picker-height: 42px;
-  --report-scope-picker-width: 100%;
-  --report-filter-radius: 12px;
-  --report-filter-actions-gap: 10px;
-  --report-filter-apply-height: 42px;
-  --report-filter-apply-padding: 0 16px;
-  --report-filter-apply-font-size: 13px;
-  --report-filter-clear-height: 39px;
-  --report-filter-clear-padding: 0 13px;
+  --report-scope-picker-height: 44px;
+  --report-scope-picker-width: 218px;
+  --report-filter-radius: 999px;
+  --report-filter-actions-gap: 8px;
+  --report-filter-apply-height: 44px;
+  --report-filter-apply-padding: 0 14px;
+  --report-filter-apply-font-size: 12px;
+  --report-filter-clear-height: 44px;
+  --report-filter-clear-padding: 0 14px;
   --report-filter-clear-font-size: 12px;
+}
+.reports-period-filter-cluster,
+.reports-period-action-cluster {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.reports-period-filter-cluster {
+  flex: 1 1 auto;
+}
+.reports-period-action-cluster {
+  flex: 0 0 auto;
+  align-items: flex-end;
+}
+.reports-period-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 .reports-period-actions {
   justify-content: flex-start;
+  min-width: 0;
+}
+.reports-period-date-group {
+  display: inline-flex;
+  align-items: center;
+  width: 214px;
+  min-width: 0;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid rgba(124, 91, 255, 0.2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbff 100%);
+  box-shadow: 0 8px 18px rgba(91, 63, 215, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+  cursor: pointer;
+}
+.reports-period-date-group:hover {
+  transform: translateY(-1px);
+  border-color: rgba(124, 91, 255, 0.35);
+  box-shadow: 0 12px 24px rgba(91, 63, 215, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+.reports-period-date-group:focus-within {
+  transform: translateY(-1px);
+  border-color: rgba(124, 91, 255, 0.46);
+  box-shadow: 0 0 0 3px rgba(124, 91, 255, 0.14), 0 12px 24px rgba(91, 63, 215, 0.12);
 }
 .reports-period-select {
-  height: 42px;
+  height: 44px;
   min-width: 0;
-  padding: 0 12px;
-  border: 1px solid #d6d9e8;
-  border-radius: 12px;
-  background: #ffffff;
+  padding: 0 13px;
+  border: 1px solid rgba(124, 91, 255, 0.2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbff 100%);
   box-sizing: border-box;
+  font-family: "Public Sans", sans-serif;
   font-size: 13px;
-  font-weight: 700;
-  color: #1f2937;
-  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  color: #111827;
+  box-shadow: 0 8px 18px rgba(91, 63, 215, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+  cursor: pointer;
+}
+.reports-period-select:hover {
+  transform: translateY(-1px);
+  border-color: rgba(124, 91, 255, 0.35);
+  box-shadow: 0 12px 24px rgba(91, 63, 215, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
 }
 .reports-period-select:focus,
 .reports-period-select:focus-visible {
   outline: none;
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.14);
+  transform: translateY(-1px);
+  border-color: rgba(124, 91, 255, 0.46);
+  box-shadow: 0 0 0 3px rgba(124, 91, 255, 0.14), 0 12px 24px rgba(91, 63, 215, 0.12);
 }
-.reports-period-form-compact .reports-period-select--month { width: 120px; }
-.reports-period-form-compact .reports-period-select--year { width: 104px; }
+.reports-period-form-compact .reports-period-date-group .reports-period-select {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.reports-period-form-compact .reports-period-date-group .reports-period-select:hover,
+.reports-period-form-compact .reports-period-date-group .reports-period-select:focus,
+.reports-period-form-compact .reports-period-date-group .reports-period-select:focus-visible {
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+.reports-period-form-compact .reports-period-select--month {
+  flex: 1 1 116px;
+  width: auto;
+}
+.reports-period-form-compact .reports-period-select--year {
+  flex: 0 0 96px;
+  width: 96px;
+  border-left: 1px solid rgba(124, 91, 255, 0.14) !important;
+}
 .reports-period-form-compact .report-scope-field {
   display: flex;
-  height: 42px;
+  align-items: center;
+  height: 44px;
   min-width: 0;
-  width: 100%;
+  width: var(--report-scope-picker-width);
+  overflow: visible;
+  border: 1px solid rgba(124, 91, 255, 0.2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbff 100%);
+  box-shadow: 0 8px 18px rgba(91, 63, 215, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+  cursor: pointer;
 }
 .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper {
-  height: 42px;
+  position: relative;
+  height: 100%;
   width: 100%;
   min-width: 0;
+  transition: transform 0.16s ease;
 }
 .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single .ts-control,
 .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
-  height: 42px;
-  min-height: 42px;
+  height: 100%;
+  min-height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.reports-period-form-compact .report-scope-field .report-scope-ts-wrapper:hover,
+.reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.focus {
+  transform: none;
+}
+.reports-period-form-compact .report-scope-field:hover,
+.reports-period-form-compact .report-scope-field:focus-within {
+  border-color: rgba(124, 91, 255, 0.38);
+  box-shadow: 0 12px 24px rgba(91, 63, 215, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+.reports-period-form-compact .report-filter-apply {
+  min-width: 62px;
+  border-color: rgba(124, 91, 255, 0.9);
+  background: linear-gradient(135deg, #8b6cff 0%, #7447e8 100%);
+  font-family: "Public Sans", sans-serif;
+  font-weight: 800;
+  box-shadow: 0 10px 22px rgba(124, 91, 255, 0.24);
+}
+.reports-period-form-compact .report-filter-clear {
+  min-width: 58px;
+  font-family: "Public Sans", sans-serif;
+  font-weight: 800;
+}
+.reports-period-form-compact .report-filter-export {
+  min-width: 176px;
+  height: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(239, 68, 68, 0.28);
+}
+.reports-period-form-compact .report-filter-export::before {
+  flex-basis: 34px;
+  width: 34px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #dc2626;
+  box-shadow: none;
+}
+.reports-period-form-compact .report-filter-export::after {
+  color: #ffffff;
+}
+.reports-period-form-compact .report-filter-export:hover,
+.reports-period-form-compact .report-filter-export:focus-visible {
+  border: 0;
+  background: linear-gradient(135deg, #f05252 0%, #c81e1e 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.36);
+}
+html.theme-dark .reports-period-date-group,
+html.theme-dark .reports-period-select,
+html.theme-dark .reports-period-form-compact .report-scope-field {
+  border-color: rgba(156, 137, 255, 0.28);
+  background: linear-gradient(180deg, #18223a 0%, #101827 100%);
+  color: #f7f3ff;
+  box-shadow: 0 10px 22px rgba(2, 6, 23, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+html.theme-dark .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single .ts-control,
+html.theme-dark .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html.theme-dark .reports-period-form-compact .report-scope-field .ts-control > .item,
+html.theme-dark .reports-period-form-compact .report-scope-field .ts-control > input {
+  color: #f7f3ff;
+}
+html.theme-dark .reports-period-date-group .reports-period-select {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: #f7f3ff;
+}
+html.theme-dark .reports-period-date-group .reports-period-select--year {
+  border-left-color: rgba(156, 137, 255, 0.2) !important;
+}
+.reports-page .report-scope-ts-dropdown {
+  z-index: 1200;
+  max-height: 224px;
+  overflow: hidden;
+}
+.reports-page .report-scope-ts-dropdown .ts-dropdown-content {
+  max-height: 172px;
+  overflow-y: auto;
+}
+.reports-page .reports-metrics--admin {
+  position: relative;
+  z-index: 1;
 }
 .reports-period-check {
   height: 34px;
@@ -875,39 +1060,53 @@ html.theme-dark .reports-page .report-legend {
   }
 
   .reports-period-form-compact {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     width: 100%;
-    gap: 8px 10px;
+    margin-right: 0;
+    gap: 10px;
     align-items: stretch;
     padding: 0;
   }
 
-  .reports-period-form-compact .reports-period-select--month,
-  .reports-period-form-compact .reports-period-select--year {
+  .reports-period-filter-cluster,
+  .reports-period-action-cluster {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .reports-period-filter-controls {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .reports-period-form-compact .reports-period-date-group {
+    width: 100%;
+  }
+
+  .reports-period-form-compact .reports-period-date-group .reports-period-select--month,
+  .reports-period-form-compact .reports-period-date-group .reports-period-select--year {
     width: 100%;
   }
 
   .reports-period-form-compact .report-scope-field {
-    grid-column: 1 / -1;
+    width: 100%;
   }
 
+  .reports-period-date-group,
   .reports-period-select,
   .report-scope-field,
   .report-scope-field .report-scope-ts-wrapper,
   .reports-period-check,
   .reports-period-actions .report-filter-clear,
-  .reports-period-actions .report-filter-apply {
+  .reports-period-actions .report-filter-apply,
+  .reports-period-actions .report-filter-export {
     width: 100%;
     min-width: 0;
     height: 42px;
     font-size: 14px;
     box-sizing: border-box;
-  }
-
-  .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single .ts-control,
-  .reports-period-form-compact .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
-    border-radius: 12px;
   }
 
   .reports-period-check {
@@ -916,20 +1115,21 @@ html.theme-dark .reports-page .report-legend {
   }
 
   .reports-period-actions {
-    grid-column: 1 / -1;
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 98px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     align-items: stretch;
   }
 
   .reports-period-actions .report-filter-apply,
-  .reports-period-actions .report-filter-clear {
+  .reports-period-actions .report-filter-clear,
+  .reports-period-actions .report-filter-export {
     margin: 0;
   }
 
-  .reports-period-actions .report-filter-clear {
+  .reports-period-actions .report-filter-clear,
+  .reports-period-actions .report-filter-export {
     min-width: 0;
   }
 
@@ -1008,12 +1208,11 @@ html.theme-dark .reports-page .report-legend {
   }
 
   .reports-period-form-compact {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
   .reports-period-actions {
-    grid-template-columns: minmax(0, 1fr) 92px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .reports-page .dashboard-metric-card {

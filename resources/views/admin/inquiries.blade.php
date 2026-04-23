@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Inquiries Management – Admin')
 @push('styles')
-<link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260417-11">
+<link rel="stylesheet" href="{{ asset('css/pages/admin-inquiries.css') }}?v=20260421-04">
 @endpush
 @section('content')
 @php
@@ -1169,7 +1169,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!scroller) return;
         var visibleCols = Array.isArray(visible) ? visible : [];
         var hasExtras = visibleCols.some(function(c) { return defaults.indexOf(c) === -1; });
-        var hasProducts = visibleCols.indexOf('products') !== -1 || visibleCols.indexOf('dealtproducts') !== -1;
         // If user selected "None", we keep current scrolling behavior (doesn't matter).
         var enabled = visibleCols.length > 0;
 
@@ -1181,8 +1180,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        scroller.classList.toggle('inquiries-table-scroll--no-x', enabled && !hasExtras && !hasProducts);
-        table.classList.toggle('inquiries-table--fit', enabled && !hasExtras && !hasProducts);
+        scroller.classList.toggle('inquiries-table-scroll--no-x', enabled && !hasExtras);
+        table.classList.toggle('inquiries-table--fit', enabled && !hasExtras);
     }
 
     function getVisibleColumns() {

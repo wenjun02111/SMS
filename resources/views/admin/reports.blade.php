@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Report - Monthly Performance Analytics')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260409-1">
-    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260420-2">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260423-4">
+    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260423-10">
     <style>
         .reports-page .dashboard-panels-two-column {
             display: grid;
@@ -582,7 +582,8 @@
             }
 
             .reports-page .report-filter-apply,
-            .reports-page .report-filter-clear {
+            .reports-page .report-filter-clear,
+            .reports-page .report-filter-export {
                 justify-content: center;
                 text-align: center;
             }
@@ -645,7 +646,7 @@
 <header class="dashboard-header">
     @php
         $reportTabQuery = [];
-        $currentReportScope = trim((string) ($selectedReportScope ?? request('report_scope', '')));
+        $currentReportScope = trim((string) ($selectedReportScope ?? request('report_scope', 'all')));
         if ($currentReportScope !== '') {
             $reportTabQuery['report_scope'] = $currentReportScope;
         }
@@ -741,13 +742,13 @@
 
 <div class="reports-period-row">
     @php
-        $clearMonthlyFiltersUrl = route('admin.reports', [
-            'month' => (int) now()->format('n'),
-            'year' => (int) now()->format('Y'),
-            'report_scope' => 'all',
-        ]);
+        $exportScopeLabel = $reportScopeOptions[$selectedReportScope ?? 'all']['label'] ?? 'All';
+        $monthlyExportTitle = 'Monthly Performance Report - ' . $selectedMonthName . ' ' . $selectedYear;
+        if ($exportScopeLabel !== 'All') {
+            $monthlyExportTitle .= ' - ' . $exportScopeLabel;
+        }
     @endphp
-    <form method="get" class="reports-period-form reports-period-form-compact">
+    <form method="get" class="reports-period-form reports-period-form-compact" data-auto-submit-report-filters>
         @php
             $months = [
                 1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April',
@@ -755,30 +756,43 @@
                 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
             ];
         @endphp
-        <select name="month" class="reports-period-select reports-period-select--month" aria-label="Select month">
-            @foreach ($months as $m => $label)
-                <option value="{{ $m }}" {{ (int) ($selectedMonth ?? now()->format('n')) === (int) $m ? 'selected' : '' }}>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </select>
-        <select name="year" class="reports-period-select reports-period-select--year" aria-label="Select year">
-            @foreach (($yearOptions ?? []) as $y)
-                <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>
-                    {{ $y }}
-                </option>
-            @endforeach
-        </select>
-        @include('admin.partials.report_scope_picker', [
-            'options' => $reportScopeOptions ?? [],
-            'selected' => $selectedReportScope ?? 'all',
-        ])
-        @include('admin.partials.report_filter_actions', [
-            'clearUrl' => $clearMonthlyFiltersUrl,
-            'wrapperClass' => 'reports-period-actions report-filter-actions',
-            'applyClass' => 'report-filter-apply',
-            'clearClass' => 'report-filter-clear',
-        ])
+        <div class="reports-period-filter-cluster">
+            <div class="reports-period-filter-controls">
+                <div class="reports-period-date-group" aria-label="Report date filter">
+                    <select name="month" class="reports-period-select reports-period-select--month" aria-label="Select month">
+                        @foreach ($months as $m => $label)
+                            <option value="{{ $m }}" {{ (int) ($selectedMonth ?? now()->format('n')) === (int) $m ? 'selected' : '' }}>
+                                {{ $label }}
+                            </option>
+                        @endforeach
+                    </select>
+                    <select name="year" class="reports-period-select reports-period-select--year" aria-label="Select year">
+                        @foreach (($yearOptions ?? []) as $y)
+                            <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>
+                                {{ $y }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                @include('admin.partials.report_scope_picker', [
+                    'options' => $reportScopeOptions ?? [],
+                    'selected' => $selectedReportScope ?? 'all',
+                ])
+            </div>
+        </div>
+        <div class="reports-period-action-cluster">
+            @include('admin.partials.report_filter_actions', [
+                'wrapperClass' => 'reports-period-actions report-filter-actions',
+                'applyClass' => 'report-filter-apply',
+                'exportClass' => 'report-filter-export',
+                'clearClass' => 'report-filter-clear',
+                'showApply' => false,
+                'showExport' => true,
+                'showClear' => false,
+                'exportTitle' => $monthlyExportTitle,
+                'exportTarget' => '.reports-page',
+            ])
+        </div>
     </form>
 </div>
 
@@ -1039,6 +1053,63 @@
                     if (e.key === 'Escape') closeDropdown();
                 });
             }
+
+            const autoSubmitReportForms = document.querySelectorAll('[data-auto-submit-report-filters]');
+            autoSubmitReportForms.forEach(function (form) {
+                if (!form || form.dataset.autoSubmitReady === '1') {
+                    return;
+                }
+
+                form.dataset.autoSubmitReady = '1';
+                let autoSubmitTimer = null;
+
+                const markReportFiltersSubmitting = function () {
+                    form.classList.add('is-report-filter-submitting');
+
+                    form.querySelectorAll('select[name="report_scope"]').forEach(function (select) {
+                        if (select.tomselect && typeof select.tomselect.blur === 'function') {
+                            select.tomselect.blur();
+                        }
+                    });
+
+                    if (document.activeElement && form.contains(document.activeElement) && typeof document.activeElement.blur === 'function') {
+                        document.activeElement.blur();
+                    }
+                };
+
+                form.addEventListener('submit', markReportFiltersSubmitting);
+
+                const submitReportFilters = function () {
+                    window.clearTimeout(autoSubmitTimer);
+                    autoSubmitTimer = window.setTimeout(function () {
+                        markReportFiltersSubmitting();
+
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit();
+                            return;
+                        }
+
+                        form.submit();
+                    }, 80);
+                };
+
+                form.querySelectorAll('select[name="month"], select[name="year"], select[name="report_scope"]').forEach(function (select) {
+                    select.addEventListener('change', submitReportFilters);
+
+                    const bindTomSelectChange = function () {
+                        if (!select.tomselect || select.dataset.autoSubmitTomSelectReady === '1') {
+                            return;
+                        }
+
+                        select.dataset.autoSubmitTomSelectReady = '1';
+                        select.tomselect.on('change', submitReportFilters);
+                    };
+
+                    bindTomSelectChange();
+                    window.setTimeout(bindTomSelectChange, 120);
+                    window.setTimeout(bindTomSelectChange, 360);
+                });
+            });
 
             const showChartFallback = function (wrapper, fallback, message) {
                 if (wrapper) {

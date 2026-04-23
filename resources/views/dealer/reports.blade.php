@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Reports – SQL LMS Dealer Console')
 @push('styles')
+<link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260423-4">
 <style>
     .dealer-reports-page .dashboard-panels-two-column { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:20px; min-width:0; }
     .dealer-reports-page .dashboard-panels-two-column > *, .dealer-reports-page .reports-product-section { min-width:0; }
@@ -28,6 +29,19 @@
     .dealer-reports-page .reports-product-scale-chip { gap:6px; padding:5px 10px; font-size:11px; font-weight:600; }
     .dealer-reports-page .reports-product-scale-dot { width:8px; height:8px; border-radius:999px; flex-shrink:0; }
     .dealer-reports-page .reports-product-scale-dot--high { background:#22c55e; } .dealer-reports-page .reports-product-scale-dot--medium { background:#f59e0b; } .dealer-reports-page .reports-product-scale-dot--low { background:#ef4444; }
+    .dealer-reports-page .reports-period-form--dealer { --dealer-report-action-width:180px; --dealer-report-action-height:44px; gap:8px; align-items:center; }
+    .dealer-reports-page .reports-period-quick-group { display:inline-flex; align-items:center; box-sizing:border-box; flex:0 0 var(--dealer-report-action-width); width:var(--dealer-report-action-width); min-width:var(--dealer-report-action-width); max-width:var(--dealer-report-action-width); height:var(--dealer-report-action-height); overflow:hidden; border:1px solid rgba(124,91,255,.2); border-radius:14px; background:linear-gradient(180deg,#fff 0%,#fcfbff 100%); box-shadow:0 8px 18px rgba(91,63,215,.08), inset 0 1px 0 rgba(255,255,255,.95); transition:transform .16s ease, border-color .16s ease, box-shadow .16s ease, background-color .16s ease; }
+    .dealer-reports-page .reports-period-quick-group:hover { transform:translateY(-1px); border-color:rgba(124,91,255,.34); background:#fff; box-shadow:0 12px 26px rgba(91,63,215,.13), inset 0 1px 0 rgba(255,255,255,.98); }
+    .dealer-reports-page .reports-period-quick-group:focus-within { transform:translateY(-1px); border-color:rgba(124,91,255,.34); box-shadow:0 0 0 3px rgba(124,91,255,.1), 0 12px 26px rgba(91,63,215,.13), inset 0 1px 0 rgba(255,255,255,.95); }
+    .dealer-reports-page .reports-period-quick-group .reports-period-select--dealer { flex:1 1 auto; min-width:0; height:100%; padding:0 22px 0 16px; border:0; border-radius:0; outline:0; background:transparent; box-shadow:none; color:#111827; font-family:"Public Sans", sans-serif; font-size:13px; font-weight:800; line-height:1; letter-spacing:.045em; cursor:pointer; }
+    .dealer-reports-page .reports-period-quick-group .reports-period-select--dealer:focus, .dealer-reports-page .reports-period-quick-group .reports-period-select--dealer:focus-visible { outline:0; box-shadow:none; }
+    .dealer-reports-page .reports-period-range-inline { display:inline-flex; gap:0; align-items:center; box-sizing:border-box; height:var(--dealer-report-action-height); overflow:hidden; border:1px solid rgba(124,91,255,.18); border-radius:14px; background:linear-gradient(180deg,#fff 0%,#fcfbff 100%); box-shadow:0 8px 18px rgba(91,63,215,.07), inset 0 1px 0 rgba(255,255,255,.95); transition:border-color .18s ease, box-shadow .18s ease; }
+    .dealer-reports-page .reports-period-range-inline:focus-within { border-color:rgba(124,91,255,.32); box-shadow:0 0 0 3px rgba(124,91,255,.09), 0 10px 22px rgba(91,63,215,.09), inset 0 1px 0 rgba(255,255,255,.95); }
+    .dealer-reports-page .reports-period-range-inline .reports-period-date { width:150px; min-width:150px; height:100%; padding:0 12px 0 14px; border:0; border-radius:0; outline:0; background:transparent; box-shadow:none; color:#111827; font-weight:700; }
+    .dealer-reports-page .reports-period-range-inline .reports-period-date::-webkit-calendar-picker-indicator { margin-left:8px; margin-right:2px; opacity:.68; cursor:pointer; }
+    .dealer-reports-page .reports-period-range-inline .reports-period-date + .reports-period-date { border-left:1px solid rgba(124,91,255,.12); }
+    .dealer-reports-page .reports-period-range-inline .reports-period-date:focus, .dealer-reports-page .reports-period-range-inline .reports-period-date:focus-visible { outline:0; box-shadow:none; }
+    .dealer-reports-page .reports-period-range-inline.is-hidden { display:none; }
     .dealer-reports-page .report-status-body { display:flex; flex-direction:column; align-items:center; gap:16px; }
     .dealer-reports-page .report-donut-wrapper { display:flex; justify-content:center; width:100%; }
     .dealer-reports-page .report-donut { width:196px; height:196px; border-radius:50%; position:relative; border:1px solid #e5e7eb; box-shadow:0 14px 30px rgba(15,23,42,.08); }
@@ -37,6 +51,7 @@
     .dealer-reports-page .report-legend li { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
     .dealer-reports-page .report-legend-color { width:10px; height:10px; border-radius:999px; flex-shrink:0; }
     .dealer-reports-page .report-legend-label { flex:1; color:#475569; } .dealer-reports-page .report-legend-value { font-weight:600; color:#0f172a; }
+    .dealer-reports-page .reports-period-export { box-sizing:border-box; flex:0 0 var(--dealer-report-action-width); width:var(--dealer-report-action-width); min-width:var(--dealer-report-action-width); max-width:var(--dealer-report-action-width); height:var(--dealer-report-action-height); min-height:var(--dealer-report-action-height); }
     html.theme-dark .dealer-reports-page .reports-metric-card { border-color:#283451; background:linear-gradient(180deg,#181f34 0%,#11182b 100%); box-shadow:0 18px 36px rgba(2,6,23,.26); }
     html.theme-dark .dealer-reports-page .reports-metric-icon-failed,
     html.theme-dark .dealer-reports-page .reports-metric-icon-failed::before { background:linear-gradient(135deg,#f8fafc 0%,#dbe5f6 100%) !important; }
@@ -47,14 +62,59 @@
     html.theme-dark .dealer-reports-page .reports-inquiry-heading .dashboard-panel-title, html.theme-dark .dealer-reports-page .reports-product-heading .dashboard-panel-title, html.theme-dark .dealer-reports-page .dealer-reports-status-heading .dashboard-panel-title, html.theme-dark .dealer-reports-page .reports-inquiry-chip-value, html.theme-dark .dealer-reports-page .report-donut-total, html.theme-dark .dealer-reports-page .report-legend-value { color:#f6f9ff; }
     html.theme-dark .dealer-reports-page .reports-inquiry-subtitle, html.theme-dark .dealer-reports-page .reports-product-subtitle, html.theme-dark .dealer-reports-page .dealer-reports-status-subtitle, html.theme-dark .dealer-reports-page .reports-inquiry-chip-label, html.theme-dark .dealer-reports-page .dealer-reports-chart-fallback, html.theme-dark .dealer-reports-page .reports-product-chart-fallback, html.theme-dark .dealer-reports-page .dealer-reports-empty, html.theme-dark .dealer-reports-page .reports-product-empty, html.theme-dark .dealer-reports-page .report-donut-label, html.theme-dark .dealer-reports-page .report-legend-label { color:#8e9abc; }
     html.theme-dark .dealer-reports-page .reports-inquiry-chip, html.theme-dark .dealer-reports-page .reports-product-scale-chip { border-color:#2f3b5a; background:rgba(16,23,39,.66); color:#c8d2eb; box-shadow:inset 0 1px 0 rgba(255,255,255,.03); }
+    html.theme-dark .dealer-reports-page .reports-period-quick-group { border-color:rgba(156,137,255,.26); background:linear-gradient(180deg,#18223a 0%,#101827 100%); box-shadow:0 10px 24px rgba(2,6,23,.3), inset 0 1px 0 rgba(255,255,255,.05); }
+    html.theme-dark .dealer-reports-page .reports-period-quick-group:focus-within { border-color:rgba(156,137,255,.42); box-shadow:0 0 0 3px rgba(156,137,255,.13), 0 12px 28px rgba(2,6,23,.32), inset 0 1px 0 rgba(255,255,255,.05); }
+    html.theme-dark .dealer-reports-page .reports-period-quick-group .reports-period-select--dealer { color:#f3f6ff; }
+    html.theme-dark .dealer-reports-page .reports-period-range-inline { border-color:rgba(156,137,255,.24); background:linear-gradient(180deg,#18223a 0%,#101827 100%); box-shadow:0 10px 24px rgba(2,6,23,.28), inset 0 1px 0 rgba(255,255,255,.05); }
+    html.theme-dark .dealer-reports-page .reports-period-range-inline:focus-within { border-color:rgba(156,137,255,.4); box-shadow:0 0 0 3px rgba(156,137,255,.12), 0 12px 28px rgba(2,6,23,.3), inset 0 1px 0 rgba(255,255,255,.05); }
+    html.theme-dark .dealer-reports-page .reports-period-range-inline .reports-period-date { color:#f3f6ff; }
+    html.theme-dark .dealer-reports-page .reports-period-range-inline .reports-period-date + .reports-period-date { border-left-color:rgba(156,137,255,.18); }
     html.theme-dark .dealer-reports-page .dealer-reports-card, html.theme-dark .dealer-reports-page .reports-product-card, html.theme-dark .dealer-reports-page .dealer-reports-status-card { border-color:#25314d; background:linear-gradient(180deg,rgba(27,35,57,.98) 0%,rgba(16,22,38,.98) 100%); box-shadow:inset 0 1px 0 rgba(255,255,255,.03); }
     html.theme-dark .dealer-reports-page .dealer-reports-chart-wrapper, html.theme-dark .dealer-reports-page .reports-product-chart-wrapper { background:linear-gradient(180deg,#131b2f 0%,#0f1728 100%); border-color:#27334e; }
     html.theme-dark .dealer-reports-page .reports-inquiry-section .dealer-reports-chart-wrapper { background:transparent; border-color:transparent; }
     html.theme-dark .dealer-reports-page .report-donut { border-color:#27334e; box-shadow:0 14px 30px rgba(2,6,23,.24); }
     html.theme-dark .dealer-reports-page .report-donut-center { background:linear-gradient(180deg,#131b2f 0%,#0f1728 100%); box-shadow:0 12px 28px rgba(2,6,23,.28); }
     html.theme-dark .dealer-reports-page .report-legend-color--failed { background:#f8fafc !important; box-shadow:0 0 0 1px rgba(148,163,184,.4); }
+    @media (min-width:1024px) and (max-width:1600px) and (max-height:920px) {
+        .dashboard-content.reports-page.dealer-reports-page { padding-top:10px; padding-bottom:12px; gap:8px; }
+        .dealer-reports-page .reports-header { margin-bottom:6px; }
+        .dealer-reports-page .reports-period-form--dealer { width:min(100%, 690px); gap:7px; flex-wrap:nowrap; --dealer-report-action-width:156px; --dealer-report-action-height:40px; --report-scope-picker-height:36px; --report-filter-radius:10px; --report-filter-apply-height:36px; --report-filter-apply-padding:0 13px; --report-filter-apply-font-size:11px; --report-filter-clear-height:32px; --report-filter-clear-padding:0 10px; --report-filter-clear-font-size:10.5px; }
+        .dealer-reports-page .reports-period-select { height:36px; padding:0 10px; font-size:11px; border-radius:10px; }
+        .dealer-reports-page .reports-period-quick-group .reports-period-select--dealer { height:100%; padding:0 18px 0 13px; border-radius:0; }
+        .dealer-reports-page .reports-period-range-inline { flex:0 0 270px; width:270px; }
+        .dealer-reports-page .reports-period-range-inline .reports-period-date { width:135px; min-width:0; height:100%; padding:0 9px 0 11px; border-radius:0; font-size:10.5px; }
+        .dealer-reports-page .reports-period-export { font-size:10.5px; }
+        .dealer-reports-page .reports-metrics { gap:10px; margin-bottom:10px; }
+        .dealer-reports-page .reports-metric-card { min-height:118px; padding:12px 14px; border-radius:15px; }
+        .dealer-reports-page .reports-metric-icon { width:40px; height:40px; margin-bottom:8px; font-size:19px; }
+        .dealer-reports-page .reports-metric-value { font-size:21px; line-height:1; }
+        .dealer-reports-page .reports-metric-label { margin-top:7px; font-size:11px; letter-spacing:.08em; }
+        .dealer-reports-page .dashboard-panels-two-column { gap:14px; }
+        .dealer-reports-page .reports-inquiry-section, .dealer-reports-page .dealer-reports-status-section, .dealer-reports-page .reports-product-section { border-radius:18px; }
+        .dealer-reports-page .reports-inquiry-section .dashboard-panel-header, .dealer-reports-page .dealer-reports-status-section .dashboard-panel-header, .dealer-reports-page .reports-product-section .dashboard-panel-header { gap:10px; padding:14px 16px 7px; }
+        .dealer-reports-page .reports-inquiry-section .dashboard-panel-body, .dealer-reports-page .dealer-reports-status-section .dashboard-panel-body, .dealer-reports-page .reports-product-section .dashboard-panel-body { padding:0 16px 14px; }
+        .dealer-reports-page .reports-inquiry-heading .dashboard-panel-title, .dealer-reports-page .reports-product-heading .dashboard-panel-title, .dealer-reports-page .dealer-reports-status-heading .dashboard-panel-title { font-size:16px; }
+        .dealer-reports-page .reports-inquiry-subtitle, .dealer-reports-page .reports-product-subtitle, .dealer-reports-page .dealer-reports-status-subtitle { font-size:11.5px; }
+        .dealer-reports-page .reports-inquiry-chip { padding:5px 9px; }
+        .dealer-reports-page .dealer-reports-card, .dealer-reports-page .reports-product-card, .dealer-reports-page .dealer-reports-status-card { border-radius:15px; padding:10px 12px 8px; }
+        .dealer-reports-page .reports-inquiry-section .dealer-reports-card { padding:7px 9px 3px; }
+        .dealer-reports-page .reports-inquiry-section .dealer-reports-chart-wrapper { height:250px !important; }
+        .dealer-reports-page .dealer-reports-empty, .dealer-reports-page .reports-product-empty { padding:14px 8px; font-size:12px; }
+        .dealer-reports-page .report-status-body { gap:10px; }
+        .dealer-reports-page .report-donut { width:160px; height:160px; }
+        .dealer-reports-page .report-donut-center { inset:20px; }
+        .dealer-reports-page .report-donut-total { font-size:19px; }
+        .dealer-reports-page .report-legend { padding:0 2px 2px; gap:5px 10px; font-size:10.5px; }
+        .dealer-reports-page .reports-product-scale-chip { padding:3px 7px; font-size:9.5px; }
+        .dealer-reports-page .reports-product-chart-wrapper { padding:7px; }
+    }
     @media (max-width:1200px) { .dealer-reports-page .dashboard-panels-two-column { grid-template-columns:minmax(0,1fr); } }
     @media (max-width:768px) {
+        .dealer-reports-page .reports-period-form--dealer { --dealer-report-action-width:100%; --dealer-report-action-height:46px; width:100%; display:grid; grid-template-columns:1fr; justify-content:stretch; }
+        .dealer-reports-page .reports-period-quick-group, .dealer-reports-page .reports-period-export { width:100%; min-width:0; }
+        .dealer-reports-page .reports-period-range-inline { width:100%; display:flex; }
+        .dealer-reports-page .reports-period-range-inline.is-hidden { display:none; }
+        .dealer-reports-page .reports-period-range-inline .reports-period-date { width:50%; min-width:0; }
         .dealer-reports-page .reports-inquiry-section .dashboard-panel-header, .dealer-reports-page .dealer-reports-status-section .dashboard-panel-header, .dealer-reports-page .reports-product-section .dashboard-panel-header { padding:16px 16px 10px; flex-direction:column; align-items:flex-start; }
         .dealer-reports-page .reports-inquiry-section .dashboard-panel-body, .dealer-reports-page .dealer-reports-status-section .dashboard-panel-body, .dealer-reports-page .reports-product-section .dashboard-panel-body { padding:0 16px 16px; }
         .dealer-reports-page .dealer-reports-card, .dealer-reports-page .reports-product-card, .dealer-reports-page .dealer-reports-status-card { padding:12px; border-radius:14px; }
@@ -69,17 +129,19 @@
     <header class="reports-header reports-header--dealer">
         <div class="reports-header-actions">
             <form method="get" action="{{ route('dealer.reports') }}" class="reports-period-form reports-period-form-compact reports-period-form--dealer" id="reportsPeriodForm">
-                <select name="period" id="reportsPeriodSelect" class="reports-period-select reports-period-select--dealer" aria-label="Report period">
-                    <option value="week" {{ ($period ?? 'month') === 'week' ? 'selected' : '' }}>Current Week</option>
-                    <option value="month" {{ ($period ?? 'month') === 'month' ? 'selected' : '' }}>Current Month</option>
-                    <option value="year" {{ ($period ?? 'month') === 'year' ? 'selected' : '' }}>Current Year</option>
-                    <option value="range" {{ ($period ?? 'month') === 'range' ? 'selected' : '' }}>Range</option>
-                </select>
+                <div class="reports-period-quick-group">
+                    <select name="period" id="reportsPeriodSelect" class="reports-period-select reports-period-select--dealer" aria-label="Report period">
+                        <option value="week" {{ ($period ?? 'month') === 'week' ? 'selected' : '' }}>Current Week</option>
+                        <option value="month" {{ ($period ?? 'month') === 'month' ? 'selected' : '' }}>Current Month</option>
+                        <option value="year" {{ ($period ?? 'month') === 'year' ? 'selected' : '' }}>Current Year</option>
+                        <option value="range" {{ ($period ?? 'month') === 'range' ? 'selected' : '' }}>Range</option>
+                    </select>
+                </div>
                 <div class="reports-period-range-inline{{ ($period ?? 'month') === 'range' ? '' : ' is-hidden' }}" id="reportsRangeInline">
                     <input type="date" name="from" id="reportsRangeFrom" class="reports-period-select reports-period-select--dealer reports-period-date" value="{{ $from ?? '' }}" aria-label="From date">
                     <input type="date" name="to" id="reportsRangeTo" class="reports-period-select reports-period-select--dealer reports-period-date" value="{{ $to ?? '' }}" aria-label="To date">
                 </div>
-                <button type="submit" class="reports-period-apply reports-period-apply--dealer">Apply</button>
+                <button type="button" class="report-filter-export reports-period-export" data-export-report-pdf data-export-title="Dealer Performance Report - {{ $periodLabel ?? 'Current Month' }}" data-export-target=".dashboard-content.reports-page">Export PDF</button>
             </form>
         </div>
     </header>
@@ -189,7 +251,7 @@
             })
             ->values();
         $hasInquiryTrendData = (int) ($totalInquiry ?? 0) > 0 && collect($inquiryTrendData ?? [])->sum() > 0;
-        $productChartHeightPx = max(168, $productConversionDisplay->count() * 30 + 44);
+        $productChartHeightPx = max(260, $productConversionDisplay->count() * 24 + 44);
     @endphp
 
     <section class="dashboard-panels-two-column">
@@ -290,6 +352,15 @@ function initDealerReportsPage() {
     var rangeFrom = document.getElementById('reportsRangeFrom');
     var rangeTo = document.getElementById('reportsRangeTo');
     var form = document.getElementById('reportsPeriodForm');
+    var rangeSubmitTimer = null;
+
+    function getTodayValue() {
+        var today = new Date();
+        var year = today.getFullYear();
+        var month = String(today.getMonth() + 1).padStart(2, '0');
+        var day = String(today.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
 
     function syncRangeInputs() {
         if (!periodSelect || !rangeWrap || !rangeFrom || !rangeTo) return;
@@ -302,11 +373,60 @@ function initDealerReportsPage() {
         rangeTo.min = isRange ? (rangeFrom.value || '') : '';
     }
 
+    function scheduleRangeSubmit() {
+        if (!form || !periodSelect || !rangeFrom || !rangeTo) return;
+        if (periodSelect.value !== 'range') return;
+
+        var from = rangeFrom.value;
+        var to = rangeTo.value;
+        if (!from || !to || from > to) return;
+
+        window.clearTimeout(rangeSubmitTimer);
+        rangeSubmitTimer = window.setTimeout(function() {
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        }, 180);
+    }
+
+    function submitReportFilter() {
+        if (!form) return;
+        window.clearTimeout(rangeSubmitTimer);
+        window.setTimeout(function() {
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        }, 80);
+    }
+
     if (periodSelect && rangeWrap && rangeFrom && rangeTo) {
-        periodSelect.addEventListener('change', syncRangeInputs);
+        periodSelect.addEventListener('change', function() {
+            syncRangeInputs();
+
+            if (periodSelect.value === 'range') {
+                var todayValue = getTodayValue();
+                rangeFrom.value = rangeFrom.value || todayValue;
+                rangeTo.value = rangeTo.value || todayValue;
+                rangeTo.min = rangeFrom.value || '';
+                scheduleRangeSubmit();
+                return;
+            }
+
+            rangeFrom.value = '';
+            rangeTo.value = '';
+            submitReportFilter();
+        });
         rangeFrom.addEventListener('change', function() {
             rangeTo.min = rangeFrom.value || '';
+            scheduleRangeSubmit();
         });
+        rangeTo.addEventListener('change', scheduleRangeSubmit);
+        rangeFrom.addEventListener('input', scheduleRangeSubmit);
+        rangeTo.addEventListener('input', scheduleRangeSubmit);
         syncRangeInputs();
     }
 
@@ -831,8 +951,8 @@ function initDealerReportsPage() {
                         borderWidth: 1,
                         borderSkipped: false,
                         borderRadius: 8,
-                        barThickness: 18,
-                        maxBarThickness: 20,
+                        barThickness: 14,
+                        maxBarThickness: 16,
                         categoryPercentage: 0.78,
                         barPercentage: 0.82,
                         hoverBackgroundColor: function(context) {
@@ -916,10 +1036,11 @@ function initDealerReportsPage() {
                                 display: false
                             },
                             ticks: {
-                                padding: 12,
+                                autoSkip: false,
+                                padding: 10,
                                 color: darkTheme ? '#eef2ff' : '#0f172a',
                                 font: {
-                                    size: 12,
+                                    size: 11,
                                     weight: '600'
                                 }
                             }

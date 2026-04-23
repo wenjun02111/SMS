@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Pending Payouts - SQL LMS Dealer Console')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/dealer-payouts.css') }}?v=20260411-03">
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-payouts.css') }}?v=20260422-01">
 @endpush
 @section('content')
 @php
@@ -99,7 +99,7 @@
                     @endphp
                     @for ($i = 0; $i < $completedPlaceholderRows; $i++)
                         <tr class="inquiries-placeholder-row" aria-hidden="true">
-                            <td class="inquiries-placeholder-cell" colspan="22" style="height: 57px;"></td>
+                            <td class="inquiries-placeholder-cell" colspan="22"></td>
                         </tr>
                     @endfor
                 </tbody>

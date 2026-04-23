@@ -70,6 +70,40 @@
   table-layout: fixed;
 }
 
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit {
+  width: 100%;
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="customername"],
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="customername"] {
+  width: 300px;
+  min-width: 300px;
+  max-width: 300px;
+}
+
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="email"],
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="email"] {
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+}
+
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="postcode"],
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="postcode"] {
+  width: 95px;
+  min-width: 95px;
+  max-width: 95px;
+}
+
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="city"],
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="city"] {
+  width: 105px;
+  min-width: 105px;
+  max-width: 105px;
+}
+
 .inquiries-page-wrap #allTable:not(.inquiries-table--fit) th[data-col="inquiryid"],
 .inquiries-page-wrap #allTable:not(.inquiries-table--fit) td[data-col="inquiryid"] {
   width: 1%;
@@ -124,6 +158,17 @@
 .inquiries-page-wrap #unassignedTable td.inquiries-col-action {
   width: 150px;
   min-width: 150px;
+  max-width: 150px;
+}
+
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="products"],
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="products"] {
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+}
+
+.inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="products"] .inquiries-grid-filter {
   max-width: 150px;
 }
 
@@ -405,6 +450,16 @@
   }
 
   .dashboard-topbar {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .dashboard-topbar-actions-cluster {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .dashboard-bottombar {
     padding-top: 8px;
     padding-bottom: 8px;
   }
@@ -515,6 +570,10 @@
 }
 
 @media (min-width: 1280px) and (max-height: 899px) {
+  .inquiries-page-wrap {
+    padding-top: 0;
+  }
+
   .inquiries-page-wrap > .inquiries-tabs {
     margin-bottom: 6px;
   }
@@ -926,12 +985,33 @@
 }
 
 @media (min-width: 1200px) and (max-height: 900px) {
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-main-body {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    gap: 6px;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-content.inquiries-page-wrap {
+    padding: 6px 10px 8px;
+    gap: 6px;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-topbar {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .dashboard-root:has(.inquiries-page-wrap) .dashboard-bottombar {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
   .inquiries-page-wrap {
-    padding: 10px;
+    padding: 6px 10px;
   }
 
   .inquiries-page-wrap > .inquiries-tabs {
-    margin-bottom: 8px;
+    margin-bottom: 5px;
   }
 
   .inquiries-page-wrap .inquiries-panel-header {
@@ -951,7 +1031,7 @@
   }
 
   .inquiries-page-wrap .inquiries-table .inquiries-placeholder-cell {
-    height: 32px;
+    height: 28px;
   }
 
   .inquiries-page-wrap .inquiries-table thead .inquiries-header-row th {
@@ -1011,8 +1091,8 @@
     display: flex;
     flex-direction: column;
     flex: 0 0 auto;
-    height: clamp(540px, calc(100vh - 210px), 650px);
-    min-height: clamp(540px, calc(100vh - 210px), 650px);
+    height: clamp(480px, calc(100vh - 230px), 620px);
+    min-height: clamp(480px, calc(100vh - 230px), 620px);
   }
 
   #incomingPanel > .inquiries-mgmt-panel > .inquiries-table-wrap.inquiries-table-wrap-filled,
@@ -1054,7 +1134,53 @@
   #incomingPanel .inquiries-table-scroll,
   #assignedPanel .inquiries-table-scroll,
   #allPanel .inquiries-table-scroll {
-    min-height: 300px !important;
+    min-height: 260px !important;
+  }
+
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="products"],
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="products"] {
+    width: 135px;
+    min-width: 135px;
+    max-width: 135px;
+  }
+
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="products"] .inquiries-grid-filter {
+    max-width: 135px;
+  }
+
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="customername"],
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="customername"] {
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+  }
+
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="email"],
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="email"] {
+    width: 190px;
+    min-width: 190px;
+    max-width: 190px;
+  }
+
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="postcode"],
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="postcode"] {
+    width: 82px;
+    min-width: 82px;
+    max-width: 82px;
+  }
+
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit th[data-col="city"],
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit td[data-col="city"] {
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+  }
+
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit th.inquiries-col-action,
+  .inquiries-page-wrap #unassignedTable.inquiries-table--fit td.inquiries-col-action {
+    width: 130px;
+    min-width: 130px;
+    max-width: 130px;
   }
 }
 

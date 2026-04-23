@@ -2,7 +2,7 @@
 @section('title', 'Dashboard – SQL LMS Dealer Console')
 
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/pages/dealer-dashboard.css') }}?v=20260417-04">
+    <link rel="stylesheet" href="{{ asset('css/pages/dealer-dashboard.css') }}?v=20260423-6">
 @endpush
 
 @section('content')
@@ -84,8 +84,8 @@
                     <div class="dealer-table-header">
                         <span>INQUIRY ID</span>
                         <span>CUSTOMER</span>
-                        <span>LAST STATUS UPDATE</span>
                         <span>PROGRESS STAGE</span>
+                        <span>LAST STATUS UPDATE</span>
                         <span>NEXT FOLLOW-UP</span>
                     </div>
                     @forelse(($leads ?? []) as $i => $r)
@@ -124,7 +124,6 @@
                            aria-label="Open inquiry #SQL-{{ $r->LEADID }} and update status">
                             <span class="dealer-inquiry-id">#SQL-{{ $r->LEADID }}</span>
                             <span title="{{ $customerFull !== '—' ? $customerFull : '' }}">{{ $customerFull }}</span>
-                            <span>{{ $r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED)) : '—' }}</span>
                             <div class="dealer-progress-cell">
                                 <span class="dealer-progress-text">{{ $displayStatus }}</span>
                                 <div class="dealer-status-bar">
@@ -136,6 +135,7 @@
                                     @endfor
                                 </div>
                             </div>
+                            <span>{{ $r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED)) : '—' }}</span>
                             <span>{{ $idx < 4 ? ($r->LASTMODIFIED ? date('M j, Y', strtotime($r->LASTMODIFIED . ' +3 days')) : 'N/A') : 'N/A' }}</span>
                         </a>
                     @empty
@@ -192,7 +192,7 @@
                 </div>
                 <div class="dashboard-panel-body">
                     <div class="dashboard-chart-container dealer-chart-shell{{ $dealerClosedWeekHasData ? '' : ' is-empty' }}" id="dealerClosedCaseChartShell">
-                        <canvas id="dealerClosedCaseChart" height="200"></canvas>
+                        <canvas id="dealerClosedCaseChart"></canvas>
                         <div class="dealer-chart-empty-state" id="dealerClosedCaseEmpty"{{ $dealerClosedWeekHasData ? ' hidden' : '' }}>
                             <span class="dealer-chart-empty-icon" aria-hidden="true"><i class="bi bi-bar-chart-line"></i></span>
                             <strong class="dealer-chart-empty-title" id="dealerClosedCaseEmptyTitle">No closed cases this week</strong>
@@ -561,7 +561,7 @@
             layout: {
                 padding: {
                     top: 4,
-                    bottom: scaleRange === 'month' ? 12 : 10
+                    bottom: 0
                 }
             },
             plugins: {
@@ -652,6 +652,18 @@
                 }]
             },
             options: buildClosedCaseChartOptions(activeRange)
+        });
+
+        requestAnimationFrame(function() {
+            if (window.closedChart) {
+                window.closedChart.resize();
+            }
+
+            requestAnimationFrame(function() {
+                if (window.closedChart) {
+                    window.closedChart.resize();
+                }
+            });
         });
     }
 

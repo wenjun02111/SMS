@@ -729,7 +729,8 @@ html.theme-dark .rv2-page-ellipsis {
   .rv2-filters-form { width: auto; justify-content: flex-end; }
   .rv2-filter { flex: 0 1 260px; min-width: 220px; }
   .rv2-filter-apply { flex: 0 0 auto; align-items: center; justify-content: flex-start; min-width: 0; }
-  .rv2-filter-actions .report-filter-apply { width: auto; min-width: 120px; }
+  .rv2-filter-actions .report-filter-apply,
+  .rv2-filter-actions .report-filter-export { width: auto; min-width: 120px; }
   .rv2-date-range { flex-wrap: wrap; }
   .rv2-date-range span { width: 100%; color: #64748b; font-size: 11px; }
   .rv2-variance-grid { grid-template-columns: 1fr; }
@@ -793,7 +794,8 @@ html.theme-dark .rv2-page-ellipsis {
     width: auto;
   }
 
-  .rv2-filter-actions .report-filter-apply {
+  .rv2-filter-actions .report-filter-apply,
+  .rv2-filter-actions .report-filter-export {
     width: auto;
     min-height: 34px;
     min-width: 110px;

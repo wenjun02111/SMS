@@ -111,28 +111,82 @@
 .rrp-filter-form {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  --report-scope-picker-height: 31px;
-  --report-scope-picker-width: 270px;
-  --report-filter-radius: 8px;
+  justify-content: flex-end;
+  gap: 8px;
+  width: min(100%, 656px);
+  margin-left: auto;
+  margin-right: -14px;
+  --report-scope-picker-height: 44px;
+  --report-scope-picker-width: 250px;
+  --report-filter-radius: 999px;
   --report-filter-actions-gap: 8px;
-  --report-filter-apply-height: 31px;
-  --report-filter-apply-padding: 0 12px;
+  --report-filter-apply-height: 44px;
+  --report-filter-apply-padding: 0 14px;
   --report-filter-apply-font-size: 12px;
-  --report-filter-clear-height: 29px;
-  --report-filter-clear-padding: 0 11px;
+  --report-filter-clear-height: 44px;
+  --report-filter-clear-padding: 0 14px;
   --report-filter-clear-font-size: 11px;
 }
+.rrp-period-date-group {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 214px;
+  width: 214px;
+  min-width: 0;
+  height: 44px;
+  overflow: hidden;
+  border: 1px solid rgba(124, 91, 255, 0.2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbff 100%);
+  box-shadow: 0 8px 18px rgba(91, 63, 215, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+.rrp-period-date-group:hover,
+.rrp-period-date-group:focus-within {
+  transform: translateY(-1px);
+  border-color: rgba(124, 91, 255, 0.38);
+  box-shadow: 0 12px 24px rgba(91, 63, 215, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
 .rrp-filter-select {
-  height: 31px;
-  min-width: 100px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid #d6d9e8;
-  background: #ffffff;
+  height: 44px;
+  min-width: 0;
+  padding: 0 13px;
+  border: 1px solid rgba(124, 91, 255, 0.2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbff 100%);
   color: #1f2937;
-  font-size: 12px;
-  font-weight: 700;
+  font-family: "Public Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.015em;
+  box-sizing: border-box;
+  box-shadow: 0 8px 18px rgba(91, 63, 215, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+  cursor: pointer;
+}
+.rrp-period-date-group .rrp-filter-select {
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.rrp-period-date-group .rrp-filter-select:hover,
+.rrp-period-date-group .rrp-filter-select:focus,
+.rrp-period-date-group .rrp-filter-select:focus-visible {
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+.rrp-filter-select--quarter {
+  flex: 1 1 116px;
+  width: auto;
+}
+.rrp-filter-select--year {
+  flex: 0 0 96px;
+  width: 96px;
+  border-left: 1px solid rgba(124, 91, 255, 0.14) !important;
 }
 .rrp-filter-select:focus {
   outline: none;
@@ -161,6 +215,68 @@
 }
 .rrp-filter-actions {
   justify-content: flex-start;
+}
+.rrp-filter-form .report-scope-field {
+  display: flex;
+  align-items: center;
+  flex: 0 0 var(--report-scope-picker-width);
+  height: 44px;
+  min-width: 0;
+  width: var(--report-scope-picker-width);
+  overflow: visible;
+  border: 1px solid rgba(124, 91, 255, 0.2);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfbff 100%);
+  box-shadow: 0 8px 18px rgba(91, 63, 215, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+}
+.rrp-filter-form .report-scope-field:hover,
+.rrp-filter-form .report-scope-field:focus-within {
+  border-color: rgba(124, 91, 255, 0.38);
+  box-shadow: 0 12px 24px rgba(91, 63, 215, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.98);
+}
+.rrp-filter-form .report-scope-field .report-scope-ts-wrapper {
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  transition: transform 0.16s ease;
+}
+.rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single .ts-control,
+.rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
+  height: 100%;
+  min-height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.rrp-filter-form .report-filter-export {
+  min-width: 176px;
+  height: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(239, 68, 68, 0.28);
+}
+.rrp-filter-form .report-filter-export::before {
+  flex-basis: 34px;
+  width: 34px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  color: #dc2626;
+  box-shadow: none;
+}
+.rrp-filter-form .report-filter-export::after {
+  color: #ffffff;
+}
+.rrp-filter-form .report-filter-export:hover,
+.rrp-filter-form .report-filter-export:focus-visible {
+  border: 0;
+  background: linear-gradient(135deg, #f05252 0%, #c81e1e 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 28px rgba(239, 68, 68, 0.36);
 }
 
 .rrp-header {
@@ -359,9 +475,25 @@ html.theme-dark .rrp-dealer-id {
   color: #8d99ba;
 }
 
-html.theme-dark .rrp-filter-select {
+html.theme-dark .rrp-period-date-group,
+html.theme-dark .rrp-filter-select,
+html.theme-dark .rrp-filter-form .report-scope-field {
   border-color: #33405f;
   background: linear-gradient(180deg, #141d32 0%, #0f1728 100%);
+  color: #f3f6ff;
+}
+html.theme-dark .rrp-period-date-group .rrp-filter-select,
+html.theme-dark .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single .ts-control,
+html.theme-dark .rrp-filter-form .report-scope-field .report-scope-ts-wrapper.single.input-active .ts-control {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html.theme-dark .rrp-period-date-group .rrp-filter-select--year {
+  border-left-color: #33405f !important;
+}
+html.theme-dark .rrp-filter-form .report-scope-field .ts-control > .item,
+html.theme-dark .rrp-filter-form .report-scope-field .ts-control > input {
   color: #f3f6ff;
 }
 
@@ -457,20 +589,26 @@ html.theme-dark .rrp-pill-purple {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
+    margin-right: 0;
     gap: 8px 10px;
     align-items: stretch;
   }
 
+  .rrp-period-date-group,
   .rrp-filter-form .report-scope-field {
     grid-column: 1 / -1;
+    width: 100%;
+    flex-basis: auto;
   }
 
+  .rrp-period-date-group,
   .rrp-filter-select,
   .report-scope-field,
   .report-scope-field .report-scope-ts-wrapper,
   .rrp-filter-check,
   .rrp-filter-actions .report-filter-apply,
-  .rrp-filter-actions .report-filter-clear {
+  .rrp-filter-actions .report-filter-clear,
+  .rrp-filter-actions .report-filter-export {
     width: 100%;
     min-width: 0;
     height: 36px;
@@ -506,17 +644,19 @@ html.theme-dark .rrp-pill-purple {
     grid-column: 1 / -1;
     width: 100%;
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 92px;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
     align-items: stretch;
   }
 
   .rrp-filter-actions .report-filter-apply,
-  .rrp-filter-actions .report-filter-clear {
+  .rrp-filter-actions .report-filter-clear,
+  .rrp-filter-actions .report-filter-export {
     margin: 0;
   }
 
-  .rrp-filter-actions .report-filter-clear {
+  .rrp-filter-actions .report-filter-clear,
+  .rrp-filter-actions .report-filter-export {
     min-width: 0;
   }
 
@@ -574,13 +714,14 @@ html.theme-dark .rrp-pill-purple {
   }
 
   .rrp-filter-actions {
-    grid-template-columns: minmax(0, 1fr) 88px;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .rrp-filter-select,
   .rrp-filter-check,
   .rrp-filter-actions .report-filter-apply,
-  .rrp-filter-actions .report-filter-clear {
+  .rrp-filter-actions .report-filter-clear,
+  .rrp-filter-actions .report-filter-export {
     font-size: 13px;
   }
 
