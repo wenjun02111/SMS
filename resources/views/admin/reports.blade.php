@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Report - Monthly Performance Analytics')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260423-4">
-    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260423-10">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260424-1">
+    <link rel="stylesheet" href="{{ asset('css/report_monthly_performance_analytics.css') }}?v=20260424-3">
     <style>
         .reports-page .dashboard-panels-two-column {
             display: grid;
@@ -642,8 +642,6 @@
 @endpush
 @section('content')
 <div class="reports-page">
-<div class="reports-page-layout">
-<header class="dashboard-header">
     @php
         $reportTabQuery = [];
         $currentReportScope = trim((string) ($selectedReportScope ?? request('report_scope', 'all')));
@@ -651,23 +649,28 @@
             $reportTabQuery['report_scope'] = $currentReportScope;
         }
     @endphp
+<div class="reports-page-tabs-shell">
     <div class="reports-tabs-row">
         <nav class="reports-tabs-nav" aria-label="Report views">
             <a href="{{ route('admin.reports', $reportTabQuery) }}"
                class="reports-tab-link {{ request()->routeIs('admin.reports') ? 'is-active' : '' }}">
-                Monthly Performance
+                <i class="bi bi-bar-chart-line reports-tab-icon" aria-hidden="true"></i>
+                <span>Monthly Performance</span>
             </a>
             <a href="{{ route('admin.reports.v2', $reportTabQuery) }}"
                class="reports-tab-link {{ request()->routeIs('admin.reports.v2') ? 'is-active' : '' }}">
-                Dealer Sales Overtime
+                <i class="bi bi-clock-history reports-tab-icon" aria-hidden="true"></i>
+                <span>Dealer Sales Overtime</span>
             </a>
             <a href="{{ route('admin.reports.revenue', $reportTabQuery) }}"
                class="reports-tab-link {{ request()->routeIs('admin.reports.revenue') ? 'is-active' : '' }}">
-                Dealer Revenue Production
+                <i class="bi bi-coin reports-tab-icon" aria-hidden="true"></i>
+                <span>Dealer Revenue Production</span>
             </a>
         </nav>
     </div>
-</header>
+</div>
+<div class="reports-page-filters-shell">
 @php
     $totalLeads = array_sum($leadStatus);
     $totalPayouts = array_sum($payoutStatus);
@@ -756,46 +759,42 @@
                 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December',
             ];
         @endphp
-        <div class="reports-period-filter-cluster">
-            <div class="reports-period-filter-controls">
-                <div class="reports-period-date-group" aria-label="Report date filter">
-                    <select name="month" class="reports-period-select reports-period-select--month" aria-label="Select month">
-                        @foreach ($months as $m => $label)
-                            <option value="{{ $m }}" {{ (int) ($selectedMonth ?? now()->format('n')) === (int) $m ? 'selected' : '' }}>
-                                {{ $label }}
-                            </option>
-                        @endforeach
-                    </select>
-                    <select name="year" class="reports-period-select reports-period-select--year" aria-label="Select year">
-                        @foreach (($yearOptions ?? []) as $y)
-                            <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>
-                                {{ $y }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                @include('admin.partials.report_scope_picker', [
-                    'options' => $reportScopeOptions ?? [],
-                    'selected' => $selectedReportScope ?? 'all',
-                ])
-            </div>
+        <div class="reports-period-date-group" aria-label="Report date filter">
+            <select name="month" class="reports-period-select reports-period-select--month" aria-label="Select month">
+                @foreach ($months as $m => $label)
+                    <option value="{{ $m }}" {{ (int) ($selectedMonth ?? now()->format('n')) === (int) $m ? 'selected' : '' }}>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </select>
+            <select name="year" class="reports-period-select reports-period-select--year" aria-label="Select year">
+                @foreach (($yearOptions ?? []) as $y)
+                    <option value="{{ $y }}" {{ (int) ($selectedYear ?? now()->format('Y')) === (int) $y ? 'selected' : '' }}>
+                        {{ $y }}
+                    </option>
+                @endforeach
+            </select>
         </div>
-        <div class="reports-period-action-cluster">
-            @include('admin.partials.report_filter_actions', [
-                'wrapperClass' => 'reports-period-actions report-filter-actions',
-                'applyClass' => 'report-filter-apply',
-                'exportClass' => 'report-filter-export',
-                'clearClass' => 'report-filter-clear',
-                'showApply' => false,
-                'showExport' => true,
-                'showClear' => false,
-                'exportTitle' => $monthlyExportTitle,
-                'exportTarget' => '.reports-page',
-            ])
-        </div>
+        @include('admin.partials.report_scope_picker', [
+            'options' => $reportScopeOptions ?? [],
+            'selected' => $selectedReportScope ?? 'all',
+        ])
+        @include('admin.partials.report_filter_actions', [
+            'wrapperClass' => 'reports-period-actions report-filter-actions',
+            'applyClass' => 'report-filter-apply',
+            'exportClass' => 'report-filter-export',
+            'clearClass' => 'report-filter-clear',
+            'showApply' => false,
+            'showExport' => true,
+            'showClear' => false,
+            'exportTitle' => $monthlyExportTitle,
+            'exportTarget' => '.reports-page',
+        ])
     </form>
 </div>
 
+</div>
+<div class="reports-page-layout">
 <section class="reports-metrics reports-metrics--admin">
     @foreach ($metricCards as $card)
     @php

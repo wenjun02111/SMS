@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Report - Dealer Sales Overtime')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260423-4">
-    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}?v=20260420-01">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260424-1">
+    <link rel="stylesheet" href="{{ asset('css/report_dealer_sales_overtime.css') }}?v=20260423-4">
     <link rel="stylesheet" href="{{ asset('css/pages/admin-reports-v2.css') }}?v=20260324-9">
 @endpush
 @section('content')
@@ -19,15 +19,18 @@
             <nav class="reports-tabs-nav" aria-label="Report views">
                 <a href="{{ route('admin.reports', $reportTabQuery) }}"
                    class="reports-tab-link {{ request()->routeIs('admin.reports') ? 'is-active' : '' }}">
-                    Monthly Performance
+                    <i class="bi bi-bar-chart-line reports-tab-icon" aria-hidden="true"></i>
+                    <span>Monthly Performance</span>
                 </a>
                 <a href="{{ route('admin.reports.v2', $reportTabQuery) }}"
                    class="reports-tab-link {{ request()->routeIs('admin.reports.v2') ? 'is-active' : '' }}">
-                    Dealer Sales Overtime
+                    <i class="bi bi-clock-history reports-tab-icon" aria-hidden="true"></i>
+                    <span>Dealer Sales Overtime</span>
                 </a>
                 <a href="{{ route('admin.reports.revenue', $reportTabQuery) }}"
                    class="reports-tab-link {{ request()->routeIs('admin.reports.revenue') ? 'is-active' : '' }}">
-                    Dealer Revenue Production
+                    <i class="bi bi-coin reports-tab-icon" aria-hidden="true"></i>
+                    <span>Dealer Revenue Production</span>
                 </a>
             </nav>
         </div>
@@ -416,12 +419,12 @@
             const top10Failed = @json($top10Failed ?? []);
             const top10Closed = @json($top10Closed ?? []);
             // Keep a single, consistent color per side.
-            const BAR_RED = 'rgba(220, 38, 38, 0.86)';
-            const BAR_RED_HOVER = 'rgba(220, 38, 38, 1)';
-            const BAR_CLOSED = 'rgba(22, 163, 74, 0.82)';
-            const BAR_CLOSED_HOVER = 'rgba(22, 163, 74, 1)';
-            const BAR_RED_BORDER = 'rgba(127, 29, 29, 1)';
-            const BAR_CLOSED_BORDER = 'rgba(20, 83, 45, 1)';
+            const BAR_RED = 'rgba(239, 68, 68, 0.96)';
+            const BAR_RED_HOVER = 'rgba(248, 113, 113, 1)';
+            const BAR_CLOSED = 'rgba(34, 197, 94, 0.94)';
+            const BAR_CLOSED_HOVER = 'rgba(16, 185, 129, 1)';
+            const BAR_RED_BORDER = 'rgba(185, 28, 28, 0.9)';
+            const BAR_CLOSED_BORDER = 'rgba(21, 128, 61, 0.9)';
             const isDarkTheme = document.documentElement.classList.contains('theme-dark');
             const isMobile = window.matchMedia('(max-width: 768px)').matches;
             const chartLabelFontSize = isMobile ? 8 : 10;
@@ -430,10 +433,11 @@
             const neutralTitleColor = isDarkTheme ? '#7f8caf' : '#64748b';
             const failedAxisColor = isDarkTheme ? '#ff9b9b' : '#7f1d1d';
             const closedAxisColor = isDarkTheme ? '#7be194' : '#166534';
-            const gridLineColor = isDarkTheme ? 'rgba(148, 163, 184, 0.12)' : 'rgba(148, 163, 184, 0.22)';
-            const zeroLineColor = isDarkTheme ? 'rgba(148, 163, 184, 0.26)' : 'rgba(51, 65, 85, 0.4)';
-            const failedBackdropColor = isDarkTheme ? 'rgba(239, 68, 68, 0.08)' : 'rgba(248, 113, 113, 0.06)';
-            const closedBackdropColor = isDarkTheme ? 'rgba(74, 222, 128, 0.08)' : 'rgba(74, 222, 128, 0.06)';
+            const gridLineColor = isDarkTheme ? 'rgba(148, 163, 184, 0.1)' : 'rgba(148, 163, 184, 0.14)';
+            const zeroLineColor = isDarkTheme ? 'rgba(148, 163, 184, 0.22)' : 'rgba(51, 65, 85, 0.24)';
+            const failedBackdropColor = isDarkTheme ? 'rgba(248, 113, 113, 0.075)' : 'rgba(254, 226, 226, 0.5)';
+            const closedBackdropColor = isDarkTheme ? 'rgba(74, 222, 128, 0.075)' : 'rgba(220, 252, 231, 0.5)';
+            const transparentBackdropColor = isDarkTheme ? 'rgba(15, 23, 42, 0)' : 'rgba(255, 255, 255, 0)';
 
             if (window.Chart && typeof window.ChartDataLabels !== 'undefined') {
                 window.Chart.register(window.ChartDataLabels);
@@ -456,8 +460,9 @@
                         backgroundColor: Array.from({ length: rowCount }, () => BAR_RED),
                         hoverBackgroundColor: Array.from({ length: rowCount }, () => BAR_RED_HOVER),
                         borderColor: Array.from({ length: rowCount }, () => BAR_RED_BORDER),
-                        borderWidth: 1.2,
-                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        borderSkipped: false,
                         barThickness: chartBarThickness,
                         maxBarThickness: chartBarThickness
                     },
@@ -468,8 +473,9 @@
                         backgroundColor: Array.from({ length: rowCount }, () => BAR_CLOSED),
                         hoverBackgroundColor: Array.from({ length: rowCount }, () => BAR_CLOSED_HOVER),
                         borderColor: Array.from({ length: rowCount }, () => BAR_CLOSED_BORDER),
-                        borderWidth: 1.2,
-                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderRadius: 10,
+                        borderSkipped: false,
                         barThickness: chartBarThickness,
                         maxBarThickness: chartBarThickness
                     }
@@ -489,13 +495,36 @@
                     const height = chartArea.bottom - chartArea.top;
                     const zeroX = xScale.getPixelForValue(0);
                     const ctx = chart.ctx;
+                    const failedBackdrop = ctx.createLinearGradient(left, top, zeroX, top);
+                    failedBackdrop.addColorStop(0, transparentBackdropColor);
+                    failedBackdrop.addColorStop(1, failedBackdropColor);
+
+                    const closedBackdrop = ctx.createLinearGradient(zeroX, top, right, top);
+                    closedBackdrop.addColorStop(0, closedBackdropColor);
+                    closedBackdrop.addColorStop(1, transparentBackdropColor);
 
                     ctx.save();
-                    ctx.fillStyle = failedBackdropColor;
+                    ctx.fillStyle = failedBackdrop;
                     ctx.fillRect(left, top, Math.max(0, zeroX - left), height);
-                    ctx.fillStyle = closedBackdropColor;
+                    ctx.fillStyle = closedBackdrop;
                     ctx.fillRect(zeroX, top, Math.max(0, right - zeroX), height);
                     ctx.restore();
+                }
+            };
+
+            const failedClosedBarShadowPlugin = {
+                id: 'failedClosedBarShadowPlugin',
+                beforeDatasetDraw: function(chart, args) {
+                    const ctx = chart.ctx;
+                    ctx.save();
+                    ctx.shadowColor = args.index === 0
+                        ? (isDarkTheme ? 'rgba(248, 113, 113, 0.24)' : 'rgba(239, 68, 68, 0.16)')
+                        : (isDarkTheme ? 'rgba(74, 222, 128, 0.22)' : 'rgba(34, 197, 94, 0.16)');
+                    ctx.shadowBlur = 12;
+                    ctx.shadowOffsetY = 3;
+                },
+                afterDatasetDraw: function(chart) {
+                    chart.ctx.restore();
                 }
             };
 
@@ -552,7 +581,7 @@
             const config = {
                 type: 'bar',
                 data: data,
-                plugins: [failedClosedBackdropPlugin, failedClosedLabelHoverPlugin],
+                plugins: [failedClosedBackdropPlugin, failedClosedBarShadowPlugin, failedClosedLabelHoverPlugin],
                 options: {
                     indexAxis: 'y',
                     responsive: true,
@@ -589,7 +618,7 @@
                                 // Only show percentages inside the bars
                                 pct: {
                                     color: '#ffffff',
-                                    font: { size: chartLabelFontSize, weight: '700' },
+                                    font: { size: chartLabelFontSize, weight: '800' },
                                     formatter: function(_value, ctx) {
                                         const i = ctx.dataIndex;
                                         return ctx.dataset.label === 'Failed' ? `${failedPct[i]}%` : `${closedPct[i]}%`;
@@ -609,7 +638,7 @@
                                     return Number(ctx.tick?.value) === 0 ? zeroLineColor : gridLineColor;
                                 },
                                 lineWidth: function(ctx) {
-                                    return Number(ctx.tick?.value) === 0 ? 1.2 : 1;
+                                    return Number(ctx.tick?.value) === 0 ? 1.1 : 1;
                                 },
                                 drawTicks: false
                             },
@@ -661,10 +690,12 @@
             const divergeEl = document.getElementById('top10FailedClosedChart');
             if (divergeEl && window.Chart && rowCount > 0) {
                 // Make chart height dynamic based on number of dealers and bar size.
+                const isWideMonitor = window.matchMedia('(min-width: 1600px)').matches;
                 const perRow = isMobile ? 52 : 92;
                 const minRows = isMobile ? 1 : 4;
                 const rowsForHeight = Math.max(rowCount, minRows);
-                divergeEl.height = perRow * rowsForHeight;
+                const monitorHeightTrim = isWideMonitor ? 55 : 0;
+                divergeEl.height = Math.max(160, (perRow * rowsForHeight) - monitorHeightTrim);
                 new Chart(divergeEl.getContext('2d'), config);
             }
         });

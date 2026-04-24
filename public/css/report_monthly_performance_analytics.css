@@ -31,6 +31,16 @@
   transform-origin: top left;
 }
 
+.reports-page-tabs-shell {
+  flex: 0 0 auto;
+  padding: 0 20px 0 18px;
+}
+
+.reports-page-filters-shell {
+  flex: 0 0 auto;
+  padding: 0 20px 0 18px;
+}
+
 .reports-page .dashboard-header .dashboard-title { font-size: 1.5rem; }
 .reports-page .dashboard-header .dashboard-subtitle { font-size: 1rem; text-align: left; }
 .reports-page .dashboard-header > div:first-child { text-align: left; }
@@ -40,13 +50,13 @@
   justify-content: flex-end;
   position: relative;
   z-index: 40;
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 .reports-period-form-compact {
-  display: flex;
-  align-items: flex-end;
+  display: inline-flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 16px;
+  gap: 8px;
   width: min(100%, 710px);
   margin-left: auto;
   margin-right: -14px;
@@ -56,7 +66,7 @@
   background: transparent;
   box-shadow: none;
   --report-scope-picker-height: 44px;
-  --report-scope-picker-width: 218px;
+  --report-scope-picker-width: 250px;
   --report-filter-radius: 999px;
   --report-filter-actions-gap: 8px;
   --report-filter-apply-height: 44px;
@@ -735,7 +745,6 @@ html.theme-dark .reports-period-date-group .reports-period-select--year {
 }
 
 /* Admin report border styling */
-.reports-page .reports-tabs-nav,
 .reports-page .dashboard-metric-card,
 .reports-page .dashboard-panel,
 .reports-page .reports-product-chart-wrapper,
@@ -829,7 +838,6 @@ html.theme-dark .reports-period-date-group .reports-period-select--year {
   --report-border-shadow: rgba(21, 128, 61, 0.2);
 }
 
-.reports-page .reports-tabs-nav,
 .reports-page .dashboard-panel {
   border-radius: 16px;
 }
@@ -846,11 +854,6 @@ html.theme-dark .reports-period-date-group .reports-period-select--year {
 .reports-page .report-metric-link:hover,
 .reports-page .report-metric-link:focus-visible {
   text-decoration: none;
-}
-
-/* Final monthly sizing tweaks */
-.reports-page .reports-tab-link {
-  font-size: 13px;
 }
 
 .reports-page .reports-period-select,
@@ -1020,6 +1023,14 @@ html.theme-dark .reports-page .report-legend {
 }
 
 @media (max-width: 1024px) {
+  .reports-page-tabs-shell {
+    padding: 0 20px;
+  }
+
+  .reports-page-filters-shell {
+    padding: 0 20px;
+  }
+
   .reports-page-layout {
     width: 100% !important;
     max-width: 100%;
@@ -1044,6 +1055,14 @@ html.theme-dark .reports-page .report-legend {
 @media (max-width: 768px) {
   .reports-page {
     font-size: 100%;
+  }
+
+  .reports-page-tabs-shell {
+    padding: 0 16px;
+  }
+
+  .reports-page-filters-shell {
+    padding: 0 16px;
   }
 
   .reports-page-layout {
@@ -1203,6 +1222,14 @@ html.theme-dark .reports-page .report-legend {
 }
 
 @media (max-width: 480px) {
+  .reports-page-tabs-shell {
+    padding: 0 12px;
+  }
+
+  .reports-page-filters-shell {
+    padding: 0 12px;
+  }
+
   .reports-page-layout {
     padding: 0 12px 20px;
   }

@@ -566,6 +566,92 @@ html.theme-dark .rrp-pill-purple {
   color: #ffffff;
 }
 
+@media (min-width: 1600px) {
+  .rrp-page {
+    padding: 0 24px 8px 22px;
+  }
+
+  .rrp-tabs-row {
+    margin-bottom: 8px;
+  }
+
+  .rrp-filter-row {
+    margin-bottom: 8px;
+  }
+
+  .rrp-filter-form {
+    transform: scale(0.96);
+    transform-origin: top right;
+  }
+
+  .rrp-top-grid {
+    gap: 9px;
+    margin-bottom: 9px;
+  }
+
+  .rrp-metric-card {
+    padding: 9px 12px;
+    border-radius: 10px;
+  }
+
+  .rrp-metric-label {
+    font-size: 9px;
+  }
+
+  .rrp-metric-value {
+    margin-top: 4px;
+    font-size: 18px;
+    line-height: 1.05;
+  }
+
+  .rrp-metric-sub {
+    margin-top: 3px;
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .rrp-panel {
+    margin-top: 9px;
+    border-radius: 10px;
+  }
+
+  .rrp-panel-header {
+    padding: 9px 12px;
+  }
+
+  .rrp-panel-title {
+    font-size: 12px;
+  }
+
+  .rrp-panel-subtitle {
+    font-size: 10px;
+  }
+
+  .rrp-panel-body {
+    padding: 10px 12px;
+  }
+
+  .rrp-chart-wrap {
+    height: 236px;
+  }
+
+  .rrp-table thead th,
+  .rrp-table tbody td {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    font-size: 12px;
+  }
+
+  .rrp-dealer-name {
+    font-size: 12px;
+  }
+
+  .rrp-pill {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+}
+
 @media (max-width: 1100px) {
   .rrp-header { flex-direction: column; align-items: flex-start; }
   .rrp-top-grid { grid-template-columns: 1fr; }

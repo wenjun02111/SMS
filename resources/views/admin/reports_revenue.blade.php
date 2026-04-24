@@ -1,8 +1,8 @@
 @extends('layouts.app')
 @section('title', 'Report - Dealer Revenue Production')
 @push('styles')
-    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260423-4">
-    <link rel="stylesheet" href="{{ asset('css/report_dealer_revenue_production.css') }}?v=20260423-1">
+    <link rel="stylesheet" href="{{ asset('css/shared/reports-tabs.css') }}?v=20260424-1">
+    <link rel="stylesheet" href="{{ asset('css/report_dealer_revenue_production.css') }}?v=20260423-3">
 @endpush
 @section('content')
 <div class="rrp-page">
@@ -17,15 +17,18 @@
         <nav class="reports-tabs-nav" aria-label="Report views">
             <a href="{{ route('admin.reports', $reportTabQuery) }}"
                class="reports-tab-link {{ request()->routeIs('admin.reports') ? 'is-active' : '' }}">
-                Monthly Performance
+                <i class="bi bi-bar-chart-line reports-tab-icon" aria-hidden="true"></i>
+                <span>Monthly Performance</span>
             </a>
             <a href="{{ route('admin.reports.v2', $reportTabQuery) }}"
                class="reports-tab-link {{ request()->routeIs('admin.reports.v2') ? 'is-active' : '' }}">
-                Dealer Sales Overtime
+                <i class="bi bi-clock-history reports-tab-icon" aria-hidden="true"></i>
+                <span>Dealer Sales Overtime</span>
             </a>
             <a href="{{ route('admin.reports.revenue', $reportTabQuery) }}"
                class="reports-tab-link {{ request()->routeIs('admin.reports.revenue') ? 'is-active' : '' }}">
-                Dealer Revenue Production
+                <i class="bi bi-coin reports-tab-icon" aria-hidden="true"></i>
+                <span>Dealer Revenue Production</span>
             </a>
         </nav>
     </div>
