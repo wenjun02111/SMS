@@ -270,48 +270,6 @@
             box-shadow: none;
         }
 
-        .inquiry-city-wrapper {
-            display: flex;
-            gap: 8px;
-            width: 100%;
-            align-items: stretch;
-        }
-
-        .inquiry-map-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            flex-shrink: 0;
-            aspect-ratio: 1 / 1;
-            border-radius: 10px;
-            background: #f3edff;
-            border: 1px solid #e0d7ff;
-            color: #7c5cff;
-            transition: all 0.2s ease;
-        }
-
-        .inquiry-map-btn:hover {
-            background: #e0d7ff;
-            color: #6847f5;
-        }
-
-        .inquiry-map-btn[hidden] {
-            display: none !important;
-        }
-
-        html.theme-dark .inquiry-map-btn {
-            background: rgba(124, 92, 255, 0.12) !important;
-            border: 1px solid rgba(155, 135, 255, 0.24) !important;
-            color: #d8ccff !important;
-        }
-
-        html.theme-dark .inquiry-map-btn:hover {
-            background: rgba(124, 92, 255, 0.18) !important;
-            border-color: rgba(173, 157, 255, 0.32) !important;
-            color: #f3efff !important;
-        }
-
         .inquiry-create-panel #inquiryFormGrid .inquiry-form-checkboxes {
             display: grid;
             grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -1259,12 +1217,7 @@
                 <div class="inquiry-postcode-city-row city">
                     <label class="inquiry-city-mini-field" for="cityInput">
                         <span class="inquiry-form-label-title">City <span class="required">*</span></span>
-                    <div class="inquiry-city-wrapper">
                         <input type="text" id="cityInput" name="CITY" value="{{ old('CITY', $inquiry->CITY ?? '') }}" required maxlength="100" autocomplete="address-level2" class="inquiry-form-input">
-                        <a href="#" id="openMapsBtn" target="_blank" class="inquiry-map-btn" title="View on Google Maps" hidden>
-                            <i class="bi bi-geo-alt"></i>
-                        </a>
-                    </div>
                     </label>
                 </div>
                 <div class="inquiry-form-label inquiry-form-products inquiry-products-field product-interested">
@@ -1327,27 +1280,6 @@ document.addEventListener('DOMContentLoaded', function () {
     var postcodeCityLookup = @json($postcodeCityLookup ?? []);
     var lastAutoFilledCity = '';
 
-    var mapBtn = document.getElementById('openMapsBtn');
-
-    function updateMapLink() {
-        if (!mapBtn || !cityInput) return;
-        var cityVal = (cityInput.value || '').trim();
-        var postVal = (postcodeInput ? postcodeInput.value : '').trim();
-
-        if (cityVal === '') {
-            mapBtn.hidden = true;
-        } else {
-            mapBtn.hidden = false;
-            var query = encodeURIComponent(postVal + ' ' + cityVal + ' Malaysia');
-            mapBtn.href = 'https://www.google.com/maps/search/?api=1&query=' + query;
-        }
-    }
-
-    if (cityInput) {
-        cityInput.addEventListener('input', updateMapLink);
-        cityInput.addEventListener('change', updateMapLink);
-    }
-
     function normalizePostcodeValue(value) {
         return String(value || '').replace(/\D+/g, '').slice(0, 5);
     }
@@ -1365,7 +1297,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 cityInput.value = '';
             }
             lastAutoFilledCity = '';
-            updateMapLink();
             return;
         }
 
@@ -1375,21 +1306,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 cityInput.value = '';
             }
             lastAutoFilledCity = '';
-            updateMapLink();
             return;
         }
 
         if (cityInput.value.trim() === '' || cityInput.value === lastAutoFilledCity) {
             cityInput.value = matchedCity;
             lastAutoFilledCity = matchedCity;
-            updateMapLink();
             return;
         }
 
         if (cityInput.value.trim().toLowerCase() === matchedCity.toLowerCase()) {
             lastAutoFilledCity = cityInput.value;
         }
-        updateMapLink();
     }
 
     // Demo mode toggle (Zoom / On-site)
@@ -1612,7 +1540,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     address2Input.value = lastCompanyData.address2;
                 }
             }
-            updateMapLink();
 
             // Demo mode toggle (Zoom / On-site) from existing lead
             if (lastCompanyData.demomode) {
